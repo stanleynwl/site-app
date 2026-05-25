@@ -1,0 +1,365 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { getSessionUser, getProfile } from "@/lib/auth/dal";
+import { todayISO, isInSoftEditWindow, normalizeReportDate } from "@/lib/date";
+import type { IssueCategory, NoWorkReason, ReportType, Weather } from "./reports";
+
+const WEATHERS: Weather[] = ["sunny", "cloudy", "light_rain", "heavy_rain"];
+const CATEGORIES: IssueCategory[] = ["material", "weather", "consultant", "other"];
+const REPORT_TYPES: ReportType[] = ["normal", "no_work"];
+const NO_WORK_REASONS: NoWorkReason[] = ["holiday", "weather", "site_closed", "other"];
+
+export async function createProject(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("projects")
+    .insert({
+      name,
+      code: String(formData.get("code") ?? "").trim() || null,
+      location: String(formData.get("location") ?? "").trim() || null,
+      start_date: String(formData.get("start_date") ?? "") || null,
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) return;
+  revalidatePath("/office");
+  revalidatePath("/office/projects");
+  redirect(`/office/projects/${data.id}`);
+}
+
+// --- Phase 2 catalog: managed suppliers + materials (pm/office only) ---------
+
+export async function createSupplier(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "pm" && profile.role !== "office") return;
+
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+
+  const supabase = await createClient();
+  await supabase.from("suppliers").insert({
+    name,
+    code: String(formData.get("code") ?? "").trim() || null,
+    phone: String(formData.get("phone") ?? "").trim() || null,
+    company_id: profile.company_id,
+    created_by: profile.id,
+  });
+  revalidatePath("/office/catalog");
+}
+
+export async function createMaterial(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "pm" && profile.role !== "office") return;
+
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+
+  const supabase = await createClient();
+  await supabase.from("materials").insert({
+    name,
+    unit: String(formData.get("unit") ?? "").trim() || null,
+    count_required: formData.get("count_required") === "on",
+    company_id: profile.company_id,
+  });
+  revalidatePath("/office/catalog");
+}
+
+// --- Phase 2 deliveries: three-quantity model -------------------------------
+
+export type DeliveryState =
+  | { ok: true }
+  | { error: "save" | "not-configured" | "auth" | "validation" }
+  | undefined;
+
+function parseQty(raw: FormDataEntryValue | null): number | null {
+  const s = String(raw ?? "").trim();
+  if (s === "") return null;
+  const n = Number(s);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+// Supervisor logs a delivery when materials arrive on site. received_quantity is
+// only meaningful for count_required materials (UI hides it otherwise).
+export async function createDelivery(
+  _prev: DeliveryState,
+  formData: FormData,
+): Promise<DeliveryState> {
+  if (!isSupabaseConfigured) return { error: "not-configured" };
+  const user = await getSessionUser();
+  if (!user) return { error: "auth" };
+
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!projectId) return { error: "validation" };
+
+  const materialIdRaw = String(formData.get("material_id") ?? "");
+  const isOther = materialIdRaw === "" || materialIdRaw === "__other__";
+  const materialText = String(formData.get("material_text") ?? "").trim();
+  // Require either a catalog material or free-text.
+  if (isOther && !materialText) return { error: "validation" };
+
+  const supplierIdRaw = String(formData.get("supplier_id") ?? "");
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("deliveries").insert({
+    project_id: projectId,
+    supplier_id: supplierIdRaw || null,
+    material_id: isOther ? null : materialIdRaw,
+    material_text: isOther ? materialText : null,
+    do_number: String(formData.get("do_number") ?? "").trim() || null,
+    unit: String(formData.get("unit") ?? "").trim() || null,
+    received_quantity: parseQty(formData.get("received_quantity")),
+    delivered_on: String(formData.get("delivered_on") ?? "") || todayISO(),
+    created_by: user.id,
+  });
+  if (error) return { error: "save" };
+
+  revalidatePath(`/app/projects/${projectId}/deliveries`);
+  revalidatePath(`/office/projects/${projectId}`);
+  return { ok: true };
+}
+
+// Office enters the DO quantity (read from the DO photo/document).
+export async function setDoQuantity(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "pm" && profile.role !== "office") return;
+
+  const id = String(formData.get("delivery_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!id) return;
+
+  const supabase = await createClient();
+  await supabase
+    .from("deliveries")
+    .update({ do_quantity: parseQty(formData.get("do_quantity")) })
+    .eq("id", id);
+
+  revalidatePath(`/office/projects/${projectId}`);
+}
+
+export type SaveReportState =
+  | { ok: true; submitted: boolean }
+  | { error: "locked" | "save" | "not-configured" | "auth" }
+  | undefined;
+
+export async function saveReport(
+  _prev: SaveReportState,
+  formData: FormData,
+): Promise<SaveReportState> {
+  if (!isSupabaseConfigured) return { error: "not-configured" };
+  const user = await getSessionUser();
+  if (!user) return { error: "auth" };
+
+  const projectId = String(formData.get("project_id") ?? "");
+  const submit = formData.get("intent") === "submit";
+
+  // Target date: defaults to today, but a missed past day can be backfilled.
+  // Validate against the allowed backdate window; reject future / too-old dates.
+  const today = todayISO();
+  const requestedDate = String(formData.get("report_date") ?? "").trim();
+  const date = requestedDate ? normalizeReportDate(requestedDate) : today;
+  if (!date) return { error: "save" };
+  const isBackdated = date !== today;
+
+  const supabase = await createClient();
+
+  // Validate and parse report_type
+  const reportTypeRaw = String(formData.get("report_type") ?? "");
+  const reportType: ReportType = REPORT_TYPES.includes(reportTypeRaw as ReportType)
+    ? (reportTypeRaw as ReportType)
+    : "normal";
+
+  const noWorkReasonRaw = String(formData.get("no_work_reason") ?? "");
+  const noWorkReason: NoWorkReason | null =
+    reportType === "no_work" && NO_WORK_REASONS.includes(noWorkReasonRaw as NoWorkReason)
+      ? (noWorkReasonRaw as NoWorkReason)
+      : null;
+
+  const weatherRaw = String(formData.get("weather") ?? "");
+  const weather = WEATHERS.includes(weatherRaw as Weather)
+    ? (weatherRaw as Weather)
+    : null;
+  const rainRaw = String(formData.get("rain_hours") ?? "").trim();
+  const rainHours = rainRaw === "" ? null : Number(rainRaw);
+
+  // Check for an existing report and enforce lock / soft-edit rules.
+  const { data: existing } = await supabase
+    .from("daily_reports")
+    .select("id, status, author_id, submitted_at")
+    .eq("project_id", projectId)
+    .eq("report_date", date)
+    .maybeSingle();
+
+  if (existing) {
+    if (existing.status === "locked") return { error: "locked" };
+    if (existing.status === "submitted") {
+      // Only the original author may edit within the soft window.
+      if (existing.author_id !== user.id) return { error: "locked" };
+      if (!isInSoftEditWindow(existing.submitted_at)) return { error: "locked" };
+    }
+  }
+
+  // For no_work reports, work_done is always null; for normal reports use the field.
+  const workDone =
+    reportType === "normal"
+      ? String(formData.get("work_done") ?? "").trim() || null
+      : null;
+
+  const { data: report, error } = await supabase
+    .from("daily_reports")
+    .upsert(
+      {
+        project_id: projectId,
+        report_date: date,
+        author_id: user.id,
+        report_type: reportType,
+        no_work_reason: noWorkReason,
+        is_backdated: isBackdated,
+        weather,
+        rain_hours: Number.isFinite(rainHours) ? rainHours : null,
+        work_done: workDone,
+        notes: String(formData.get("notes") ?? "").trim() || null,
+      },
+      { onConflict: "project_id,report_date" },
+    )
+    .select("id")
+    .single();
+
+  if (error || !report) return { error: "save" };
+
+  // If we edited a submitted report within the soft window, log the edit.
+  if (existing?.status === "submitted") {
+    await supabase.from("report_edits").insert({
+      report_id: report.id,
+      editor_id: user.id,
+      kind: "soft_window",
+    });
+  }
+
+  // Manpower and issues only apply to normal reports.
+  if (reportType === "normal") {
+    const trades = formData.getAll("manpower_trade").map(String);
+    const subs = formData.getAll("manpower_subcontractor").map(String);
+    const counts = formData.getAll("manpower_worker_count").map(String);
+    const manpower = trades
+      .map((trade, i) => ({
+        report_id: report.id,
+        trade: trade.trim(),
+        subcontractor: subs[i]?.trim() || null,
+        worker_count: Number.parseInt(counts[i] ?? "0", 10) || 0,
+      }))
+      // Keep only trades that actually had workers — drops untouched default
+      // rows (worker_count 0) so empty trades never reach the DB / office view.
+      .filter((row) => row.trade !== "" && row.worker_count > 0);
+
+    const descs = formData.getAll("issue_description").map(String);
+    const cats = formData.getAll("issue_category").map(String);
+    const issues = descs
+      .map((description, i) => ({
+        report_id: report.id,
+        description: description.trim(),
+        category: (CATEGORIES.includes(cats[i] as IssueCategory)
+          ? cats[i]
+          : "other") as IssueCategory,
+      }))
+      .filter((row) => row.description !== "");
+
+    await supabase.from("manpower_entries").delete().eq("report_id", report.id);
+    if (manpower.length) {
+      await supabase.from("manpower_entries").insert(manpower);
+    }
+    await supabase.from("issues").delete().eq("report_id", report.id);
+    if (issues.length) {
+      await supabase.from("issues").insert(issues);
+    }
+  }
+
+  if (submit) {
+    const { error: submitError } = await supabase
+      .from("daily_reports")
+      .update({ status: "submitted", submitted_at: new Date().toISOString() })
+      .eq("id", report.id);
+    if (submitError) return { error: "save" };
+  }
+
+  revalidatePath(`/app/projects/${projectId}`);
+  revalidatePath("/app");
+  revalidatePath("/office");
+  revalidatePath(`/office/projects/${projectId}`);
+  return { ok: true, submitted: submit };
+}
+
+export type UnlockReportState =
+  | { ok: true }
+  | { error: "not-pm" | "not-locked" | "save" | "not-configured" | "auth" }
+  | undefined;
+
+// PMs can reset a hard-locked (or expired-window submitted) report back to
+// draft so the author can re-edit and re-submit. Requires a reason.
+export async function unlockReport(
+  _prev: UnlockReportState,
+  formData: FormData,
+): Promise<UnlockReportState> {
+  if (!isSupabaseConfigured) return { error: "not-configured" };
+  const [user, profile] = await Promise.all([getSessionUser(), getProfile()]);
+  if (!user || !profile) return { error: "auth" };
+  if (profile.role !== "pm") return { error: "not-pm" };
+
+  const reportId = String(formData.get("report_id") ?? "");
+  const reason = String(formData.get("unlock_reason") ?? "").trim();
+  if (!reason) return { error: "save" };
+
+  const supabase = await createClient();
+
+  const { data: report } = await supabase
+    .from("daily_reports")
+    .select("id, project_id, status, submitted_at")
+    .eq("id", reportId)
+    .maybeSingle();
+
+  if (!report) return { error: "not-locked" };
+
+  const isExpiredSubmitted =
+    report.status === "submitted" && !isInSoftEditWindow(report.submitted_at);
+  const isHardLocked = report.status === "locked";
+  if (!isExpiredSubmitted && !isHardLocked) return { error: "not-locked" };
+
+  const { error } = await supabase
+    .from("daily_reports")
+    .update({
+      status: "draft",
+      unlocked_by: user.id,
+      unlock_reason: reason,
+    })
+    .eq("id", reportId);
+
+  if (error) return { error: "save" };
+
+  await supabase.from("report_edits").insert({
+    report_id: reportId,
+    editor_id: user.id,
+    kind: "pm_unlock",
+  });
+
+  revalidatePath(`/office/projects/${report.project_id}`);
+  revalidatePath(`/office/projects/${report.project_id}/reports/${reportId}`);
+  return { ok: true };
+}

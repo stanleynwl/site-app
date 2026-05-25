@@ -1,0 +1,179 @@
+{
+  "App": {
+    "name": "SiteApp",
+    "tagline": "Daily site reports, organized by project and by day."
+  },
+  "Login": {
+    "tagline": "Sign in to your daily site reports.",
+    "username": "Username",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in…",
+    "invalid": "Incorrect username or password.",
+    "missing": "Enter your username and password.",
+    "notConfigured": "Supabase not configured — copy .env.example to .env.local and add your project URL and anon key."
+  },
+  "Nav": {
+    "today": "Today",
+    "projects": "Projects",
+    "dashboard": "Dashboard",
+    "catalog": "Catalog",
+    "doQueue": "DO queue",
+    "pdfExport": "PDF export",
+    "office": "Office",
+    "signOut": "Sign out"
+  },
+  "Catalog": {
+    "title": "Suppliers & materials",
+    "suppliers": "Suppliers",
+    "newSupplier": "New supplier",
+    "addSupplier": "Add supplier",
+    "noSuppliers": "No suppliers yet.",
+    "materials": "Materials",
+    "newMaterial": "New material",
+    "addMaterial": "Add material",
+    "noMaterials": "No materials yet.",
+    "name": "Name",
+    "code": "Code",
+    "phone": "Phone",
+    "unit": "Unit",
+    "unitHint": "e.g. m3, bag, tonne",
+    "countRequired": "Count required at delivery",
+    "countRequiredBadge": "Count required",
+    "inactive": "Inactive"
+  },
+  "Today": {
+    "title": "Today's reports",
+    "empty": "You're not a member of any project yet.",
+    "open": "Open today's report"
+  },
+  "Projects": {
+    "title": "Projects",
+    "none": "No projects yet.",
+    "new": "New project",
+    "create": "Create project",
+    "name": "Project name",
+    "code": "Code",
+    "location": "Location",
+    "startDate": "Start date"
+  },
+  "Status": {
+    "todayDone": "Submitted today",
+    "todayDraft": "Draft in progress",
+    "todayNone": "Not started",
+    "draft": "Draft",
+    "submitted": "Submitted",
+    "locked": "Locked"
+  },
+  "Report": {
+    "title": "Daily report",
+    "deliveries": "Deliveries",
+    "reportDate": "Date",
+    "backToToday": "Back to today",
+    "backdatedNotice": "You're filling in a report for a past date ({date}). It will be flagged as backdated.",
+    "backdatedBadge": "Backdated",
+    "reportType": {
+      "normal": "Normal day",
+      "no_work": "No work today"
+    },
+    "noWorkReason": "Reason for no work",
+    "noWorkReasonOpt": {
+      "holiday": "Public holiday",
+      "weather": "Bad weather",
+      "site_closed": "Site closed",
+      "other": "Other"
+    },
+    "weather": "Weather",
+    "rainHours": "Hours of rain",
+    "manpower": "Manpower",
+    "trades": {
+      "general_worker": "General worker",
+      "carpenter": "Carpenter",
+      "bar_bender": "Bar bender",
+      "bricklayer": "Bricklayer",
+      "plasterer": "Plasterer"
+    },
+    "trade": "Trade",
+    "subcontractor": "Subcontractor",
+    "workers": "Workers",
+    "addRow": "Add row",
+    "remove": "Remove",
+    "workDone": "Work done today",
+    "issues": "Issues / delays",
+    "issueDescription": "Description",
+    "category": "Category",
+    "notes": "Notes",
+    "saveDraft": "Save draft",
+    "submit": "Submit",
+    "saving": "Saving…",
+    "savedDraft": "Draft saved.",
+    "submittedOk": "Report submitted.",
+    "lockedNotice": "This report has been submitted and is locked.",
+    "softEditNotice": "Submitted — you can still edit for {minutes} more minute(s).",
+    "windowExpired": "The edit window has closed. Ask a PM to unlock if needed.",
+    "saveError": "Could not save. Please try again.",
+    "weatherOpt": {
+      "sunny": "Sunny",
+      "cloudy": "Cloudy",
+      "light_rain": "Light rain",
+      "heavy_rain": "Heavy rain"
+    },
+    "cat": {
+      "material": "Waiting for material",
+      "weather": "Weather",
+      "consultant": "Waiting for consultant",
+      "other": "Other"
+    }
+  },
+  "Dashboard": {
+    "title": "Dashboard",
+    "empty": "No projects yet.",
+    "latestReport": "Latest report",
+    "noReports": "No reports yet"
+  },
+  "Deliveries": {
+    "title": "Deliveries",
+    "newDelivery": "Log a delivery",
+    "addDelivery": "Add delivery",
+    "saving": "Saving…",
+    "saved": "Delivery logged.",
+    "saveError": "Could not save. Please try again.",
+    "validationError": "Pick a material (or type one) first.",
+    "supplier": "Supplier",
+    "material": "Material",
+    "otherMaterial": "Other (type below)",
+    "materialText": "Material name",
+    "doNumber": "DO number",
+    "deliveredOn": "Delivered on",
+    "receivedQuantity": "Received quantity",
+    "unit": "Unit",
+    "doQuantity": "DO qty",
+    "received": "Received",
+    "variance": "Variance",
+    "recent": "Recent deliveries",
+    "none": "No deliveries yet.",
+    "save": "Save"
+  },
+  "Office": {
+    "timeline": "Report timeline",
+    "noReports": "No reports yet.",
+    "view": "View",
+    "backToProjects": "All projects",
+    "reportOn": "Report — {date}",
+    "noManpower": "No manpower recorded.",
+    "noIssues": "No issues raised.",
+    "unlockReport": "Unlock report",
+    "unlockReason": "Reason for unlocking",
+    "unlockReasonPlaceholder": "Why does this report need to be edited?",
+    "unlockSubmit": "Unlock",
+    "unlocking": "Unlocking…",
+    "unlockSuccess": "Report unlocked. The author can now edit and re-submit.",
+    "unlockError": "Could not unlock. Please try again."
+  },
+  "Locale": {
+    "label": "Language",
+    "en": "English",
+    "ms": "Bahasa Malaysia",
+    "zh": "中文"
+  }
+}

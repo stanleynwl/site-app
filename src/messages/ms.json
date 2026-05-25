@@ -1,0 +1,179 @@
+{
+  "App": {
+    "name": "SiteApp",
+    "tagline": "Laporan tapak harian, disusun mengikut projek dan hari."
+  },
+  "Login": {
+    "tagline": "Log masuk ke laporan tapak harian anda.",
+    "username": "Nama pengguna",
+    "password": "Kata laluan",
+    "signIn": "Log masuk",
+    "signingIn": "Sedang log masuk…",
+    "invalid": "Nama pengguna atau kata laluan salah.",
+    "missing": "Masukkan nama pengguna dan kata laluan anda.",
+    "notConfigured": "Supabase belum dikonfigurasi — salin .env.example ke .env.local dan masukkan URL projek serta kunci anon anda."
+  },
+  "Nav": {
+    "today": "Hari Ini",
+    "projects": "Projek",
+    "dashboard": "Papan Pemuka",
+    "catalog": "Katalog",
+    "doQueue": "Baris DO",
+    "pdfExport": "Eksport PDF",
+    "office": "Pejabat",
+    "signOut": "Log keluar"
+  },
+  "Catalog": {
+    "title": "Pembekal & bahan",
+    "suppliers": "Pembekal",
+    "newSupplier": "Pembekal baharu",
+    "addSupplier": "Tambah pembekal",
+    "noSuppliers": "Tiada pembekal lagi.",
+    "materials": "Bahan",
+    "newMaterial": "Bahan baharu",
+    "addMaterial": "Tambah bahan",
+    "noMaterials": "Tiada bahan lagi.",
+    "name": "Nama",
+    "code": "Kod",
+    "phone": "Telefon",
+    "unit": "Unit",
+    "unitHint": "cth. m3, beg, tan",
+    "countRequired": "Perlu dikira semasa penghantaran",
+    "countRequiredBadge": "Perlu dikira",
+    "inactive": "Tidak aktif"
+  },
+  "Today": {
+    "title": "Laporan hari ini",
+    "empty": "Anda belum menjadi ahli mana-mana projek.",
+    "open": "Buka laporan hari ini"
+  },
+  "Projects": {
+    "title": "Projek",
+    "none": "Tiada projek lagi.",
+    "new": "Projek baharu",
+    "create": "Cipta projek",
+    "name": "Nama projek",
+    "code": "Kod",
+    "location": "Lokasi",
+    "startDate": "Tarikh mula"
+  },
+  "Status": {
+    "todayDone": "Dihantar hari ini",
+    "todayDraft": "Draf dalam proses",
+    "todayNone": "Belum dimulakan",
+    "draft": "Draf",
+    "submitted": "Dihantar",
+    "locked": "Dikunci"
+  },
+  "Report": {
+    "title": "Laporan harian",
+    "deliveries": "Penghantaran",
+    "reportDate": "Tarikh",
+    "backToToday": "Kembali ke hari ini",
+    "backdatedNotice": "Anda mengisi laporan untuk tarikh lampau ({date}). Ia akan ditanda sebagai laporan susulan.",
+    "backdatedBadge": "Susulan",
+    "reportType": {
+      "normal": "Hari biasa",
+      "no_work": "Tiada kerja hari ini"
+    },
+    "noWorkReason": "Sebab tiada kerja",
+    "noWorkReasonOpt": {
+      "holiday": "Cuti umum",
+      "weather": "Cuaca buruk",
+      "site_closed": "Tapak ditutup",
+      "other": "Lain-lain"
+    },
+    "weather": "Cuaca",
+    "rainHours": "Jam hujan",
+    "manpower": "Tenaga kerja",
+    "trades": {
+      "general_worker": "Pekerja am",
+      "carpenter": "Tukang kayu",
+      "bar_bender": "Tukang besi",
+      "bricklayer": "Tukang batu",
+      "plasterer": "Tukang lepa"
+    },
+    "trade": "Bidang kerja",
+    "subcontractor": "Subkontraktor",
+    "workers": "Pekerja",
+    "addRow": "Tambah baris",
+    "remove": "Buang",
+    "workDone": "Kerja yang disiapkan hari ini",
+    "issues": "Isu / kelewatan",
+    "issueDescription": "Penerangan",
+    "category": "Kategori",
+    "notes": "Catatan",
+    "saveDraft": "Simpan draf",
+    "submit": "Hantar",
+    "saving": "Menyimpan…",
+    "savedDraft": "Draf disimpan.",
+    "submittedOk": "Laporan dihantar.",
+    "lockedNotice": "Laporan ini telah dihantar dan dikunci.",
+    "softEditNotice": "Dihantar — anda masih boleh mengedit dalam {minutes} minit lagi.",
+    "windowExpired": "Tempoh edit telah tamat. Minta PM untuk membuka kunci jika perlu.",
+    "saveError": "Tidak dapat menyimpan. Sila cuba lagi.",
+    "weatherOpt": {
+      "sunny": "Cerah",
+      "cloudy": "Mendung",
+      "light_rain": "Hujan renyai",
+      "heavy_rain": "Hujan lebat"
+    },
+    "cat": {
+      "material": "Menunggu bahan",
+      "weather": "Cuaca",
+      "consultant": "Menunggu perunding",
+      "other": "Lain-lain"
+    }
+  },
+  "Dashboard": {
+    "title": "Papan Pemuka",
+    "empty": "Tiada projek lagi.",
+    "latestReport": "Laporan terkini",
+    "noReports": "Tiada laporan lagi"
+  },
+  "Deliveries": {
+    "title": "Penghantaran",
+    "newDelivery": "Rekod penghantaran",
+    "addDelivery": "Tambah penghantaran",
+    "saving": "Menyimpan…",
+    "saved": "Penghantaran direkodkan.",
+    "saveError": "Tidak dapat menyimpan. Sila cuba lagi.",
+    "validationError": "Pilih bahan (atau taip satu) dahulu.",
+    "supplier": "Pembekal",
+    "material": "Bahan",
+    "otherMaterial": "Lain-lain (taip di bawah)",
+    "materialText": "Nama bahan",
+    "doNumber": "Nombor DO",
+    "deliveredOn": "Tarikh hantar",
+    "receivedQuantity": "Kuantiti diterima",
+    "unit": "Unit",
+    "doQuantity": "Kuantiti DO",
+    "received": "Diterima",
+    "variance": "Varians",
+    "recent": "Penghantaran terkini",
+    "none": "Tiada penghantaran lagi.",
+    "save": "Simpan"
+  },
+  "Office": {
+    "timeline": "Garis masa laporan",
+    "noReports": "Tiada laporan lagi.",
+    "view": "Lihat",
+    "backToProjects": "Semua projek",
+    "reportOn": "Laporan — {date}",
+    "noManpower": "Tiada tenaga kerja direkodkan.",
+    "noIssues": "Tiada isu dibangkitkan.",
+    "unlockReport": "Buka kunci laporan",
+    "unlockReason": "Sebab membuka kunci",
+    "unlockReasonPlaceholder": "Mengapa laporan ini perlu diedit?",
+    "unlockSubmit": "Buka kunci",
+    "unlocking": "Membuka kunci…",
+    "unlockSuccess": "Laporan dibuka kunci. Penulis boleh mengedit dan menghantar semula.",
+    "unlockError": "Tidak dapat membuka kunci. Sila cuba lagi."
+  },
+  "Locale": {
+    "label": "Bahasa",
+    "en": "English",
+    "ms": "Bahasa Malaysia",
+    "zh": "中文"
+  }
+}

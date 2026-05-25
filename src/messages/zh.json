@@ -1,0 +1,179 @@
+{
+  "App": {
+    "name": "SiteApp",
+    "tagline": "每日工地报告，按项目和日期自动整理。"
+  },
+  "Login": {
+    "tagline": "登录查看您的每日工地报告。",
+    "username": "用户名",
+    "password": "密码",
+    "signIn": "登录",
+    "signingIn": "正在登录…",
+    "invalid": "用户名或密码不正确。",
+    "missing": "请输入用户名和密码。",
+    "notConfigured": "尚未配置 Supabase — 请将 .env.example 复制为 .env.local 并填入项目 URL 和 anon 密钥。"
+  },
+  "Nav": {
+    "today": "今天",
+    "projects": "项目",
+    "dashboard": "仪表板",
+    "catalog": "目录",
+    "doQueue": "送货单队列",
+    "pdfExport": "导出 PDF",
+    "office": "办公室",
+    "signOut": "退出登录"
+  },
+  "Catalog": {
+    "title": "供应商与材料",
+    "suppliers": "供应商",
+    "newSupplier": "新增供应商",
+    "addSupplier": "添加供应商",
+    "noSuppliers": "暂无供应商。",
+    "materials": "材料",
+    "newMaterial": "新增材料",
+    "addMaterial": "添加材料",
+    "noMaterials": "暂无材料。",
+    "name": "名称",
+    "code": "编号",
+    "phone": "电话",
+    "unit": "单位",
+    "unitHint": "如 m3、包、吨",
+    "countRequired": "交货时需清点",
+    "countRequiredBadge": "需清点",
+    "inactive": "停用"
+  },
+  "Today": {
+    "title": "今日报告",
+    "empty": "您还不是任何项目的成员。",
+    "open": "打开今日报告"
+  },
+  "Projects": {
+    "title": "项目",
+    "none": "暂无项目。",
+    "new": "新建项目",
+    "create": "创建项目",
+    "name": "项目名称",
+    "code": "编号",
+    "location": "地点",
+    "startDate": "开始日期"
+  },
+  "Status": {
+    "todayDone": "今日已提交",
+    "todayDraft": "草稿进行中",
+    "todayNone": "尚未开始",
+    "draft": "草稿",
+    "submitted": "已提交",
+    "locked": "已锁定"
+  },
+  "Report": {
+    "title": "每日报告",
+    "deliveries": "送货",
+    "reportDate": "日期",
+    "backToToday": "返回今天",
+    "backdatedNotice": "您正在为过去的日期（{date}）填写报告，将被标记为补录。",
+    "backdatedBadge": "补录",
+    "reportType": {
+      "normal": "正常工作日",
+      "no_work": "今日无施工"
+    },
+    "noWorkReason": "无施工原因",
+    "noWorkReasonOpt": {
+      "holiday": "公共假日",
+      "weather": "恶劣天气",
+      "site_closed": "工地关闭",
+      "other": "其他"
+    },
+    "weather": "天气",
+    "rainHours": "降雨小时数",
+    "manpower": "人力",
+    "trades": {
+      "general_worker": "普工",
+      "carpenter": "木工",
+      "bar_bender": "扎铁工",
+      "bricklayer": "砌砖工",
+      "plasterer": "抹灰工"
+    },
+    "trade": "工种",
+    "subcontractor": "分包商",
+    "workers": "人数",
+    "addRow": "添加一行",
+    "remove": "删除",
+    "workDone": "今日完成的工作",
+    "issues": "问题 / 延误",
+    "issueDescription": "描述",
+    "category": "类别",
+    "notes": "备注",
+    "saveDraft": "保存草稿",
+    "submit": "提交",
+    "saving": "正在保存…",
+    "savedDraft": "草稿已保存。",
+    "submittedOk": "报告已提交。",
+    "lockedNotice": "此报告已提交并锁定。",
+    "softEditNotice": "已提交 — 还可在 {minutes} 分钟内继续编辑。",
+    "windowExpired": "编辑窗口已关闭。如需修改，请联系 PM 解锁。",
+    "saveError": "无法保存，请重试。",
+    "weatherOpt": {
+      "sunny": "晴",
+      "cloudy": "多云",
+      "light_rain": "小雨",
+      "heavy_rain": "大雨"
+    },
+    "cat": {
+      "material": "等待材料",
+      "weather": "天气",
+      "consultant": "等待顾问",
+      "other": "其他"
+    }
+  },
+  "Dashboard": {
+    "title": "仪表板",
+    "empty": "暂无项目。",
+    "latestReport": "最新报告",
+    "noReports": "暂无报告"
+  },
+  "Deliveries": {
+    "title": "送货",
+    "newDelivery": "登记送货",
+    "addDelivery": "添加送货",
+    "saving": "正在保存…",
+    "saved": "送货已登记。",
+    "saveError": "无法保存，请重试。",
+    "validationError": "请先选择材料（或手动输入）。",
+    "supplier": "供应商",
+    "material": "材料",
+    "otherMaterial": "其他（在下方输入）",
+    "materialText": "材料名称",
+    "doNumber": "送货单号",
+    "deliveredOn": "送货日期",
+    "receivedQuantity": "实收数量",
+    "unit": "单位",
+    "doQuantity": "送货单数量",
+    "received": "实收",
+    "variance": "差异",
+    "recent": "近期送货",
+    "none": "暂无送货记录。",
+    "save": "保存"
+  },
+  "Office": {
+    "timeline": "报告时间线",
+    "noReports": "暂无报告。",
+    "view": "查看",
+    "backToProjects": "所有项目",
+    "reportOn": "报告 — {date}",
+    "noManpower": "未记录人力。",
+    "noIssues": "未提出问题。",
+    "unlockReport": "解锁报告",
+    "unlockReason": "解锁原因",
+    "unlockReasonPlaceholder": "为什么需要编辑此报告？",
+    "unlockSubmit": "解锁",
+    "unlocking": "正在解锁…",
+    "unlockSuccess": "报告已解锁，作者可重新编辑并提交。",
+    "unlockError": "无法解锁，请重试。"
+  },
+  "Locale": {
+    "label": "语言",
+    "en": "English",
+    "ms": "Bahasa Malaysia",
+    "zh": "中文"
+  }
+}
