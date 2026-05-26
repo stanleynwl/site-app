@@ -170,7 +170,9 @@
     "variance": "Variance",
     "recent": "Recent deliveries",
     "none": "No deliveries yet.",
-    "save": "Save"
+    "save": "Save",
+    "delete": "Delete",
+    "confirmDelete": "Delete this delivery and its photos? This cannot be undone."
   },
   "Office": {
     "timeline": "Report timeline",

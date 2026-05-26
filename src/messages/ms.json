@@ -170,7 +170,9 @@
     "variance": "Varians",
     "recent": "Penghantaran terkini",
     "none": "Tiada penghantaran lagi.",
-    "save": "Simpan"
+    "save": "Simpan",
+    "delete": "Padam",
+    "confirmDelete": "Padam penghantaran ini dan fotonya? Tindakan ini tidak boleh dibatalkan."
   },
   "Office": {
     "timeline": "Garis masa laporan",

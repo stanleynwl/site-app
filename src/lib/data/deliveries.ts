@@ -18,6 +18,7 @@ export type DeliveryIssue =
 export type DeliveryPhoto = {
   id: string;
   storage_path: string;
+  archived_at: string | null;
   url?: string | null; // resolved signed URL (set by withSignedUrls)
 };
 
@@ -40,8 +41,10 @@ export type Delivery = {
 
 const PHOTO_BUCKET = "site-photos";
 
+// `photos!photos_delivery_id_fkey` disambiguates from the deliveries.do_photo_id
+// FK — we want all photos belonging to this delivery (the one-to-many side).
 const DELIVERY_COLUMNS =
-  "id, project_id, do_number, delivered_on, unit, requested_quantity, do_quantity, received_quantity, material_text, issue_type, note, supplier:suppliers(name), material:materials(name, count_required), photos(id, storage_path)";
+  "id, project_id, do_number, delivered_on, unit, requested_quantity, do_quantity, received_quantity, material_text, issue_type, note, supplier:suppliers(name), material:materials(name, count_required), photos!photos_delivery_id_fkey(id, storage_path, archived_at)";
 
 export async function getProjectDeliveries(
   projectId: string,
@@ -67,13 +70,17 @@ export async function withSignedUrls(
   return Promise.all(
     deliveries.map(async (d) => ({
       ...d,
+      // Archived photos no longer exist in Storage — skip URL generation so the
+      // UI doesn't render a broken thumbnail (file lives on the PC archive now).
       photos: await Promise.all(
-        d.photos.map(async (p) => {
-          const { data } = await supabase.storage
-            .from(PHOTO_BUCKET)
-            .createSignedUrl(p.storage_path, 3600);
-          return { ...p, url: data?.signedUrl ?? null };
-        }),
+        d.photos
+          .filter((p) => p.archived_at == null)
+          .map(async (p) => {
+            const { data } = await supabase.storage
+              .from(PHOTO_BUCKET)
+              .createSignedUrl(p.storage_path, 3600);
+            return { ...p, url: data?.signedUrl ?? null };
+          }),
       ),
     })),
   );

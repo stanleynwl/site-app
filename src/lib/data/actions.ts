@@ -230,6 +230,37 @@ export async function setDeliveryOfficeFields(formData: FormData): Promise<void>
   revalidatePath(`/office/projects/${projectId}`);
 }
 
+// Delete a delivery and its photos (Storage files + rows). pm/office only.
+export async function deleteDelivery(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "pm" && profile.role !== "office") return;
+
+  const id = String(formData.get("delivery_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!id) return;
+
+  const supabase = await createClient();
+
+  // Purge the delivery's photos from Storage, then their rows. Deleting the
+  // photo rows also null-clears deliveries.do_photo_id (on delete set null).
+  const { data: photos } = await supabase
+    .from("photos")
+    .select("storage_path")
+    .eq("delivery_id", id);
+  const paths = (photos ?? []).map((p) => p.storage_path).filter(Boolean);
+  if (paths.length > 0) {
+    await supabase.storage.from("site-photos").remove(paths);
+    await supabase.from("photos").delete().eq("delivery_id", id);
+  }
+
+  await supabase.from("deliveries").delete().eq("id", id);
+
+  revalidatePath(`/office/projects/${projectId}`);
+  revalidatePath(`/app/projects/${projectId}/deliveries`);
+}
+
 export type SaveReportState =
   | { ok: true; submitted: boolean }
   | { error: "locked" | "save" | "not-configured" | "auth" }

@@ -11,6 +11,7 @@ import {
 } from "@/lib/data/deliveries";
 import { getSuppliers, getMaterials } from "@/lib/data/catalog";
 import { setDeliveryOfficeFields } from "@/lib/data/actions";
+import { DeleteDeliveryButton } from "@/components/delete-delivery-button";
 
 export default async function OfficeProjectDetail({
   params,
@@ -169,6 +170,8 @@ export default async function OfficeProjectDetail({
                       {td("save")}
                     </button>
                   </form>
+
+                  <DeleteDeliveryButton deliveryId={d.id} projectId={id} />
                 </li>
               );
             })}
