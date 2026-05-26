@@ -5,6 +5,7 @@ import { getProject } from "@/lib/data/projects";
 import { getSuppliers, getMaterials } from "@/lib/data/catalog";
 import {
   getProjectDeliveries,
+  withSignedUrls,
   deliveryMaterialName,
 } from "@/lib/data/deliveries";
 import { todayISO } from "@/lib/date";
@@ -20,11 +21,12 @@ export default async function DeliveriesPage({
   if (!project) notFound();
 
   const t = await getTranslations("Deliveries");
-  const [suppliers, materials, deliveries] = await Promise.all([
+  const [suppliers, materials, rawDeliveries] = await Promise.all([
     getSuppliers(),
     getMaterials(),
     getProjectDeliveries(id),
   ]);
+  const deliveries = await withSignedUrls(rawDeliveries);
 
   return (
     <div className="space-y-4">
@@ -52,7 +54,7 @@ export default async function DeliveriesPage({
         ) : (
           <ul className="divide-y divide-black/10 rounded-xl border border-black/10 dark:divide-white/10 dark:border-white/15">
             {deliveries.map((d) => (
-              <li key={d.id} className="px-4 py-3 text-sm">
+              <li key={d.id} className="space-y-2 px-4 py-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{deliveryMaterialName(d)}</span>
                   <span className="text-black/50 dark:text-white/50">
@@ -66,6 +68,27 @@ export default async function DeliveriesPage({
                     ? ` · ${t("received")}: ${d.received_quantity}${d.unit ? ` ${d.unit}` : ""}`
                     : ""}
                 </div>
+                {d.issue_type && (
+                  <span className="inline-block rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-300">
+                    {t(`issueType.${d.issue_type}`)}
+                    {d.note ? `: ${d.note}` : ""}
+                  </span>
+                )}
+                {d.photos.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {d.photos.map((p) =>
+                      p.url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          key={p.id}
+                          src={p.url}
+                          alt=""
+                          className="h-16 w-16 rounded-lg object-cover"
+                        />
+                      ) : null,
+                    )}
+                  </div>
+                )}
               </li>
             ))}
           </ul>

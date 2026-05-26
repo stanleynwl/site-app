@@ -88,6 +88,16 @@ export type DeliveryState =
   | { error: "save" | "not-configured" | "auth" | "validation" }
   | undefined;
 
+const DELIVERY_ISSUES = [
+  "broken",
+  "missing",
+  "short",
+  "wrong_item",
+  "late",
+  "other",
+] as const;
+type DeliveryIssue = (typeof DELIVERY_ISSUES)[number];
+
 function parseQty(raw: FormDataEntryValue | null): number | null {
   const s = String(raw ?? "").trim();
   if (s === "") return null;
@@ -95,8 +105,17 @@ function parseQty(raw: FormDataEntryValue | null): number | null {
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
-// Supervisor logs a delivery when materials arrive on site. received_quantity is
-// only meaningful for count_required materials (UI hides it otherwise).
+function parseCoord(raw: FormDataEntryValue | null): number | null {
+  const s = String(raw ?? "").trim();
+  if (s === "") return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+// Supervisor logs a delivery — photo-first. The fast path is a photo (+ optional
+// issue chip/note); structured fields (supplier/material/qty) are optional and
+// often filled by the office later from the photo. received_quantity only applies
+// to count_required materials (UI hides it otherwise).
 export async function createDelivery(
   _prev: DeliveryState,
   formData: FormData,
@@ -111,32 +130,82 @@ export async function createDelivery(
   const materialIdRaw = String(formData.get("material_id") ?? "");
   const isOther = materialIdRaw === "" || materialIdRaw === "__other__";
   const materialText = String(formData.get("material_text") ?? "").trim();
-  // Require either a catalog material or free-text.
-  if (isOther && !materialText) return { error: "validation" };
-
   const supplierIdRaw = String(formData.get("supplier_id") ?? "");
+  const doNumber = String(formData.get("do_number") ?? "").trim();
+
+  const issueRaw = String(formData.get("issue_type") ?? "");
+  const issueType = DELIVERY_ISSUES.includes(issueRaw as DeliveryIssue)
+    ? (issueRaw as DeliveryIssue)
+    : null;
+  const note = String(formData.get("note") ?? "").trim() || null;
+
+  const photoPaths = formData.getAll("photo_path").map(String).filter(Boolean);
+  const photoTakenAt = formData.getAll("photo_taken_at").map(String);
+  const photoLat = formData.getAll("photo_lat").map(String);
+  const photoLng = formData.getAll("photo_lng").map(String);
+
+  // Photo-first: allow a delivery with just a photo and/or an issue. Reject only
+  // a completely empty submit (no photo, no issue, no material/supplier/DO).
+  const hasContent =
+    photoPaths.length > 0 ||
+    issueType !== null ||
+    (!isOther && materialIdRaw) ||
+    (isOther && materialText) ||
+    Boolean(supplierIdRaw) ||
+    Boolean(doNumber);
+  if (!hasContent) return { error: "validation" };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("deliveries").insert({
-    project_id: projectId,
-    supplier_id: supplierIdRaw || null,
-    material_id: isOther ? null : materialIdRaw,
-    material_text: isOther ? materialText : null,
-    do_number: String(formData.get("do_number") ?? "").trim() || null,
-    unit: String(formData.get("unit") ?? "").trim() || null,
-    received_quantity: parseQty(formData.get("received_quantity")),
-    delivered_on: String(formData.get("delivered_on") ?? "") || todayISO(),
-    created_by: user.id,
-  });
-  if (error) return { error: "save" };
+  const { data: delivery, error } = await supabase
+    .from("deliveries")
+    .insert({
+      project_id: projectId,
+      supplier_id: supplierIdRaw || null,
+      material_id: isOther || !materialIdRaw ? null : materialIdRaw,
+      material_text: isOther ? materialText || null : null,
+      do_number: doNumber || null,
+      unit: String(formData.get("unit") ?? "").trim() || null,
+      received_quantity: parseQty(formData.get("received_quantity")),
+      delivered_on: String(formData.get("delivered_on") ?? "") || todayISO(),
+      issue_type: issueType,
+      note,
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
+  if (error || !delivery) return { error: "save" };
+
+  // Persist photo metadata (binaries already uploaded to Storage client-side).
+  if (photoPaths.length > 0) {
+    const photoRows = photoPaths.map((path, i) => ({
+      project_id: projectId,
+      delivery_id: delivery.id,
+      storage_path: path,
+      taken_at: photoTakenAt[i] || null,
+      gps_lat: parseCoord(photoLat[i] ?? null),
+      gps_lng: parseCoord(photoLng[i] ?? null),
+      uploaded_by: user.id,
+    }));
+    const { data: inserted } = await supabase
+      .from("photos")
+      .insert(photoRows)
+      .select("id");
+    if (inserted && inserted.length > 0) {
+      await supabase
+        .from("deliveries")
+        .update({ do_photo_id: inserted[0].id })
+        .eq("id", delivery.id);
+    }
+  }
 
   revalidatePath(`/app/projects/${projectId}/deliveries`);
   revalidatePath(`/office/projects/${projectId}`);
   return { ok: true };
 }
 
-// Office enters the DO quantity (read from the DO photo/document).
-export async function setDoQuantity(formData: FormData): Promise<void> {
+// Office fills structured data from the photo: DO quantity, and (if the
+// supervisor left them blank) supplier / material.
+export async function setDeliveryOfficeFields(formData: FormData): Promise<void> {
   if (!isSupabaseConfigured) return;
   const profile = await getProfile();
   if (!profile) redirect("/login");
@@ -146,11 +215,17 @@ export async function setDoQuantity(formData: FormData): Promise<void> {
   const projectId = String(formData.get("project_id") ?? "");
   if (!id) return;
 
+  const supplierId = String(formData.get("supplier_id") ?? "");
+  const materialId = String(formData.get("material_id") ?? "");
+
+  const update: Record<string, unknown> = {
+    do_quantity: parseQty(formData.get("do_quantity")),
+  };
+  if (supplierId) update.supplier_id = supplierId;
+  if (materialId) update.material_id = materialId;
+
   const supabase = await createClient();
-  await supabase
-    .from("deliveries")
-    .update({ do_quantity: parseQty(formData.get("do_quantity")) })
-    .eq("id", id);
+  await supabase.from("deliveries").update(update).eq("id", id);
 
   revalidatePath(`/office/projects/${projectId}`);
 }
