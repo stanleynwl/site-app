@@ -1,13 +1,19 @@
 # Photo archive
 
 Keeps SiteApp under Supabase's free 1 GB storage by moving **every** photo **file**
-to your PC. It only touches photo files — delivery/report records and photo metadata
-all stay in Supabase (archived photos are just flagged `archived_at` and stop
-showing in the app). The small metadata rows stay until you delete them yourself.
+to your PC. It only deletes photo *files* from Storage — delivery/report records and
+photo metadata all stay in Supabase (archived photos are just flagged `archived_at`
+and stop showing in the app). The metadata rows stay until you delete them yourself.
 
 - **What it does:** downloads **all live photos** to your archive folder (mirroring
-  `photos/{YYYY-MM}/...`), verifies each file, then deletes the file from Supabase
-  Storage and marks the row archived. Writes a JSON manifest of everything archived.
+  `photos/{YYYY-MM}/...`), verifies each file, **saves the full metadata offline**,
+  then deletes the file from Supabase Storage and marks the row archived.
+- **Full metadata, saved offline too:** next to every photo it writes a sidecar
+  `<file>.json` containing the complete photo row **and** its delivery record
+  (supplier, material, project, quantities, DO#, issue, note). It also writes a
+  per-run manifest. So your local archive is self-contained — even if you later
+  delete the Supabase metadata rows, the offline copy still has every detail. The
+  script itself **never deletes metadata** from Supabase.
 - **No age grace period:** each run clears *every* photo from Storage, so the app
   only shows photos captured since the previous run. The full-res files live in
   your local archive + manifest. If you need recent delivery photos to stay visible

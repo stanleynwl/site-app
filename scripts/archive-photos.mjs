@@ -1,12 +1,18 @@
 // SiteApp — archive ALL photos off Supabase Storage to keep under the free tier.
-// Downloads every live photo file to a local archive folder, verifies each, then
-// deletes the file from Storage and marks the photo row `archived_at` (the row +
-// all other data stay). The small metadata rows are never deleted by this script —
-// they stay in Supabase until you delete them manually on request.
+// Downloads every live photo file to a local archive folder, verifies each, writes
+// its FULL metadata offline, then deletes only the FILE from Storage and marks the
+// photo row `archived_at`. The metadata rows are NEVER deleted by this script — they
+// stay in Supabase until you delete them manually on request.
 //
-// NOTE: this clears EVERY photo from Storage each run (no age grace period), so the
-// app only shows photos captured since the previous run. The full-resolution files
-// live in your local archive folder + JSON manifest.
+// Offline metadata: alongside each photo file it writes a sidecar `<file>.json`
+// containing the complete photo row + its delivery record (supplier / material /
+// project / quantities / DO# / issue / note). It also writes a per-run manifest of
+// everything archived. So the local archive is fully self-contained — if you later
+// delete the Supabase metadata rows, the offline copy still has every detail.
+//
+// NOTE: this clears EVERY photo FILE from Storage each run (no age grace period), so
+// the app only shows photos captured since the previous run. The full-resolution
+// files + their metadata live in your local archive folder.
 //
 // Run manually:   npm run archive
 // Or schedule biweekly via Windows Task Scheduler (see scripts/README_archive.md).
@@ -70,9 +76,10 @@ async function main() {
   );
   console.log(`[archive] archive folder: ${archiveDir}`);
 
+  // Pull the FULL photo row (every column) so the offline copy is self-contained.
   const { data: photos, error } = await supabase
     .from("photos")
-    .select("id, storage_path, created_at, delivery_id, taken_at, gps_lat, gps_lng")
+    .select("*")
     .is("archived_at", null);
 
   if (error) {
@@ -82,6 +89,28 @@ async function main() {
   if (!photos || photos.length === 0) {
     console.log("[archive] nothing to archive. Done.");
     return;
+  }
+
+  // Fetch the full delivery record (with supplier / material / project names) for
+  // every photo that belongs to a delivery, so the offline metadata stands on its
+  // own even if the Supabase rows are deleted later. Read-only — deletes nothing.
+  const deliveryIds = [...new Set(photos.map((p) => p.delivery_id).filter(Boolean))];
+  const deliveriesById = {};
+  if (deliveryIds.length > 0) {
+    const { data: dels, error: dErr } = await supabase
+      .from("deliveries")
+      .select(
+        "*, supplier:suppliers(name), material:materials(name, count_required), project:projects(name, code, location)",
+      )
+      .in("id", deliveryIds);
+    if (dErr) {
+      console.error("[archive] delivery metadata query failed:", dErr.message);
+      process.exit(1);
+    }
+    for (const d of dels ?? []) deliveriesById[d.id] = d;
+    console.log(
+      `[archive] loaded metadata for ${Object.keys(deliveriesById).length} linked delivery(ies)`,
+    );
   }
 
   const manifest = [];
@@ -112,24 +141,28 @@ async function main() {
         continue;
       }
 
-      // Safe to remove from Storage + mark the row archived (keep the row).
+      // Save the FULL metadata offline as a sidecar JSON next to the photo file —
+      // the complete photo row + its delivery record (supplier/material/project/
+      // quantities/DO#/issue/note). Written BEFORE we touch Storage so the offline
+      // copy is guaranteed to exist first.
+      const record = {
+        archived_at: new Date().toISOString(),
+        photo: p,
+        delivery: p.delivery_id ? (deliveriesById[p.delivery_id] ?? null) : null,
+        local_file: dest,
+        size: s.size,
+      };
+      await writeFile(`${dest}.json`, JSON.stringify(record, null, 2));
+
+      // Now safe to remove the FILE from Storage + flag the row archived. The row
+      // and ALL metadata stay in Supabase — this script never deletes metadata.
       await supabase.storage.from(BUCKET).remove([p.storage_path]);
       await supabase
         .from("photos")
-        .update({ archived_at: new Date().toISOString() })
+        .update({ archived_at: record.archived_at })
         .eq("id", p.id);
 
-      manifest.push({
-        id: p.id,
-        delivery_id: p.delivery_id,
-        storage_path: p.storage_path,
-        local_file: dest,
-        size: s.size,
-        taken_at: p.taken_at,
-        gps_lat: p.gps_lat,
-        gps_lng: p.gps_lng,
-        created_at: p.created_at,
-      });
+      manifest.push(record);
       archived++;
       bytes += s.size;
     } catch (e) {
