@@ -10,9 +10,11 @@
 // everything archived. So the local archive is fully self-contained — if you later
 // delete the Supabase metadata rows, the offline copy still has every detail.
 //
-// NOTE: this clears EVERY photo FILE from Storage each run (no age grace period), so
-// the app only shows photos captured since the previous run. The full-resolution
-// files + their metadata live in your local archive folder.
+// GRACE PERIOD: a photo is only archived once it's at least 3 *working* days old,
+// counting Mon–Sat as days and NOT counting Sundays. So recent photos stay visible
+// in the app (for the office to act on) until they pass the grace; older ones get
+// pulled down and cleared from Storage. The full-resolution files + their metadata
+// live in your local archive folder.
 //
 // Run manually:   npm run archive
 // Or schedule biweekly via Windows Task Scheduler (see scripts/README_archive.md).
@@ -31,6 +33,42 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
 
 const BUCKET = "site-photos";
+
+// Keep a photo this many WORKING days before archiving it. Working days are
+// Mon–Sat; Sundays do not count. Dates are evaluated in Malaysia time.
+const GRACE_WORKING_DAYS = 3;
+const TZ = "Asia/Kuala_Lumpur";
+
+// --- Working-day grace helpers ----------------------------------------------
+// "YYYY-MM-DD" for a date, in Malaysia time.
+function mytDateStr(d) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+}
+
+// UTC-midnight Date for a "YYYY-MM-DD" string — safe for day arithmetic + weekday.
+function dateFromStr(s) {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
+// Count working days (Mon–Sat; Sundays excluded) strictly after the photo's
+// creation date, up to and including today — both in Malaysia time. A photo taken
+// Friday becomes eligible the following Tuesday (Sat, Mon, Tue = 3; Sunday skipped).
+function workingDaysSince(createdAtIso, now = new Date()) {
+  const cur = dateFromStr(mytDateStr(new Date(createdAtIso)));
+  const today = dateFromStr(mytDateStr(now));
+  let count = 0;
+  while (cur < today) {
+    cur.setUTCDate(cur.getUTCDate() + 1);
+    if (cur.getUTCDay() !== 0) count++; // 0 = Sunday → doesn't count as a day
+  }
+  return count;
+}
 
 // --- Load .env.local (tiny parser; no dependency) ---------------------------
 async function loadEnv() {
@@ -72,12 +110,12 @@ async function main() {
   });
 
   console.log(
-    `[archive] downloading ALL live photos, then removing them from Supabase Storage`,
+    `[archive] grace = ${GRACE_WORKING_DAYS} working days (Mon–Sat; Sundays don't count)`,
   );
   console.log(`[archive] archive folder: ${archiveDir}`);
 
   // Pull the FULL photo row (every column) so the offline copy is self-contained.
-  const { data: photos, error } = await supabase
+  const { data: allPhotos, error } = await supabase
     .from("photos")
     .select("*")
     .is("archived_at", null);
@@ -86,8 +124,21 @@ async function main() {
     console.error("[archive] query failed:", error.message);
     process.exit(1);
   }
-  if (!photos || photos.length === 0) {
-    console.log("[archive] nothing to archive. Done.");
+  if (!allPhotos || allPhotos.length === 0) {
+    console.log("[archive] no live photos. Done.");
+    return;
+  }
+
+  // Hold back photos still inside the working-day grace; archive only the rest.
+  const photos = allPhotos.filter(
+    (p) => workingDaysSince(p.created_at) >= GRACE_WORKING_DAYS,
+  );
+  const heldBack = allPhotos.length - photos.length;
+  console.log(
+    `[archive] ${allPhotos.length} live photo(s): ${photos.length} past grace → archiving, ${heldBack} still within grace → kept`,
+  );
+  if (photos.length === 0) {
+    console.log("[archive] nothing past the grace period yet. Done.");
     return;
   }
 

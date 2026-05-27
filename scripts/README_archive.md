@@ -14,11 +14,12 @@ and stop showing in the app). The metadata rows stay until you delete them yours
   per-run manifest. So your local archive is self-contained — even if you later
   delete the Supabase metadata rows, the offline copy still has every detail. The
   script itself **never deletes metadata** from Supabase.
-- **No age grace period:** each run clears *every* photo from Storage, so the app
-  only shows photos captured since the previous run. The full-res files live in
-  your local archive + manifest. If you need recent delivery photos to stay visible
-  in the app longer, run the archive *less* often (or process those deliveries in
-  the office before the next run).
+- **3 working-day grace:** a photo is only archived once it's at least **3 working
+  days** old — counting **Mon–Sat** as days and **not counting Sundays** (Malaysia
+  time). So a photo taken Friday becomes eligible the following Tuesday (Sat, Mon,
+  Tue). Newer photos stay visible in the app for the office; only older ones get
+  pulled down and cleared from Storage. (Change the window via `GRACE_WORKING_DAYS`
+  at the top of `scripts/archive-photos.mjs`.)
 - **Cadence:** run it **manually any time**, and/or schedule it **every 2 weeks**.
 
 ## One-time setup
