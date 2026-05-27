@@ -64,12 +64,17 @@ export default async function ReportPage({
             {t("title")} · {selectedDate}
           </p>
         </div>
-        <Link
-          href={`/app/projects/${id}/deliveries`}
-          className="text-sm underline"
-        >
-          {t("deliveries")}
-        </Link>
+        <div className="flex gap-4">
+          <Link
+            href={`/app/projects/${id}/deliveries`}
+            className="text-sm underline"
+          >
+            {t("deliveries")}
+          </Link>
+          <Link href={`/app/projects/${id}/photos`} className="text-sm underline">
+            {t("photos")}
+          </Link>
+        </div>
       </div>
 
       <ReportDateNav

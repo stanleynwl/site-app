@@ -68,6 +68,7 @@
   "Report": {
     "title": "Daily report",
     "deliveries": "Deliveries",
+    "photos": "Photos",
     "reportDate": "Date",
     "backToToday": "Back to today",
     "backdatedNotice": "You're filling in a report for a past date ({date}). It will be flagged as backdated.",
@@ -173,6 +174,38 @@
     "save": "Save",
     "delete": "Delete",
     "confirmDelete": "Delete this delivery and its photos? This cannot be undone."
+  },
+  "Photos": {
+    "title": "Progress photos",
+    "newPhoto": "Add progress photos",
+    "caption": "Caption",
+    "captionHint": "What does this show? (optional)",
+    "add": "Add photos",
+    "saving": "Saving…",
+    "saved": "Photos saved.",
+    "saveError": "Could not save. Please try again.",
+    "emptyError": "Take a photo first.",
+    "none": "No photos yet.",
+    "recent": "Recent photos",
+    "suggestTag": "Suggest a tag",
+    "archived": "Archived"
+  },
+  "Tags": {
+    "title": "Tags",
+    "newTag": "New tag",
+    "addTag": "Add tag",
+    "label": "Label",
+    "approve": "Approve",
+    "pending": "Pending approval",
+    "delete": "Delete",
+    "none": "No tags yet.",
+    "save": "Save",
+    "kindOpt": {
+      "block": "Block",
+      "level": "Level",
+      "area": "Area",
+      "activity": "Activity"
+    }
   },
   "Office": {
     "timeline": "Report timeline",

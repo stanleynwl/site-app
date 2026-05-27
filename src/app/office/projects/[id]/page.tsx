@@ -10,7 +10,15 @@ import {
   deliveryVariance,
 } from "@/lib/data/deliveries";
 import { getSuppliers, getMaterials } from "@/lib/data/catalog";
-import { setDeliveryOfficeFields } from "@/lib/data/actions";
+import { getProjectTags, TAG_KINDS } from "@/lib/data/tags";
+import { getProjectPhotos, withSignedPhotoUrls } from "@/lib/data/photos";
+import {
+  setDeliveryOfficeFields,
+  createProjectTag,
+  approveProjectTag,
+  deleteProjectTag,
+  setPhotoTags,
+} from "@/lib/data/actions";
 import { DeleteDeliveryButton } from "@/components/delete-delivery-button";
 
 export default async function OfficeProjectDetail({
@@ -26,13 +34,21 @@ export default async function OfficeProjectDetail({
   const ts = await getTranslations("Status");
   const tr = await getTranslations("Report");
   const td = await getTranslations("Deliveries");
-  const [reports, rawDeliveries, suppliers, materials] = await Promise.all([
-    getProjectReports(id),
-    getProjectDeliveries(id),
-    getSuppliers(),
-    getMaterials(),
-  ]);
+  const tp = await getTranslations("Photos");
+  const tk = await getTranslations("Tags");
+  const [reports, rawDeliveries, suppliers, materials, tags, rawPhotos] =
+    await Promise.all([
+      getProjectReports(id),
+      getProjectDeliveries(id),
+      getSuppliers(),
+      getMaterials(),
+      getProjectTags(id),
+      getProjectPhotos(id),
+    ]);
   const deliveries = await withSignedUrls(rawDeliveries);
+  const photos = await withSignedPhotoUrls(rawPhotos);
+  const approvedTags = tags.filter((tg) => tg.approved);
+  const pendingTags = tags.filter((tg) => !tg.approved);
   const inputCls =
     "rounded-lg border border-black/15 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
 
@@ -175,6 +191,179 @@ export default async function OfficeProjectDetail({
                 </li>
               );
             })}
+          </ul>
+        )}
+      </section>
+
+      {/* Photo tags (taxonomy management) -------------------------------- */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold">{tk("title")}</h2>
+
+        <form
+          action={createProjectTag}
+          className="flex flex-wrap items-end gap-2 rounded-xl border border-black/10 p-4 text-sm dark:border-white/15"
+        >
+          <input type="hidden" name="project_id" value={id} />
+          <span className="w-full font-semibold">{tk("newTag")}</span>
+          <select name="kind" defaultValue="block" className={inputCls}>
+            {TAG_KINDS.map((k) => (
+              <option key={k} value={k}>
+                {tk(`kindOpt.${k}`)}
+              </option>
+            ))}
+          </select>
+          <input
+            name="label"
+            required
+            placeholder={tk("label")}
+            className={inputCls}
+          />
+          <button className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25">
+            {tk("addTag")}
+          </button>
+        </form>
+
+        {pendingTags.length > 0 && (
+          <div className="space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-700/50 dark:bg-amber-950/30">
+            <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+              {tk("pending")}
+            </p>
+            <ul className="flex flex-wrap gap-2">
+              {pendingTags.map((tg) => (
+                <li
+                  key={tg.id}
+                  className="flex items-center gap-1 rounded-full border border-amber-400 bg-white px-2 py-0.5 text-xs dark:bg-black/20"
+                >
+                  <span className="text-black/50 dark:text-white/50">
+                    {tk(`kindOpt.${tg.kind}`)}:
+                  </span>
+                  <span>{tg.label}</span>
+                  <form action={approveProjectTag} className="inline">
+                    <input type="hidden" name="tag_id" value={tg.id} />
+                    <input type="hidden" name="project_id" value={id} />
+                    <button className="ml-1 text-green-700 underline dark:text-green-400">
+                      {tk("approve")}
+                    </button>
+                  </form>
+                  <form action={deleteProjectTag} className="inline">
+                    <input type="hidden" name="tag_id" value={tg.id} />
+                    <input type="hidden" name="project_id" value={id} />
+                    <button className="text-red-600 underline">✕</button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {approvedTags.length === 0 ? (
+          <p className="text-sm text-black/50 dark:text-white/50">{tk("none")}</p>
+        ) : (
+          <div className="space-y-2">
+            {TAG_KINDS.map((kind) => {
+              const ofKind = approvedTags.filter((tg) => tg.kind === kind);
+              if (ofKind.length === 0) return null;
+              return (
+                <div key={kind} className="text-sm">
+                  <span className="text-xs text-black/50 dark:text-white/50">
+                    {tk(`kindOpt.${kind}`)}
+                  </span>
+                  <ul className="mt-1 flex flex-wrap gap-2">
+                    {ofKind.map((tg) => (
+                      <li
+                        key={tg.id}
+                        className="flex items-center gap-1 rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10"
+                      >
+                        <span>{tg.label}</span>
+                        <form action={deleteProjectTag} className="inline">
+                          <input type="hidden" name="tag_id" value={tg.id} />
+                          <input type="hidden" name="project_id" value={id} />
+                          <button
+                            aria-label={tk("delete")}
+                            className="text-red-600"
+                          >
+                            ✕
+                          </button>
+                        </form>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Progress photos (gallery + tag editing) ------------------------ */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold">{tp("title")}</h2>
+        {photos.length === 0 ? (
+          <p className="text-sm text-black/50 dark:text-white/50">{tp("none")}</p>
+        ) : (
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {photos.map((p) => (
+              <li
+                key={p.id}
+                className="space-y-2 rounded-xl border border-black/10 p-3 dark:border-white/15"
+              >
+                <div className="flex gap-3">
+                  {p.url ? (
+                    <a href={p.url} target="_blank" rel="noreferrer">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={p.url}
+                        alt={p.caption ?? ""}
+                        className="h-20 w-20 rounded-lg object-cover"
+                      />
+                    </a>
+                  ) : (
+                    <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-black/5 text-[10px] text-black/40 dark:bg-white/10 dark:text-white/40">
+                      {tp("archived")}
+                    </div>
+                  )}
+                  <div className="flex-1 text-sm">
+                    {p.caption && <p>{p.caption}</p>}
+                    <p className="text-xs text-black/50 dark:text-white/50">
+                      {p.taken_at?.slice(0, 10) ?? p.created_at.slice(0, 10)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Edit tags */}
+                {approvedTags.length > 0 && (
+                  <form action={setPhotoTags} className="space-y-2">
+                    <input type="hidden" name="photo_id" value={p.id} />
+                    <input type="hidden" name="project_id" value={id} />
+                    <div className="flex flex-wrap gap-x-3 gap-y-1">
+                      {approvedTags.map((tg) => (
+                        <label
+                          key={tg.id}
+                          className="flex items-center gap-1 text-xs"
+                        >
+                          <input
+                            type="checkbox"
+                            name="tag_id"
+                            value={tg.id}
+                            defaultChecked={p.tags.some((x) => x.id === tg.id)}
+                            className="h-3.5 w-3.5"
+                          />
+                          <span>
+                            <span className="text-black/40 dark:text-white/40">
+                              {tk(`kindOpt.${tg.kind}`)}:
+                            </span>{" "}
+                            {tg.label}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    <button className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25">
+                      {tk("save")}
+                    </button>
+                  </form>
+                )}
+              </li>
+            ))}
           </ul>
         )}
       </section>

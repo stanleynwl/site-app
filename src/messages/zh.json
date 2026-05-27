@@ -68,6 +68,7 @@
   "Report": {
     "title": "每日报告",
     "deliveries": "送货",
+    "photos": "照片",
     "reportDate": "日期",
     "backToToday": "返回今天",
     "backdatedNotice": "您正在为过去的日期（{date}）填写报告，将被标记为补录。",
@@ -173,6 +174,38 @@
     "save": "保存",
     "delete": "删除",
     "confirmDelete": "删除此送货记录及其照片？此操作无法撤销。"
+  },
+  "Photos": {
+    "title": "进度照片",
+    "newPhoto": "添加进度照片",
+    "caption": "说明",
+    "captionHint": "这是什么？（可选）",
+    "add": "添加照片",
+    "saving": "保存中…",
+    "saved": "照片已保存。",
+    "saveError": "无法保存，请重试。",
+    "emptyError": "请先拍照。",
+    "none": "暂无照片。",
+    "recent": "最近的照片",
+    "suggestTag": "建议标签",
+    "archived": "已归档"
+  },
+  "Tags": {
+    "title": "标签",
+    "newTag": "新标签",
+    "addTag": "添加标签",
+    "label": "名称",
+    "approve": "批准",
+    "pending": "待批准",
+    "delete": "删除",
+    "none": "暂无标签。",
+    "save": "保存",
+    "kindOpt": {
+      "block": "栋号",
+      "level": "楼层",
+      "area": "区域",
+      "activity": "工序"
+    }
   },
   "Office": {
     "timeline": "报告时间线",

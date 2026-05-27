@@ -81,6 +81,157 @@ export async function createMaterial(formData: FormData): Promise<void> {
   revalidatePath("/office/catalog");
 }
 
+// --- Phase 2 photo taxonomy: project tags + progress photos ------------------
+
+const TAG_KINDS = ["block", "level", "area", "activity"] as const;
+type TagKindLiteral = (typeof TAG_KINDS)[number];
+
+// Create a project tag. pm/office tags are approved immediately; a supervisor's
+// is a suggestion (approved=false) that office approves later. Duplicate
+// (project, kind, label) is ignored (unique constraint).
+export async function createProjectTag(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+
+  const projectId = String(formData.get("project_id") ?? "");
+  const kindRaw = String(formData.get("kind") ?? "");
+  const label = String(formData.get("label") ?? "").trim();
+  if (!projectId || !label) return;
+  if (!TAG_KINDS.includes(kindRaw as TagKindLiteral)) return;
+
+  const isOffice = profile.role === "pm" || profile.role === "office";
+
+  const supabase = await createClient();
+  await supabase.from("project_tags").upsert(
+    {
+      project_id: projectId,
+      kind: kindRaw,
+      label,
+      approved: isOffice,
+      created_by: profile.id,
+    },
+    { onConflict: "project_id,kind,label", ignoreDuplicates: true },
+  );
+
+  revalidatePath(`/office/projects/${projectId}`);
+  revalidatePath(`/app/projects/${projectId}/photos`);
+}
+
+export async function approveProjectTag(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "pm" && profile.role !== "office") return;
+
+  const id = String(formData.get("tag_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!id) return;
+
+  const supabase = await createClient();
+  await supabase.from("project_tags").update({ approved: true }).eq("id", id);
+
+  revalidatePath(`/office/projects/${projectId}`);
+  revalidatePath(`/app/projects/${projectId}/photos`);
+}
+
+export async function deleteProjectTag(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "pm" && profile.role !== "office") return;
+
+  const id = String(formData.get("tag_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!id) return;
+
+  // Deleting the tag cascades its photo_tags rows (on delete cascade).
+  const supabase = await createClient();
+  await supabase.from("project_tags").delete().eq("id", id);
+
+  revalidatePath(`/office/projects/${projectId}`);
+  revalidatePath(`/app/projects/${projectId}/photos`);
+}
+
+export type PhotoState =
+  | { ok: true }
+  | { error: "save" | "auth" | "validation" | "not-configured" }
+  | undefined;
+
+// Supervisor captures one or more progress photos (already uploaded to Storage
+// client-side) with an optional caption and shared taxonomy tags.
+export async function createPhoto(
+  _prev: PhotoState,
+  formData: FormData,
+): Promise<PhotoState> {
+  if (!isSupabaseConfigured) return { error: "not-configured" };
+  const user = await getSessionUser();
+  if (!user) return { error: "auth" };
+
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!projectId) return { error: "validation" };
+
+  const photoPaths = formData.getAll("photo_path").map(String).filter(Boolean);
+  if (photoPaths.length === 0) return { error: "validation" };
+  const photoTakenAt = formData.getAll("photo_taken_at").map(String);
+  const photoLat = formData.getAll("photo_lat").map(String);
+  const photoLng = formData.getAll("photo_lng").map(String);
+  const caption = String(formData.get("caption") ?? "").trim() || null;
+  const tagIds = formData.getAll("tag_id").map(String).filter(Boolean);
+
+  const supabase = await createClient();
+  const photoRows = photoPaths.map((path, i) => ({
+    project_id: projectId,
+    storage_path: path,
+    caption,
+    taken_at: photoTakenAt[i] || null,
+    gps_lat: parseCoord(photoLat[i] ?? null),
+    gps_lng: parseCoord(photoLng[i] ?? null),
+    uploaded_by: user.id,
+  }));
+  const { data: inserted, error } = await supabase
+    .from("photos")
+    .insert(photoRows)
+    .select("id");
+  if (error || !inserted) return { error: "save" };
+
+  // Apply the selected tags to every photo in this batch.
+  if (tagIds.length > 0) {
+    const links = inserted.flatMap((ph) =>
+      tagIds.map((tid) => ({ photo_id: ph.id, tag_id: tid })),
+    );
+    await supabase.from("photo_tags").insert(links);
+  }
+
+  revalidatePath(`/app/projects/${projectId}/photos`);
+  revalidatePath(`/office/projects/${projectId}`);
+  return { ok: true };
+}
+
+// Office re-tags an existing photo: replace its tag set with the submitted one.
+export async function setPhotoTags(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "pm" && profile.role !== "office") return;
+
+  const photoId = String(formData.get("photo_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!photoId) return;
+  const tagIds = formData.getAll("tag_id").map(String).filter(Boolean);
+
+  const supabase = await createClient();
+  await supabase.from("photo_tags").delete().eq("photo_id", photoId);
+  if (tagIds.length > 0) {
+    await supabase
+      .from("photo_tags")
+      .insert(tagIds.map((tid) => ({ photo_id: photoId, tag_id: tid })));
+  }
+
+  revalidatePath(`/office/projects/${projectId}`);
+  revalidatePath(`/app/projects/${projectId}/photos`);
+}
+
 // --- Phase 2 deliveries: three-quantity model -------------------------------
 
 export type DeliveryState =

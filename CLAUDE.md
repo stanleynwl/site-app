@@ -31,7 +31,7 @@ next-intl v4 without routing. Locale via `locale` cookie. Messages: `src/message
 ## Phase status
 - **Phase 0:** ✅ Done.
 - **Phase 1:** ✅ e2e VERIFIED 2026-05-25.
-- **Phase 2:** 🔧 In progress — catalog, deliveries (three-quantity), photo-first capture, delete, photo archive all built & verified.
+- **Phase 2:** 🔧 In progress — catalog, deliveries (three-quantity), photo-first capture, delete, photo archive, **photo taxonomy + progress photos** all built & verified.
 - **Phase 3+:** not started.
 
 ## Phase 1 (done)
@@ -45,6 +45,7 @@ next-intl v4 without routing. Locale via `locale` cookie. Messages: `src/message
 - **Suppliers = managed list** (not free-text). Catalog UI at `/office/catalog` (pm/office create). Data: `src/lib/data/catalog.ts`; actions `createSupplier`/`createMaterial`. Materials have `count_required`.
 - **Deliveries — three-quantity model + photo-first capture.** Supervisor fast path at `/app/projects/[id]/deliveries`: snap photo(s) + tap an issue chip (broken/missing/short/wrong_item/late/other) + optional note; supplier/material/qty optional (collapsible "Add details"). Office fills supplier/material + `do_quantity` from the photo on `/office/projects/[id]`, sees thumbnails + variance. Photos compressed client-side (canvas ~1600px/0.8), uploaded to private Storage bucket `site-photos` at `photos/{YYYY-MM}/{project_id}/{uuid}.jpg`, served via signed URLs. `requested_quantity` null until Phase 4 (purchase requests).
 - **Delete delivery** (office, pm/office): `deleteDelivery` purges Storage files + photo rows, then the delivery.
+- **Photo taxonomy + progress photos.** Per-project tags (`project_tags`, kind = block/level/area/activity, `approved` flag). Supervisor captures **progress photos** at `/app/projects/[id]/photos` (`progress-photo-form.tsx`, reuses `PhotoCapture`) with caption + tag chips, and can **suggest** new tags (approved=false). Office manages the taxonomy (add=approved, approve pending, delete) and re-tags photos on `/office/projects/[id]`. Progress photos = `photos` rows with `delivery_id IS NULL`. Data: `tags.ts` + `photos.ts` (`getProjectPhotos`/`withSignedPhotoUrls`); pure constants in `tag-kinds.ts` (client-safe, since `tags.ts` is `server-only`). Actions: `createProjectTag`/`approveProjectTag`/`deleteProjectTag`/`createPhoto`/`setPhotoTags`. No migration needed (tables existed in 0006).
 
 ## Key file map
 - `src/lib/data/reports.ts` — report types + read queries

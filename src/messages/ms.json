@@ -68,6 +68,7 @@
   "Report": {
     "title": "Laporan harian",
     "deliveries": "Penghantaran",
+    "photos": "Foto",
     "reportDate": "Tarikh",
     "backToToday": "Kembali ke hari ini",
     "backdatedNotice": "Anda mengisi laporan untuk tarikh lampau ({date}). Ia akan ditanda sebagai laporan susulan.",
@@ -173,6 +174,38 @@
     "save": "Simpan",
     "delete": "Padam",
     "confirmDelete": "Padam penghantaran ini dan fotonya? Tindakan ini tidak boleh dibatalkan."
+  },
+  "Photos": {
+    "title": "Foto kemajuan",
+    "newPhoto": "Tambah foto kemajuan",
+    "caption": "Kapsyen",
+    "captionHint": "Apa yang ditunjukkan? (pilihan)",
+    "add": "Tambah foto",
+    "saving": "Menyimpan…",
+    "saved": "Foto disimpan.",
+    "saveError": "Tidak dapat menyimpan. Sila cuba lagi.",
+    "emptyError": "Ambil foto dahulu.",
+    "none": "Tiada foto lagi.",
+    "recent": "Foto terkini",
+    "suggestTag": "Cadang tag",
+    "archived": "Diarkib"
+  },
+  "Tags": {
+    "title": "Tag",
+    "newTag": "Tag baharu",
+    "addTag": "Tambah tag",
+    "label": "Label",
+    "approve": "Lulus",
+    "pending": "Menunggu kelulusan",
+    "delete": "Padam",
+    "none": "Tiada tag lagi.",
+    "save": "Simpan",
+    "kindOpt": {
+      "block": "Blok",
+      "level": "Tingkat",
+      "area": "Kawasan",
+      "activity": "Aktiviti"
+    }
   },
   "Office": {
     "timeline": "Garis masa laporan",
