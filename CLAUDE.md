@@ -31,8 +31,10 @@ next-intl v4 without routing. Locale via `locale` cookie. Messages: `src/message
 ## Phase status
 - **Phase 0:** ✅ Done.
 - **Phase 1:** ✅ e2e VERIFIED 2026-05-25.
-- **Phase 2:** 🔧 In progress — catalog, deliveries (three-quantity), photo-first capture, delete, photo archive, **photo taxonomy + progress photos** all built & verified.
-- **Phase 3+:** not started.
+- **Phase 2:** ✅ Built — catalog, deliveries (three-quantity), photo-first capture, delete, photo archive, photo taxonomy + progress photos.
+- **Phase 3 (offline sync / PowerSync):** ⏸ not started — needs a PowerSync account + deps (external setup), deferred.
+- **Phase 4 (purchase requests):** 🔧 Code built & build-verified 2026-05-27. **Migration `0009` PENDING apply to hosted Supabase.**
+- **Phase 5–7:** not started.
 
 ## Phase 1 (done)
 - **Soft-edit window:** Author can edit submitted report for 15 min. Edits logged to `report_edits`. PMs can unlock after hard-lock with a reason (sets status back to `draft`).
@@ -61,8 +63,11 @@ next-intl v4 without routing. Locale via `locale` cookie. Messages: `src/message
 - `supabase/migrations/` — 0001 init · 0002 projects+reports · 0003 soft-edit+no_work · 0004 grants · 0005 backdated · 0006 Phase 2 schema · 0007 delivery issues+`photos.delivery_id` · 0008 `photos.archived_at`
 - `supabase/storage_setup.sql` — `site-photos` bucket + storage RLS
 
+## Phase 4 (purchase requests — code built, migration pending)
+Capture-only procurement. Supervisor raises a request at `/app/projects/[id]/requests` (`purchase-request-form.tsx`, material catalog/free-text + qty/unit/needed-by/urgency/note). Office works the queue at `/office/requests` (nav "Requests"): open requests across projects, oldest first, **aging colour** (24h amber / 48h red). State machine `pending → approved → po_issued → delivered → closed` (+ `rejected`); office actions `approvePurchaseRequest`/`rejectPurchaseRequest`/`issuePurchaseRequestPO` (captures PO#)/`closePurchaseRequest`. **Loop-closer:** linking a delivery to a request in the office delivery form (`setDeliveryOfficeFields` + `purchase_request_id` select) copies the request's qty into `deliveries.requested_quantity` and marks the request `delivered`. Data: `purchase-requests.ts`. Migration `0009_purchase_requests.sql` adds the table + enum + the forward-looking `deliveries.purchase_request_id` FK + RLS + grants.
+
 ## Migrations
-**All applied & verified through 0008 + storage_setup on hosted Supabase.**
+**Applied & verified through 0008 + storage_setup on hosted Supabase. `0009` (purchase requests) PENDING apply.**
 
 ## Photo archive (policy revised 2026-05-27)
 `scripts/archive-photos.mjs` (`npm run archive`). Downloads photos to a local archive dir (mirrors `photos/{YYYY-MM}/...`), verifies, deletes the file from Storage, marks `photos.archived_at` (keeps the row). **Grace = 3 working days (Mon–Sat; Sundays don't count, Malaysia time)** before a photo is archived — recent photos stay visible for the office; tune via `GRACE_WORKING_DAYS`. **Also saves full metadata offline:** a sidecar `<file>.json` per photo (complete photo row + joined delivery record: supplier/material/project/qty/DO#/issue/note) + a run manifest, so the local archive is self-contained. The script **never deletes metadata** — rows are deleted only manually on Stanley's request. `withSignedUrls` skips archived photos. **Consequence: the app only shows photos captured since the previous run** — review/key-in recent deliveries before running. Needs `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` (gitignored); optional `SITEAPP_ARCHIVE_DIR` (default `../siteapp-archive`). Scheduled biweekly via Windows Task Scheduler ("SiteApp Photo Archive"; Stanley moving it to Mon 10 PM w/ `-StartWhenAvailable`). See `scripts/README_archive.md`. Storage stays on Supabase for now; Cloudflare R2 (10 GB free, zero egress) is the documented fallback if the 1 GB free tier is outgrown.

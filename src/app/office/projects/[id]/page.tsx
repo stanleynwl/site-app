@@ -13,6 +13,11 @@ import { getSuppliers, getMaterials } from "@/lib/data/catalog";
 import { getProjectTags, TAG_KINDS } from "@/lib/data/tags";
 import { getProjectPhotos, withSignedPhotoUrls } from "@/lib/data/photos";
 import {
+  getProjectPurchaseRequests,
+  prMaterialName,
+  PR_OPEN_STATUSES,
+} from "@/lib/data/purchase-requests";
+import {
   setDeliveryOfficeFields,
   createProjectTag,
   approveProjectTag,
@@ -36,7 +41,7 @@ export default async function OfficeProjectDetail({
   const td = await getTranslations("Deliveries");
   const tp = await getTranslations("Photos");
   const tk = await getTranslations("Tags");
-  const [reports, rawDeliveries, suppliers, materials, tags, rawPhotos] =
+  const [reports, rawDeliveries, suppliers, materials, tags, rawPhotos, requests] =
     await Promise.all([
       getProjectReports(id),
       getProjectDeliveries(id),
@@ -44,11 +49,16 @@ export default async function OfficeProjectDetail({
       getMaterials(),
       getProjectTags(id),
       getProjectPhotos(id),
+      getProjectPurchaseRequests(id),
     ]);
   const deliveries = await withSignedUrls(rawDeliveries);
   const photos = await withSignedPhotoUrls(rawPhotos);
   const approvedTags = tags.filter((tg) => tg.approved);
   const pendingTags = tags.filter((tg) => !tg.approved);
+  // Open requests a delivery can be linked to (closes the variance loop).
+  const openRequests = requests.filter((r) =>
+    PR_OPEN_STATUSES.includes(r.status),
+  );
   const inputCls =
     "rounded-lg border border-black/15 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
 
@@ -144,6 +154,9 @@ export default async function OfficeProjectDetail({
 
                   <div className="text-black/60 dark:text-white/60">
                     {d.do_number ? `DO ${d.do_number}` : ""}
+                    {d.requested_quantity != null
+                      ? ` · ${td("requested")}: ${d.requested_quantity}`
+                      : ""}
                     {d.received_quantity != null
                       ? ` · ${td("received")}: ${d.received_quantity}${d.unit ? ` ${d.unit}` : ""}`
                       : ""}
@@ -182,6 +195,21 @@ export default async function OfficeProjectDetail({
                       placeholder={td("doQuantity")}
                       className={`${inputCls} w-24`}
                     />
+                    {openRequests.length > 0 && (
+                      <select
+                        name="purchase_request_id"
+                        defaultValue=""
+                        className={inputCls}
+                      >
+                        <option value="">{td("linkRequest")}</option>
+                        {openRequests.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {prMaterialName(r)}
+                            {r.quantity != null ? ` (${r.quantity})` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                     <button className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25">
                       {td("save")}
                     </button>

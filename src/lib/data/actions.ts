@@ -368,6 +368,9 @@ export async function setDeliveryOfficeFields(formData: FormData): Promise<void>
 
   const supplierId = String(formData.get("supplier_id") ?? "");
   const materialId = String(formData.get("material_id") ?? "");
+  const prId = String(formData.get("purchase_request_id") ?? "");
+
+  const supabase = await createClient();
 
   const update: Record<string, unknown> = {
     do_quantity: parseQty(formData.get("do_quantity")),
@@ -375,8 +378,27 @@ export async function setDeliveryOfficeFields(formData: FormData): Promise<void>
   if (supplierId) update.supplier_id = supplierId;
   if (materialId) update.material_id = materialId;
 
-  const supabase = await createClient();
+  // Linking a delivery to a purchase request closes the three-quantity variance
+  // loop: pull requested_quantity from the request, and mark the request delivered.
+  if (prId) {
+    update.purchase_request_id = prId;
+    const { data: pr } = await supabase
+      .from("purchase_requests")
+      .select("quantity")
+      .eq("id", prId)
+      .maybeSingle();
+    if (pr) update.requested_quantity = pr.quantity;
+  }
+
   await supabase.from("deliveries").update(update).eq("id", id);
+
+  if (prId) {
+    await supabase
+      .from("purchase_requests")
+      .update({ status: "delivered" })
+      .eq("id", prId);
+    revalidatePath("/office/requests");
+  }
 
   revalidatePath(`/office/projects/${projectId}`);
 }
@@ -410,6 +432,108 @@ export async function deleteDelivery(formData: FormData): Promise<void> {
 
   revalidatePath(`/office/projects/${projectId}`);
   revalidatePath(`/app/projects/${projectId}/deliveries`);
+}
+
+// --- Phase 4 purchase requests: capture-only procurement --------------------
+
+export type PurchaseRequestState =
+  | { ok: true }
+  | { error: "save" | "auth" | "validation" | "not-configured" }
+  | undefined;
+
+// Supervisor raises a purchase request (any project member). Material can be a
+// catalog pick or free text; quantity / needed-by / urgency are optional.
+export async function createPurchaseRequest(
+  _prev: PurchaseRequestState,
+  formData: FormData,
+): Promise<PurchaseRequestState> {
+  if (!isSupabaseConfigured) return { error: "not-configured" };
+  const user = await getSessionUser();
+  if (!user) return { error: "auth" };
+
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!projectId) return { error: "validation" };
+
+  const materialIdRaw = String(formData.get("material_id") ?? "");
+  const isOther = materialIdRaw === "" || materialIdRaw === "__other__";
+  const materialText = String(formData.get("material_text") ?? "").trim();
+  // Require at least a material identity (catalog pick or free text).
+  if (isOther && !materialText) return { error: "validation" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("purchase_requests").insert({
+    project_id: projectId,
+    material_id: isOther ? null : materialIdRaw,
+    material_text: isOther ? materialText : null,
+    quantity: parseQty(formData.get("quantity")),
+    unit: String(formData.get("unit") ?? "").trim() || null,
+    needed_by: String(formData.get("needed_by") ?? "") || null,
+    urgency_reason: String(formData.get("urgency_reason") ?? "").trim() || null,
+    note: String(formData.get("note") ?? "").trim() || null,
+    created_by: user.id,
+  });
+  if (error) return { error: "save" };
+
+  revalidatePath(`/app/projects/${projectId}/requests`);
+  revalidatePath("/office/requests");
+  return { ok: true };
+}
+
+// Office state-machine transitions (pm/office). Each takes request_id + project_id.
+async function updatePurchaseRequest(
+  formData: FormData,
+  patch: Record<string, unknown>,
+): Promise<void> {
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "pm" && profile.role !== "office") return;
+
+  const id = String(formData.get("request_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!id) return;
+
+  const supabase = await createClient();
+  await supabase.from("purchase_requests").update(patch).eq("id", id);
+
+  revalidatePath("/office/requests");
+  if (projectId) {
+    revalidatePath(`/app/projects/${projectId}/requests`);
+    revalidatePath(`/office/projects/${projectId}`);
+  }
+}
+
+export async function approvePurchaseRequest(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  await updatePurchaseRequest(formData, {
+    status: "approved",
+    approved_by: profile?.id ?? null,
+    approved_at: new Date().toISOString(),
+  });
+}
+
+export async function rejectPurchaseRequest(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const reason = String(formData.get("rejected_reason") ?? "").trim();
+  await updatePurchaseRequest(formData, {
+    status: "rejected",
+    rejected_reason: reason || null,
+  });
+}
+
+export async function issuePurchaseRequestPO(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const po = String(formData.get("po_number") ?? "").trim();
+  if (!po) return; // PO number is the whole point of this step
+  const supplierId = String(formData.get("supplier_id") ?? "");
+  const patch: Record<string, unknown> = { status: "po_issued", po_number: po };
+  if (supplierId) patch.supplier_id = supplierId;
+  await updatePurchaseRequest(formData, patch);
+}
+
+export async function closePurchaseRequest(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  await updatePurchaseRequest(formData, { status: "closed" });
 }
 
 export type SaveReportState =
