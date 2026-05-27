@@ -1,14 +1,18 @@
-# Photo auto-archive
+# Photo archive
 
-Keeps SiteApp under Supabase's free 1 GB storage by moving old photo **files** to
-your PC. It only touches photo files — delivery/report records and photo metadata
+Keeps SiteApp under Supabase's free 1 GB storage by moving **every** photo **file**
+to your PC. It only touches photo files — delivery/report records and photo metadata
 all stay in Supabase (archived photos are just flagged `archived_at` and stop
-showing in the app).
+showing in the app). The small metadata rows stay until you delete them yourself.
 
-- **What it does:** finds photos older than **14 days**, downloads them to your
-  archive folder (mirroring `photos/{YYYY-MM}/...`), verifies each file, then
-  deletes the file from Supabase Storage and marks the row archived. Writes a JSON
-  manifest of everything archived.
+- **What it does:** downloads **all live photos** to your archive folder (mirroring
+  `photos/{YYYY-MM}/...`), verifies each file, then deletes the file from Supabase
+  Storage and marks the row archived. Writes a JSON manifest of everything archived.
+- **No age grace period:** each run clears *every* photo from Storage, so the app
+  only shows photos captured since the previous run. The full-res files live in
+  your local archive + manifest. If you need recent delivery photos to stay visible
+  in the app longer, run the archive *less* often (or process those deliveries in
+  the office before the next run).
 - **Cadence:** run it **manually any time**, and/or schedule it **every 2 weeks**.
 
 ## One-time setup
@@ -31,17 +35,31 @@ npm run archive
 ```
 
 ## Schedule it every 2 weeks (Windows Task Scheduler)
-Run this once in **PowerShell** (adjust the node path if different):
+Run this once in **PowerShell** to create the task (every 2 weeks, **Monday 10 PM**,
+with catch-up if the PC was off):
 
 ```powershell
-$action  = New-ScheduledTaskAction -Execute "node" -Argument "scripts\archive-photos.mjs" -WorkingDirectory "D:\dev\site-app"
-$trigger = New-ScheduledTaskTrigger -Weekly -WeeksInterval 2 -DaysOfWeek Sunday -At 2am
-Register-ScheduledTask -TaskName "SiteApp Photo Archive" -Action $action -Trigger $trigger -Description "Archive old SiteApp photos off Supabase every 2 weeks"
+$action   = New-ScheduledTaskAction -Execute "node" -Argument "scripts\archive-photos.mjs" -WorkingDirectory "D:\dev\site-app"
+$trigger  = New-ScheduledTaskTrigger -Weekly -WeeksInterval 2 -DaysOfWeek Monday -At 10pm
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable
+Register-ScheduledTask -TaskName "SiteApp Photo Archive" -Action $action -Trigger $trigger -Settings $settings -Description "Archive all SiteApp photos off Supabase every 2 weeks"
 ```
 
-- Runs every 2 weeks, Sunday 2 AM. If the PC is off, Windows runs it at next boot
-  (enable "Run task as soon as possible after a scheduled start is missed" in the
-  task's Settings if you want that).
+If the task already exists and you only want to change the time/day:
+
+```powershell
+$trigger  = New-ScheduledTaskTrigger -Weekly -WeeksInterval 2 -DaysOfWeek Monday -At 10pm
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable
+Set-ScheduledTask -TaskName "SiteApp Photo Archive" -Trigger $trigger -Settings $settings
+```
+
+- Runs every 2 weeks, **Monday 10 PM**. `-StartWhenAvailable` means if the PC is off
+  at that time, Windows runs it automatically the next time you boot — so a missed
+  slot just runs late, never skipped.
+- Check the schedule any time:
+  ```powershell
+  Get-ScheduledTask -TaskName "SiteApp Photo Archive" | Get-ScheduledTaskInfo | Select-Object NextRunTime, LastRunTime, LastTaskResult
+  ```
 - The archived files land in your archive folder. **Back that folder up** to an
   external drive or cloud (Google Drive / OneDrive) per the storage strategy.
 

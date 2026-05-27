@@ -1,7 +1,12 @@
-// SiteApp — auto-archive old photos off Supabase Storage to keep under the free
-// tier. Downloads photo files older than KEEP_DAYS to a local archive folder,
-// verifies each, then deletes the file from Storage and marks the photo row
-// `archived_at` (the row + all other data stay). Other data is never touched.
+// SiteApp — archive ALL photos off Supabase Storage to keep under the free tier.
+// Downloads every live photo file to a local archive folder, verifies each, then
+// deletes the file from Storage and marks the photo row `archived_at` (the row +
+// all other data stay). The small metadata rows are never deleted by this script —
+// they stay in Supabase until you delete them manually on request.
+//
+// NOTE: this clears EVERY photo from Storage each run (no age grace period), so the
+// app only shows photos captured since the previous run. The full-resolution files
+// live in your local archive folder + JSON manifest.
 //
 // Run manually:   npm run archive
 // Or schedule biweekly via Windows Task Scheduler (see scripts/README_archive.md).
@@ -20,7 +25,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
 
 const BUCKET = "site-photos";
-const KEEP_DAYS = 14;
 
 // --- Load .env.local (tiny parser; no dependency) ---------------------------
 async function loadEnv() {
@@ -61,17 +65,15 @@ async function main() {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const cutoff = new Date(Date.now() - KEEP_DAYS * 86_400_000).toISOString();
   console.log(
-    `[archive] keep-live ${KEEP_DAYS}d → archiving photos created before ${cutoff}`,
+    `[archive] downloading ALL live photos, then removing them from Supabase Storage`,
   );
   console.log(`[archive] archive folder: ${archiveDir}`);
 
   const { data: photos, error } = await supabase
     .from("photos")
     .select("id, storage_path, created_at, delivery_id, taken_at, gps_lat, gps_lng")
-    .is("archived_at", null)
-    .lt("created_at", cutoff);
+    .is("archived_at", null);
 
   if (error) {
     console.error("[archive] query failed:", error.message);
