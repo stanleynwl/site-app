@@ -17,6 +17,8 @@
 // live in your local archive folder.
 //
 // Run manually:   npm run archive
+// Preview only:   npm run archive:dry   (downloads + writes offline files, but does
+//                 NOT delete anything from Supabase — safe to inspect first)
 // Or schedule biweekly via Windows Task Scheduler (see scripts/README_archive.md).
 //
 // Requires in .env.local:
@@ -33,6 +35,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
 
 const BUCKET = "site-photos";
+
+// --dry-run: do everything EXCEPT change Supabase. Downloads files + writes the
+// offline metadata so you can inspect the local archive, but never removes a file
+// from Storage and never sets `archived_at`. Safe preview before a real wipe.
+const DRY_RUN = process.argv.includes("--dry-run");
 
 // Keep a photo this many WORKING days before archiving it. Working days are
 // Mon–Sat; Sundays do not count. Dates are evaluated in Malaysia time.
@@ -109,6 +116,11 @@ async function main() {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  if (DRY_RUN) {
+    console.log(
+      `[archive] *** DRY RUN *** downloading + writing offline files only; Supabase will NOT be changed (no deletes, no archived_at).`,
+    );
+  }
   console.log(
     `[archive] grace = ${GRACE_WORKING_DAYS} working days (Mon–Sat; Sundays don't count)`,
   );
@@ -207,11 +219,14 @@ async function main() {
 
       // Now safe to remove the FILE from Storage + flag the row archived. The row
       // and ALL metadata stay in Supabase — this script never deletes metadata.
-      await supabase.storage.from(BUCKET).remove([p.storage_path]);
-      await supabase
-        .from("photos")
-        .update({ archived_at: record.archived_at })
-        .eq("id", p.id);
+      // (Skipped entirely on a dry run so Supabase is left untouched.)
+      if (!DRY_RUN) {
+        await supabase.storage.from(BUCKET).remove([p.storage_path]);
+        await supabase
+          .from("photos")
+          .update({ archived_at: record.archived_at })
+          .eq("id", p.id);
+      }
 
       manifest.push(record);
       archived++;
@@ -224,15 +239,25 @@ async function main() {
 
   if (manifest.length > 0) {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const manifestPath = join(archiveDir, "_manifests", `archive-${stamp}.json`);
+    const manifestPath = join(
+      archiveDir,
+      "_manifests",
+      `archive-${stamp}${DRY_RUN ? "-dryrun" : ""}.json`,
+    );
     await mkdir(dirname(manifestPath), { recursive: true });
     await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
     console.log(`[archive] manifest: ${manifestPath}`);
   }
 
-  console.log(
-    `[archive] done — archived ${archived} photo(s), ${(bytes / 1048576).toFixed(1)} MB freed, ${failed} failed.`,
-  );
+  if (DRY_RUN) {
+    console.log(
+      `[archive] DRY RUN done — ${archived} photo(s) would be archived (${(bytes / 1048576).toFixed(1)} MB), ${failed} failed. Supabase unchanged; re-run without --dry-run to apply.`,
+    );
+  } else {
+    console.log(
+      `[archive] done — archived ${archived} photo(s), ${(bytes / 1048576).toFixed(1)} MB freed, ${failed} failed.`,
+    );
+  }
   if (failed > 0) process.exitCode = 1;
 }
 

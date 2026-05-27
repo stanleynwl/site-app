@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "archive": "node scripts/archive-photos.mjs"
+    "archive": "node scripts/archive-photos.mjs",
+    "archive:dry": "node scripts/archive-photos.mjs --dry-run"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",

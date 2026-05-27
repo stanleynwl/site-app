@@ -41,6 +41,15 @@ cd D:\dev\site-app
 npm run archive
 ```
 
+### Preview first (recommended before the first real run)
+```
+npm run archive:dry
+```
+A **dry run** downloads the eligible photos and writes the offline files + metadata
+sidecars so you can inspect them, but changes **nothing** on Supabase — no files are
+deleted and no rows are flagged `archived_at`. Its manifest is saved with a `-dryrun`
+suffix. When you're happy, run `npm run archive` to apply for real.
+
 ## Schedule it every 2 weeks (Windows Task Scheduler)
 Run this once in **PowerShell** to create the task (every 2 weeks, **Monday 10 PM**,
 with catch-up if the PC was off):
