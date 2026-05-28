@@ -22,6 +22,7 @@ const NO_WORK_REASONS: NoWorkReason[] = ["holiday", "weather", "site_closed", "o
 
 type ManpowerRow = { trade: string; subcontractor: string; worker_count: number };
 type IssueRow = { description: string; category: IssueCategory };
+type VisitorRow = { name: string; purpose: string };
 
 const baseInput =
   "rounded-lg border border-black/15 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
@@ -112,6 +113,13 @@ export function DailyReportForm({
     report?.issues.map((i) => ({
       description: i.description,
       category: i.category,
+    })) ?? [],
+  );
+  // Visitors: policy is NO pre-fill — initialise from the existing report only.
+  const [visitors, setVisitors] = useState<VisitorRow[]>(
+    report?.visitor_entries.map((v) => ({
+      name: v.name,
+      purpose: v.purpose ?? "",
     })) ?? [],
   );
 
@@ -457,6 +465,48 @@ export function DailyReportForm({
         ))}
       </section>
 
+      {/* Visitors — secondary, optional; shown for all report types; no pre-fill */}
+      <section className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold">{t("visitors")}</h2>
+          <button
+            type="button"
+            onClick={() =>
+              setVisitors((rows) => [...rows, { name: "", purpose: "" }])
+            }
+            className="text-xs underline"
+          >
+            {t("addRow")}
+          </button>
+        </div>
+        {visitors.map((row, i) => (
+          <div key={`visitor-${i}`} className="flex items-center gap-3">
+            <input
+              name="visitor_name"
+              defaultValue={row.name}
+              placeholder={t("visitorName")}
+              className={`${baseInput} flex-1`}
+            />
+            <input
+              name="visitor_purpose"
+              defaultValue={row.purpose}
+              placeholder={t("visitorPurpose")}
+              className={`${baseInput} flex-1`}
+            />
+            <button
+              type="button"
+              onClick={() =>
+                setVisitors((rows) => rows.filter((_, idx) => idx !== i))
+              }
+              className="w-5 text-xs text-red-600"
+              aria-label={t("remove")}
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </section>
+
       {/* Notes — policy: NEVER pre-filled */}
       <label className="block text-sm">
         <span className="mb-1 block font-semibold">{t("notes")}</span>
@@ -574,6 +624,16 @@ function ReadOnlyReport({ report }: { report: ReportWithChildren }) {
                 .join("; ")}
         </dd>
       </div>
+      {report.visitor_entries.length > 0 && (
+        <div>
+          <dt className="font-medium">{t("visitors")}</dt>
+          <dd className="text-black/70 dark:text-white/70">
+            {report.visitor_entries
+              .map((v) => (v.purpose ? `${v.name} (${v.purpose})` : v.name))
+              .join(", ")}
+          </dd>
+        </div>
+      )}
       {report.notes && (
         <div>
           <dt className="font-medium">{t("notes")}</dt>

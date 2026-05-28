@@ -34,7 +34,7 @@ next-intl v4 without routing. Locale via `locale` cookie. Messages: `src/message
 - **Phase 2:** ✅ Built — catalog, deliveries (three-quantity), photo-first capture, delete, photo archive, photo taxonomy + progress photos.
 - **Phase 3 (offline sync / PowerSync):** ⏸ not started — needs a PowerSync account + deps (external setup), deferred.
 - **Phase 4 (purchase requests):** 🔧 Code built & build-verified 2026-05-27. **Migration `0009` PENDING apply to hosted Supabase.**
-- **Phase 5 (operations):** 🔧 Machinery (now a **daily-report section**, not standalone) + weekly stock counts built & build-verified 2026-05-27. **Migrations `0011` (stock) + `0012` (machinery-in-report; drops the old 0010 tables) PENDING.** Remaining: visitors/equipment on the daily report.
+- **Phase 5 (operations):** ✅ Built — machinery (daily-report section) + weekly stock counts + visitors (daily-report section). Equipment is covered by machinery's "Other" row. **Migrations `0011`, `0012`, `0013` PENDING.**
 - **Phase 6–7:** not started.
 
 ## Phase 1 (done)
@@ -73,7 +73,10 @@ Capture-only procurement. Supervisor raises a request at `/app/projects/[id]/req
 **Weekly stock counts.** Supervisor records a physical count of a catalog material on a date at `/app/projects/[id]/stock` (`stock-count-form.tsx`, upsert on project+material+date). **Consumption is DERIVED, never stored** (Design Principle #3): per material, `consumption = previous_count + deliveries_in_(prev,latest] − latest_count`, where a delivery contributes `received_quantity ?? do_quantity` and only catalog-material (`material_id`) deliveries match. Computed in `getStockSummary` (stock.ts). Office project page + supervisor stock page show on-hand latest + derived "used since" per material. Action `recordStockCount`. Migration `0011_stock_counts.sql`. **Remaining Phase 5: visitors/equipment as secondary fields on the daily report.**
 
 ## Migrations
-**Applied through 0010 + storage_setup on hosted Supabase (0009 + 0010 applied 2026-05-27). PENDING apply: `0011` (stock counts), `0012` (machinery-in-report — also drops the now-unused 0010 `machines`/`machine_logs`).**
+**Applied through 0010 + storage_setup on hosted Supabase (0009 + 0010 applied 2026-05-27). PENDING apply (in order): `0011` (stock counts), `0012` (machinery-in-report — also drops the now-unused 0010 `machines`/`machine_logs`), `0013` (visitor_entries).**
+
+## Visitors (daily-report section)
+Optional secondary section on the daily report (like issues, shown for all report types): name + purpose. **No pre-fill** (policy). `visitor_entries` table (migration `0013`, RLS mirrors manpower). Persisted in `saveReport` (outside the normal-only block, so it saves on no-work days too). Shown in the office report view + locked read-only view. i18n `Report.visitors`/`visitorName`/`visitorPurpose`.
 
 ## Photo archive (policy revised 2026-05-27)
 `scripts/archive-photos.mjs` (`npm run archive`). Downloads photos to a local archive dir (mirrors `photos/{YYYY-MM}/...`), verifies, deletes the file from Storage, marks `photos.archived_at` (keeps the row). **Grace = 3 working days (Mon–Sat; Sundays don't count, Malaysia time)** before a photo is archived — recent photos stay visible for the office; tune via `GRACE_WORKING_DAYS`. **Also saves full metadata offline:** a sidecar `<file>.json` per photo (complete photo row + joined delivery record: supplier/material/project/qty/DO#/issue/note) + a run manifest, so the local archive is self-contained. The script **never deletes metadata** — rows are deleted only manually on Stanley's request. `withSignedUrls` skips archived photos. **Consequence: the app only shows photos captured since the previous run** — review/key-in recent deliveries before running. Needs `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` (gitignored); optional `SITEAPP_ARCHIVE_DIR` (default `../siteapp-archive`). Scheduled biweekly via Windows Task Scheduler ("SiteApp Photo Archive"; Stanley moving it to Mon 10 PM w/ `-StartWhenAvailable`). See `scripts/README_archive.md`. Storage stays on Supabase for now; Cloudflare R2 (10 GB free, zero egress) is the documented fallback if the 1 GB free tier is outgrown.

@@ -132,6 +132,25 @@ export default async function OfficeReportView({
         )}
       </section>
 
+      {report.visitor_entries.length > 0 && (
+        <section>
+          <h2 className="mb-1 text-sm font-semibold">{tr("visitors")}</h2>
+          <ul className="text-sm">
+            {report.visitor_entries.map((v) => (
+              <li key={v.id}>
+                {v.name}
+                {v.purpose ? (
+                  <span className="text-black/50 dark:text-white/50">
+                    {" "}
+                    — {v.purpose}
+                  </span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {report.notes && (
         <section>
           <h2 className="mb-1 text-sm font-semibold">{tr("notes")}</h2>

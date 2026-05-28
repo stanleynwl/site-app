@@ -21,6 +21,12 @@ export type MachineryEntry = {
   hours_worked: number | null;
 };
 
+export type VisitorEntry = {
+  id: string;
+  name: string;
+  purpose: string | null;
+};
+
 export type Issue = {
   id: string;
   description: string;
@@ -47,6 +53,7 @@ export type DailyReport = {
 export type ReportWithChildren = DailyReport & {
   manpower_entries: ManpowerEntry[];
   machinery_entries: MachineryEntry[];
+  visitor_entries: VisitorEntry[];
   issues: Issue[];
 };
 
@@ -54,7 +61,7 @@ const REPORT_COLUMNS =
   "id, project_id, report_date, author_id, status, report_type, no_work_reason, weather, rain_hours, work_done, notes, submitted_at, is_backdated";
 
 const REPORT_CHILDREN =
-  "manpower_entries(id, trade, subcontractor, worker_count), machinery_entries(id, machine_type, hours_worked), issues(id, description, category, resolved)";
+  "manpower_entries(id, trade, subcontractor, worker_count), machinery_entries(id, machine_type, hours_worked), visitor_entries(id, name, purpose), issues(id, description, category, resolved)";
 
 export async function getReportForDate(
   projectId: string,

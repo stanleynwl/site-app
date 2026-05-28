@@ -737,6 +737,22 @@ export async function saveReport(
     }
   }
 
+  // Visitors — secondary section, applies to all report types (an inspection can
+  // happen on a no-work day). Drop blank-name rows.
+  const visitorNames = formData.getAll("visitor_name").map(String);
+  const visitorPurposes = formData.getAll("visitor_purpose").map(String);
+  const visitors = visitorNames
+    .map((name, i) => ({
+      report_id: report.id,
+      name: name.trim(),
+      purpose: visitorPurposes[i]?.trim() || null,
+    }))
+    .filter((v) => v.name !== "");
+  await supabase.from("visitor_entries").delete().eq("report_id", report.id);
+  if (visitors.length) {
+    await supabase.from("visitor_entries").insert(visitors);
+  }
+
   if (submit) {
     const { error: submitError } = await supabase
       .from("daily_reports")
