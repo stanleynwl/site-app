@@ -6,7 +6,7 @@ import { getReportsInRange } from "@/lib/data/reports";
 import { getProjectPhotos, withSignedPhotoUrls } from "@/lib/data/photos";
 import {
   getProjectPurchaseRequests,
-  prMaterialName,
+  prItemsLabel,
   prAgeHours,
   PR_OPEN_STATUSES,
 } from "@/lib/data/purchase-requests";
@@ -311,8 +311,7 @@ async function Boss({
           <ul className="ml-4 list-disc">
             {openRequests.map(({ r, age }) => (
               <li key={r.id}>
-                {prMaterialName(r)}
-                {r.quantity != null ? ` (${r.quantity}${r.unit ? ` ${r.unit}` : ""})` : ""}
+                {prItemsLabel(r)}
                 {" — "}
                 {treq(`status.${r.status}`)}
                 <span className={age >= 48 ? "font-semibold text-red-700" : ""}>

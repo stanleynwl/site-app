@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { useTranslations } from "next-intl";
 import {
   createPurchaseRequest,
   type PurchaseRequestState,
 } from "@/lib/data/actions";
+import { RequestItemsField } from "@/components/request-items-field";
 import type { Material } from "@/lib/data/catalog";
 
 const inputClass =
@@ -21,14 +22,10 @@ export function PurchaseRequestForm({
   materials: Material[];
 }) {
   const t = useTranslations("Requests");
-  const [materialId, setMaterialId] = useState("");
   const [state, action, pending] = useActionState<PurchaseRequestState, FormData>(
     createPurchaseRequest,
     undefined,
   );
-
-  const selected = materials.find((m) => m.id === materialId);
-  const isOther = materialId === "__other__";
 
   const message =
     state && "ok" in state
@@ -47,61 +44,11 @@ export function PurchaseRequestForm({
       <input type="hidden" name="project_id" value={projectId} />
       <p className="text-sm font-semibold">{t("newRequest")}</p>
 
-      <label className="block text-sm">
-        <span className="mb-1 block">{t("material")}</span>
-        <select
-          name="material_id"
-          value={materialId}
-          onChange={(e) => setMaterialId(e.target.value)}
-          className={inputClass}
-        >
-          <option value="">—</option>
-          {materials.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name}
-              {m.unit ? ` (${m.unit})` : ""}
-            </option>
-          ))}
-          <option value="__other__">{t("otherMaterial")}</option>
-        </select>
-      </label>
-
-      {isOther && (
-        <label className="block text-sm">
-          <span className="mb-1 block">{t("materialText")}</span>
-          <input name="material_text" className={inputClass} />
-        </label>
-      )}
-
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-sm">
-          <span className="mb-1 block">{t("quantity")}</span>
-          <input
-            type="number"
-            name="quantity"
-            min="0"
-            step="0.001"
-            className={inputClass}
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="mb-1 block">{t("unit")}</span>
-          <input
-            name="unit"
-            defaultValue={selected?.unit ?? ""}
-            className={inputClass}
-          />
-        </label>
-      </div>
+      <RequestItemsField materials={materials} />
 
       <label className="block text-sm">
         <span className="mb-1 block">{t("neededBy")}</span>
-        <input
-          type="date"
-          name="needed_by"
-          min={today}
-          className={inputClass}
-        />
+        <input type="date" name="needed_by" min={today} className={inputClass} />
       </label>
 
       <label className="block text-sm">

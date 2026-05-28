@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import {
   getOpenPurchaseRequests,
-  prMaterialName,
+  itemName,
   prAgeHours,
 } from "@/lib/data/purchase-requests";
 import { getSuppliers } from "@/lib/data/catalog";
@@ -55,13 +55,20 @@ export default async function OfficeRequestsPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <span className="font-medium">{prMaterialName(r)}</span>
-                    {r.quantity != null && (
-                      <span className="ml-1 text-black/60 dark:text-white/60">
-                        · {r.quantity}
-                        {r.unit ? ` ${r.unit}` : ""}
-                      </span>
-                    )}
+                    <ul className="font-medium">
+                      {r.items.map((it) => (
+                        <li key={it.id}>
+                          {itemName(it)}
+                          {it.quantity != null && (
+                            <span className="text-black/60 dark:text-white/60">
+                              {" "}
+                              · {it.quantity}
+                              {it.unit ? ` ${it.unit}` : ""}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
                     <div className="text-xs text-black/50 dark:text-white/50">
                       {r.project?.name ? (
                         <Link

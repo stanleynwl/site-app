@@ -14,7 +14,7 @@ import { getProjectTags, TAG_KINDS } from "@/lib/data/tags";
 import { getProjectPhotos, withSignedPhotoUrls } from "@/lib/data/photos";
 import {
   getProjectPurchaseRequests,
-  prMaterialName,
+  itemName,
   PR_OPEN_STATUSES,
 } from "@/lib/data/purchase-requests";
 import { getStockSummary } from "@/lib/data/stock";
@@ -66,10 +66,10 @@ export default async function OfficeProjectDetail({
   const photos = await withSignedPhotoUrls(rawPhotos);
   const approvedTags = tags.filter((tg) => tg.approved);
   const pendingTags = tags.filter((tg) => !tg.approved);
-  // Open requests a delivery can be linked to (closes the variance loop).
-  const openRequests = requests.filter((r) =>
-    PR_OPEN_STATUSES.includes(r.status),
-  );
+  // Open request line items a delivery can be linked to (closes the variance loop).
+  const openItems = requests
+    .filter((r) => PR_OPEN_STATUSES.includes(r.status))
+    .flatMap((r) => r.items.map((it) => ({ it, request: r })));
   const inputCls =
     "rounded-lg border border-black/15 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
 
@@ -206,17 +206,17 @@ export default async function OfficeProjectDetail({
                       placeholder={td("doQuantity")}
                       className={`${inputCls} w-24`}
                     />
-                    {openRequests.length > 0 && (
+                    {openItems.length > 0 && (
                       <select
-                        name="purchase_request_id"
+                        name="purchase_request_item_id"
                         defaultValue=""
                         className={inputCls}
                       >
                         <option value="">{td("linkRequest")}</option>
-                        {openRequests.map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {prMaterialName(r)}
-                            {r.quantity != null ? ` (${r.quantity})` : ""}
+                        {openItems.map(({ it }) => (
+                          <option key={it.id} value={it.id}>
+                            {itemName(it)}
+                            {it.quantity != null ? ` (${it.quantity})` : ""}
                           </option>
                         ))}
                       </select>

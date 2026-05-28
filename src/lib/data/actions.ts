@@ -435,7 +435,7 @@ export async function setDeliveryOfficeFields(formData: FormData): Promise<void>
 
   const supplierId = String(formData.get("supplier_id") ?? "");
   const materialId = String(formData.get("material_id") ?? "");
-  const prId = String(formData.get("purchase_request_id") ?? "");
+  const itemId = String(formData.get("purchase_request_item_id") ?? "");
 
   const supabase = await createClient();
 
@@ -445,28 +445,24 @@ export async function setDeliveryOfficeFields(formData: FormData): Promise<void>
   if (supplierId) update.supplier_id = supplierId;
   if (materialId) update.material_id = materialId;
 
-  // Linking a delivery to a purchase request closes the three-quantity variance
-  // loop: pull requested_quantity from the request, and mark the request delivered.
-  if (prId) {
-    update.purchase_request_id = prId;
-    const { data: pr } = await supabase
-      .from("purchase_requests")
-      .select("quantity")
-      .eq("id", prId)
+  // Linking a delivery to a purchase-request line item closes the three-quantity
+  // variance loop: pull requested_quantity from that item.
+  if (itemId) {
+    const { data: item } = await supabase
+      .from("purchase_request_items")
+      .select("quantity, request_id")
+      .eq("id", itemId)
       .maybeSingle();
-    if (pr) update.requested_quantity = pr.quantity;
+    if (item) {
+      update.purchase_request_item_id = itemId;
+      update.purchase_request_id = item.request_id;
+      update.requested_quantity = item.quantity;
+    }
   }
 
   await supabase.from("deliveries").update(update).eq("id", id);
 
-  if (prId) {
-    await supabase
-      .from("purchase_requests")
-      .update({ status: "delivered" })
-      .eq("id", prId);
-    revalidatePath("/office/requests");
-  }
-
+  if (itemId) revalidatePath("/office/requests");
   revalidatePath(`/office/projects/${projectId}`);
 }
 
@@ -508,8 +504,9 @@ export type PurchaseRequestState =
   | { error: "save" | "auth" | "validation" | "not-configured" }
   | undefined;
 
-// Supervisor raises a purchase request (any project member). Material can be a
-// catalog pick or free text; quantity / needed-by / urgency are optional.
+// Supervisor raises a purchase request with one or more line items (any project
+// member). Each item is a catalog material (material_id) or free text
+// (material_text) + optional quantity/unit. Header carries needed-by/urgency/note.
 export async function createPurchaseRequest(
   _prev: PurchaseRequestState,
   formData: FormData,
@@ -521,25 +518,44 @@ export async function createPurchaseRequest(
   const projectId = String(formData.get("project_id") ?? "");
   if (!projectId) return { error: "validation" };
 
-  const materialIdRaw = String(formData.get("material_id") ?? "");
-  const isOther = materialIdRaw === "" || materialIdRaw === "__other__";
-  const materialText = String(formData.get("material_text") ?? "").trim();
-  // Require at least a material identity (catalog pick or free text).
-  if (isOther && !materialText) return { error: "validation" };
+  const materialIds = formData.getAll("request_material_id").map(String);
+  const materialTexts = formData.getAll("request_material_text").map(String);
+  const quantities = formData.getAll("request_quantity").map(String);
+  const units = formData.getAll("request_unit").map(String);
+
+  const items = materialIds
+    .map((mid, i) => {
+      const idVal = mid.trim();
+      const text = (materialTexts[i] ?? "").trim();
+      return {
+        material_id: idVal || null,
+        material_text: idVal ? null : text || null,
+        quantity: parseQty(quantities[i] ?? null),
+        unit: (units[i] ?? "").trim() || null,
+      };
+    })
+    .filter((it) => it.material_id || it.material_text);
+
+  if (items.length === 0) return { error: "validation" };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("purchase_requests").insert({
-    project_id: projectId,
-    material_id: isOther ? null : materialIdRaw,
-    material_text: isOther ? materialText : null,
-    quantity: parseQty(formData.get("quantity")),
-    unit: String(formData.get("unit") ?? "").trim() || null,
-    needed_by: String(formData.get("needed_by") ?? "") || null,
-    urgency_reason: String(formData.get("urgency_reason") ?? "").trim() || null,
-    note: String(formData.get("note") ?? "").trim() || null,
-    created_by: user.id,
-  });
-  if (error) return { error: "save" };
+  const { data: request, error } = await supabase
+    .from("purchase_requests")
+    .insert({
+      project_id: projectId,
+      needed_by: String(formData.get("needed_by") ?? "") || null,
+      urgency_reason: String(formData.get("urgency_reason") ?? "").trim() || null,
+      note: String(formData.get("note") ?? "").trim() || null,
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
+  if (error || !request) return { error: "save" };
+
+  const { error: itemsErr } = await supabase
+    .from("purchase_request_items")
+    .insert(items.map((it) => ({ ...it, request_id: request.id })));
+  if (itemsErr) return { error: "save" };
 
   revalidatePath(`/app/projects/${projectId}/requests`);
   revalidatePath("/office/requests");

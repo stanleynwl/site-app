@@ -23,13 +23,17 @@ export const PR_OPEN_STATUSES: PurchaseRequestStatus[] = [
   "po_issued",
 ];
 
-export type PurchaseRequest = {
+export type PurchaseRequestItem = {
   id: string;
-  project_id: string;
   material_text: string | null;
   material: { name: string; unit: string | null } | null;
   quantity: number | null;
   unit: string | null;
+};
+
+export type PurchaseRequest = {
+  id: string;
+  project_id: string;
   needed_by: string | null;
   urgency_reason: string | null;
   note: string | null;
@@ -38,11 +42,12 @@ export type PurchaseRequest = {
   po_number: string | null;
   rejected_reason: string | null;
   created_at: string;
+  items: PurchaseRequestItem[];
   project?: { name: string } | null; // set only in the cross-project queue
 };
 
 const PR_COLUMNS =
-  "id, project_id, material_text, quantity, unit, needed_by, urgency_reason, note, status, po_number, rejected_reason, created_at, material:materials(name, unit), supplier:suppliers(name)";
+  "id, project_id, needed_by, urgency_reason, note, status, po_number, rejected_reason, created_at, supplier:suppliers(name), items:purchase_request_items(id, material_text, quantity, unit, material:materials(name, unit))";
 
 export async function getProjectPurchaseRequests(
   projectId: string,
@@ -70,8 +75,19 @@ export async function getOpenPurchaseRequests(): Promise<PurchaseRequest[]> {
   return (data ?? []) as unknown as PurchaseRequest[];
 }
 
-export function prMaterialName(r: PurchaseRequest): string {
-  return r.material?.name ?? r.material_text ?? "—";
+export function itemName(item: PurchaseRequestItem): string {
+  return item.material?.name ?? item.material_text ?? "—";
+}
+
+// Short one-line label for a request's items: "Timber 1x2 (50), Timber 2x3 (30)".
+export function prItemsLabel(r: PurchaseRequest): string {
+  if (r.items.length === 0) return "—";
+  return r.items
+    .map((i) => {
+      const q = i.quantity != null ? ` (${i.quantity}${i.unit ? ` ${i.unit}` : ""})` : "";
+      return `${itemName(i)}${q}`;
+    })
+    .join(", ");
 }
 
 // Whole hours a request has been waiting since it was raised — for aging colour.

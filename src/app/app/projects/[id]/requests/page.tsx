@@ -5,7 +5,7 @@ import { getProject } from "@/lib/data/projects";
 import { getMaterials } from "@/lib/data/catalog";
 import {
   getProjectPurchaseRequests,
-  prMaterialName,
+  prItemsLabel,
 } from "@/lib/data/purchase-requests";
 import { todayISO } from "@/lib/date";
 import { PurchaseRequestForm } from "@/components/purchase-request-form";
@@ -51,14 +51,9 @@ export default async function ProjectRequestsPage({
           <ul className="divide-y divide-black/10 rounded-xl border border-black/10 dark:divide-white/10 dark:border-white/15">
             {requests.map((r) => (
               <li key={r.id} className="space-y-1 px-4 py-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">
-                    {prMaterialName(r)}
-                    {r.quantity != null
-                      ? ` · ${r.quantity}${r.unit ? ` ${r.unit}` : ""}`
-                      : ""}
-                  </span>
-                  <span className="rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="font-medium">{prItemsLabel(r)}</span>
+                  <span className="shrink-0 rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">
                     {t(`status.${r.status}`)}
                   </span>
                 </div>
