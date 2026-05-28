@@ -41,12 +41,6 @@
     "unitHint": "如 m3、包、吨",
     "countRequired": "交货时需清点",
     "countRequiredBadge": "需清点",
-    "machines": "机械",
-    "newMachine": "新增机械",
-    "addMachine": "添加机械",
-    "noMachines": "暂无机械。",
-    "machineKind": "类型",
-    "machineKindHint": "如 挖掘机、罗里、起重机",
     "inactive": "停用"
   },
   "Today": {
@@ -79,6 +73,14 @@
     "requests": "申请",
     "machinery": "机械",
     "stock": "库存",
+    "hours": "时数",
+    "machineType": "机械",
+    "otherMachine": "其他机械",
+    "machineTypes": {
+      "excavator": "挖掘机",
+      "backhoe": "挖土机",
+      "backpusher": "推土机"
+    },
     "reportDate": "日期",
     "backToToday": "返回今天",
     "backdatedNotice": "您正在为过去的日期（{date}）填写报告，将被标记为补录。",
@@ -207,29 +209,6 @@
     "countedOn": "{date} 盘点",
     "consumedSince": "自 {date} 起约用 {qty}",
     "firstCount": "首次盘点"
-  },
-  "Machinery": {
-    "title": "机械",
-    "recent": "近期记录",
-    "none": "暂无机械记录。",
-    "newLog": "登记机械",
-    "addLog": "保存记录",
-    "machine": "机械",
-    "date": "日期",
-    "present": "在场",
-    "absent": "不在场",
-    "hours": "工作时数",
-    "operator": "操作员",
-    "fuel": "燃油（升）",
-    "fuelHint": "当日总量",
-    "fuelNote": "燃油备注",
-    "breakdown": "故障",
-    "breakdownHint": "哪里故障？（可选）",
-    "saving": "正在保存…",
-    "saved": "机械记录已保存。",
-    "saveError": "无法保存，请重试。",
-    "emptyError": "请先选择机械。",
-    "noMachines": "暂无机械 — 请在办公室目录中添加。"
   },
   "Requests": {
     "title": "采购申请",

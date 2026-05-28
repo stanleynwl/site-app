@@ -52,6 +52,15 @@ export default async function ReportPage({
         }))
       : null;
 
+  // Machinery pre-fills from yesterday too (same policy as manpower / equipment).
+  const preFillMachinery =
+    report == null && yesterdayReport != null
+      ? yesterdayReport.machinery_entries.map((m) => ({
+          machine_type: m.machine_type,
+          hours_worked: m.hours_worked,
+        }))
+      : null;
+
   const minutesLeft =
     report?.status === "submitted" ? softEditMinutesLeft(report.submitted_at) : 0;
 
@@ -77,9 +86,6 @@ export default async function ReportPage({
           <Link href={`/app/projects/${id}/requests`} className="text-sm underline">
             {t("requests")}
           </Link>
-          <Link href={`/app/projects/${id}/machinery`} className="text-sm underline">
-            {t("machinery")}
-          </Link>
           <Link href={`/app/projects/${id}/stock`} className="text-sm underline">
             {t("stock")}
           </Link>
@@ -103,6 +109,7 @@ export default async function ReportPage({
         reportDate={selectedDate}
         report={report}
         preFillManpower={preFillManpower}
+        preFillMachinery={preFillMachinery}
         softEditMinutesLeft={minutesLeft}
       />
     </div>

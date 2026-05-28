@@ -15,6 +15,12 @@ export type ManpowerEntry = {
   worker_count: number;
 };
 
+export type MachineryEntry = {
+  id: string;
+  machine_type: string;
+  hours_worked: number | null;
+};
+
 export type Issue = {
   id: string;
   description: string;
@@ -40,11 +46,15 @@ export type DailyReport = {
 
 export type ReportWithChildren = DailyReport & {
   manpower_entries: ManpowerEntry[];
+  machinery_entries: MachineryEntry[];
   issues: Issue[];
 };
 
 const REPORT_COLUMNS =
   "id, project_id, report_date, author_id, status, report_type, no_work_reason, weather, rain_hours, work_done, notes, submitted_at, is_backdated";
+
+const REPORT_CHILDREN =
+  "manpower_entries(id, trade, subcontractor, worker_count), machinery_entries(id, machine_type, hours_worked), issues(id, description, category, resolved)";
 
 export async function getReportForDate(
   projectId: string,
@@ -54,9 +64,7 @@ export async function getReportForDate(
   const supabase = await createClient();
   const { data } = await supabase
     .from("daily_reports")
-    .select(
-      `${REPORT_COLUMNS}, manpower_entries(id, trade, subcontractor, worker_count), issues(id, description, category, resolved)`,
-    )
+    .select(`${REPORT_COLUMNS}, ${REPORT_CHILDREN}`)
     .eq("project_id", projectId)
     .eq("report_date", date)
     .maybeSingle();
@@ -70,9 +78,7 @@ export async function getReportById(
   const supabase = await createClient();
   const { data } = await supabase
     .from("daily_reports")
-    .select(
-      `${REPORT_COLUMNS}, manpower_entries(id, trade, subcontractor, worker_count), issues(id, description, category, resolved)`,
-    )
+    .select(`${REPORT_COLUMNS}, ${REPORT_CHILDREN}`)
     .eq("id", id)
     .maybeSingle();
   return (data as ReportWithChildren) ?? null;

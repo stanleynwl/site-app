@@ -6,6 +6,7 @@ import { unlockReport, type UnlockReportState } from "@/lib/data/actions";
 import { getProfile } from "@/lib/auth/dal";
 import { isInSoftEditWindow } from "@/lib/date";
 import { defaultTradeKey } from "@/lib/trades";
+import { defaultMachineKey } from "@/lib/machines";
 import { UnlockForm } from "@/components/unlock-form";
 
 export default async function OfficeReportView({
@@ -76,6 +77,25 @@ export default async function OfficeReportView({
                     <li key={m.id}>
                       {label}
                       {m.subcontractor ? ` (${m.subcontractor})` : ""}: {m.worker_count}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+
+          <section>
+            <h2 className="mb-1 text-sm font-semibold">{tr("machinery")}</h2>
+            {report.machinery_entries.length === 0 ? (
+              <p className="text-sm text-black/50 dark:text-white/50">—</p>
+            ) : (
+              <ul className="text-sm">
+                {report.machinery_entries.map((m) => {
+                  const key = defaultMachineKey(m.machine_type);
+                  const label = key ? tr(`machineTypes.${key}`) : m.machine_type;
+                  return (
+                    <li key={m.id}>
+                      {label}: {m.hours_worked ?? 0}h
                     </li>
                   );
                 })}

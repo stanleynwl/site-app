@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { useTranslations } from "next-intl";
 import { saveReport, type SaveReportState } from "@/lib/data/actions";
 import { DEFAULT_TRADES, defaultTradeKey } from "@/lib/trades";
+import { DEFAULT_MACHINES, defaultMachineKey } from "@/lib/machines";
 import type {
   IssueCategory,
   NoWorkReason,
@@ -11,6 +12,9 @@ import type {
   ReportWithChildren,
   Weather,
 } from "@/lib/data/reports";
+
+type MachinerySource = { machine_type: string; hours_worked: number | null };
+type MachineryRow = { type: string; custom: string; hours: string };
 
 const WEATHERS: Weather[] = ["sunny", "cloudy", "light_rain", "heavy_rain"];
 const CATEGORIES: IssueCategory[] = ["material", "weather", "consultant", "other"];
@@ -28,15 +32,17 @@ export function DailyReportForm({
   reportDate,
   report,
   preFillManpower,
+  preFillMachinery,
   softEditMinutesLeft,
 }: {
   projectId: string;
   // Calendar date this report is for (today, or a past date being backfilled).
   reportDate: string;
   report: ReportWithChildren | null;
-  // Pre-fill policy: manpower from yesterday when no report exists today.
+  // Pre-fill policy: manpower + machinery from yesterday when no report exists today.
   // null means no pre-fill available (no yesterday report, or today draft already exists).
   preFillManpower: ManpowerRow[] | null;
+  preFillMachinery: MachinerySource[] | null;
   softEditMinutesLeft: number;
 }) {
   const t = useTranslations("Report");
@@ -77,10 +83,31 @@ export function DailyReportForm({
     (r) => defaultTradeKey(r.trade) == null,
   );
 
+  // Machinery rows: existing report > yesterday pre-fill > the default machine
+  // types. Each row is one machine + hours (repeat a type for multiple units).
+  const sourceMachinery: MachinerySource[] | null =
+    report?.machinery_entries.map((m) => ({
+      machine_type: m.machine_type,
+      hours_worked: m.hours_worked,
+    })) ??
+    preFillMachinery ??
+    null;
+
+  const initialMachinery: MachineryRow[] =
+    sourceMachinery && sourceMachinery.length > 0
+      ? sourceMachinery.map((m) => {
+          const hours = m.hours_worked != null ? String(m.hours_worked) : "";
+          return defaultMachineKey(m.machine_type)
+            ? { type: m.machine_type, custom: "", hours }
+            : { type: "__other__", custom: m.machine_type, hours };
+        })
+      : DEFAULT_MACHINES.map((d) => ({ type: d.canonical, custom: "", hours: "" }));
+
   const [reportType, setReportType] = useState<ReportType>(
     report?.report_type ?? "normal",
   );
   const [customRows, setCustomRows] = useState<ManpowerRow[]>(initialCustom);
+  const [machinery, setMachinery] = useState<MachineryRow[]>(initialMachinery);
   const [issues, setIssues] = useState<IssueRow[]>(
     report?.issues.map((i) => ({
       description: i.description,
@@ -272,6 +299,96 @@ export function DailyReportForm({
         </section>
       )}
 
+      {/* Machinery — one row per machine + hours. Repeat a type for multiple
+          units (e.g. backhoe 8h + backhoe 4h when one broke down). */}
+      {!isNoWork && (
+        <section className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold">{t("machinery")}</h2>
+            <button
+              type="button"
+              onClick={() =>
+                setMachinery((rows) => [
+                  ...rows,
+                  { type: DEFAULT_MACHINES[0].canonical, custom: "", hours: "" },
+                ])
+              }
+              className="text-xs underline"
+            >
+              {t("addRow")}
+            </button>
+          </div>
+
+          {machinery.map((row, i) => {
+            const isOther = row.type === "__other__";
+            const effType = isOther ? row.custom : row.type;
+            return (
+              <div key={`mach-${i}`} className="flex items-center gap-3">
+                <input type="hidden" name="machinery_type" value={effType} />
+                <select
+                  value={row.type}
+                  onChange={(e) =>
+                    setMachinery((rows) =>
+                      rows.map((r, idx) =>
+                        idx === i ? { ...r, type: e.target.value } : r,
+                      ),
+                    )
+                  }
+                  className={`${baseInput} flex-1`}
+                >
+                  {DEFAULT_MACHINES.map((d) => (
+                    <option key={d.key} value={d.canonical}>
+                      {t(`machineTypes.${d.key}`)}
+                    </option>
+                  ))}
+                  <option value="__other__">{t("otherMachine")}</option>
+                </select>
+                {isOther && (
+                  <input
+                    value={row.custom}
+                    onChange={(e) =>
+                      setMachinery((rows) =>
+                        rows.map((r, idx) =>
+                          idx === i ? { ...r, custom: e.target.value } : r,
+                        ),
+                      )
+                    }
+                    placeholder={t("machineType")}
+                    className={`${baseInput} flex-1`}
+                  />
+                )}
+                <input
+                  name="machinery_hours"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={row.hours}
+                  onChange={(e) =>
+                    setMachinery((rows) =>
+                      rows.map((r, idx) =>
+                        idx === i ? { ...r, hours: e.target.value } : r,
+                      ),
+                    )
+                  }
+                  placeholder={t("hours")}
+                  className={`${baseInput} w-24 text-right`}
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setMachinery((rows) => rows.filter((_, idx) => idx !== i))
+                  }
+                  className="w-5 text-xs text-red-600"
+                  aria-label={t("remove")}
+                >
+                  ✕
+                </button>
+              </div>
+            );
+          })}
+        </section>
+      )}
+
       {/* Work done — policy: NEVER pre-filled */}
       {!isNoWork && (
         <label className="block text-sm">
@@ -419,6 +536,22 @@ function ReadOnlyReport({ report }: { report: ReportWithChildren }) {
                       const key = defaultTradeKey(m.trade);
                       const label = key ? t(`trades.${key}`) : m.trade;
                       return `${label}${m.subcontractor ? ` (${m.subcontractor})` : ""}: ${m.worker_count}`;
+                    })
+                    .join(", ")}
+            </dd>
+          </div>
+          <div>
+            <dt className="font-medium">{t("machinery")}</dt>
+            <dd className="text-black/70 dark:text-white/70">
+              {report.machinery_entries.length === 0
+                ? "—"
+                : report.machinery_entries
+                    .map((m) => {
+                      const key = defaultMachineKey(m.machine_type);
+                      const label = key
+                        ? t(`machineTypes.${key}`)
+                        : m.machine_type;
+                      return `${label}: ${m.hours_worked ?? 0}h`;
                     })
                     .join(", ")}
             </dd>

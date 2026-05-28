@@ -41,12 +41,6 @@
     "unitHint": "cth. m3, beg, tan",
     "countRequired": "Perlu dikira semasa penghantaran",
     "countRequiredBadge": "Perlu dikira",
-    "machines": "Jentera",
-    "newMachine": "Jentera baharu",
-    "addMachine": "Tambah jentera",
-    "noMachines": "Tiada jentera lagi.",
-    "machineKind": "Jenis",
-    "machineKindHint": "cth. jengkaut, lori, kren",
     "inactive": "Tidak aktif"
   },
   "Today": {
@@ -79,6 +73,14 @@
     "requests": "Permintaan",
     "machinery": "Jentera",
     "stock": "Stok",
+    "hours": "Jam",
+    "machineType": "Jentera",
+    "otherMachine": "Jentera lain",
+    "machineTypes": {
+      "excavator": "Jengkaut",
+      "backhoe": "Backhoe",
+      "backpusher": "Backpusher"
+    },
     "reportDate": "Tarikh",
     "backToToday": "Kembali ke hari ini",
     "backdatedNotice": "Anda mengisi laporan untuk tarikh lampau ({date}). Ia akan ditanda sebagai laporan susulan.",
@@ -207,29 +209,6 @@
     "countedOn": "Dikira {date}",
     "consumedSince": "Guna ~{qty} sejak {date}",
     "firstCount": "Kiraan pertama"
-  },
-  "Machinery": {
-    "title": "Jentera",
-    "recent": "Log terkini",
-    "none": "Tiada jentera direkodkan lagi.",
-    "newLog": "Rekod jentera",
-    "addLog": "Simpan log",
-    "machine": "Jentera",
-    "date": "Tarikh",
-    "present": "Di tapak",
-    "absent": "Tiada di tapak",
-    "hours": "Jam bekerja",
-    "operator": "Operator",
-    "fuel": "Bahan api (L)",
-    "fuelHint": "Jumlah hari ini",
-    "fuelNote": "Catatan bahan api",
-    "breakdown": "Kerosakan",
-    "breakdownHint": "Apa yang rosak? (pilihan)",
-    "saving": "Menyimpan…",
-    "saved": "Log jentera disimpan.",
-    "saveError": "Tidak dapat menyimpan. Sila cuba lagi.",
-    "emptyError": "Pilih jentera dahulu.",
-    "noMachines": "Tiada jentera lagi — tambahkannya di Katalog pejabat."
   },
   "Requests": {
     "title": "Permintaan belian",

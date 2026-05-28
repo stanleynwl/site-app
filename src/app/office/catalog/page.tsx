@@ -1,17 +1,15 @@
 import { getTranslations } from "next-intl/server";
 import { getSuppliers, getMaterials } from "@/lib/data/catalog";
-import { getMachines } from "@/lib/data/machinery";
-import { createSupplier, createMaterial, createMachine } from "@/lib/data/actions";
+import { createSupplier, createMaterial } from "@/lib/data/actions";
 
 const inputClass =
   "w-full rounded-lg border border-black/15 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
 
 export default async function CatalogPage() {
   const t = await getTranslations("Catalog");
-  const [suppliers, materials, machines] = await Promise.all([
+  const [suppliers, materials] = await Promise.all([
     getSuppliers(),
     getMaterials(),
-    getMachines(),
   ]);
 
   return (
@@ -134,72 +132,6 @@ export default async function CatalogPage() {
         )}
       </section>
 
-      {/* Machines ----------------------------------------------------------- */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold">{t("machines")}</h2>
-
-        <form
-          action={createMachine}
-          className="grid gap-3 rounded-xl border border-black/10 p-4 sm:grid-cols-3 dark:border-white/15"
-        >
-          <p className="text-sm font-semibold sm:col-span-3">{t("newMachine")}</p>
-          <label className="text-sm">
-            <span className="mb-1 block">{t("name")}</span>
-            <input name="name" required className={inputClass} />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block">{t("code")}</span>
-            <input name="code" className={inputClass} />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block">{t("machineKind")}</span>
-            <input
-              name="kind"
-              placeholder={t("machineKindHint")}
-              className={inputClass}
-            />
-          </label>
-          <div className="sm:col-span-3">
-            <button className="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background">
-              {t("addMachine")}
-            </button>
-          </div>
-        </form>
-
-        {machines.length === 0 ? (
-          <p className="text-sm text-black/50 dark:text-white/50">
-            {t("noMachines")}
-          </p>
-        ) : (
-          <ul className="divide-y divide-black/10 rounded-xl border border-black/10 dark:divide-white/10 dark:border-white/15">
-            {machines.map((m) => (
-              <li
-                key={m.id}
-                className="flex items-center justify-between px-4 py-3 text-sm"
-              >
-                <span>
-                  <span className="font-medium">{m.name}</span>
-                  {m.code && (
-                    <span className="ml-2 text-black/50 dark:text-white/50">
-                      {m.code}
-                    </span>
-                  )}
-                  {m.kind && (
-                    <span className="ml-2 text-black/50 dark:text-white/50">
-                      · {m.kind}
-                    </span>
-                  )}
-                </span>
-                {!m.active && (
-                  <span className="text-xs text-black/40 dark:text-white/40">
-                    {t("inactive")}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
     </div>
   );
 }

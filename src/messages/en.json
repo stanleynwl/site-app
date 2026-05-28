@@ -41,12 +41,6 @@
     "unitHint": "e.g. m3, bag, tonne",
     "countRequired": "Count required at delivery",
     "countRequiredBadge": "Count required",
-    "machines": "Machines",
-    "newMachine": "New machine",
-    "addMachine": "Add machine",
-    "noMachines": "No machines yet.",
-    "machineKind": "Type",
-    "machineKindHint": "e.g. excavator, lorry, crane",
     "inactive": "Inactive"
   },
   "Today": {
@@ -79,6 +73,14 @@
     "requests": "Requests",
     "machinery": "Machinery",
     "stock": "Stock",
+    "hours": "Hours",
+    "machineType": "Machine",
+    "otherMachine": "Other machine",
+    "machineTypes": {
+      "excavator": "Excavator",
+      "backhoe": "Backhoe",
+      "backpusher": "Backpusher"
+    },
     "reportDate": "Date",
     "backToToday": "Back to today",
     "backdatedNotice": "You're filling in a report for a past date ({date}). It will be flagged as backdated.",
@@ -207,29 +209,6 @@
     "countedOn": "Counted {date}",
     "consumedSince": "Used ~{qty} since {date}",
     "firstCount": "First count"
-  },
-  "Machinery": {
-    "title": "Machinery",
-    "recent": "Recent logs",
-    "none": "No machinery logged yet.",
-    "newLog": "Log machinery",
-    "addLog": "Save log",
-    "machine": "Machine",
-    "date": "Date",
-    "present": "On site",
-    "absent": "Not on site",
-    "hours": "Hours worked",
-    "operator": "Operator",
-    "fuel": "Fuel (L)",
-    "fuelHint": "Total for the day",
-    "fuelNote": "Fuel note",
-    "breakdown": "Breakdown",
-    "breakdownHint": "What broke down? (optional)",
-    "saving": "Saving…",
-    "saved": "Machine log saved.",
-    "saveError": "Could not save. Please try again.",
-    "emptyError": "Pick a machine first.",
-    "noMachines": "No machines yet — add them in the office Catalog."
   },
   "Requests": {
     "title": "Purchase requests",
