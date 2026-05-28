@@ -21,6 +21,7 @@ export default async function OfficeReportView({
   const t = await getTranslations("Office");
   const tr = await getTranslations("Report");
   const ts = await getTranslations("Status");
+  const tp = await getTranslations("Pdf");
 
   const isPm = profile?.role === "pm";
   const isExpiredSubmit =
@@ -37,9 +38,17 @@ export default async function OfficeReportView({
         >
           ← {t("timeline")}
         </Link>
-        <h1 className="mt-1 text-xl font-semibold">
-          {t("reportOn", { date: report.report_date })}
-        </h1>
+        <div className="mt-1 flex items-start justify-between gap-3">
+          <h1 className="text-xl font-semibold">
+            {t("reportOn", { date: report.report_date })}
+          </h1>
+          <Link
+            href={`/office/projects/${id}/reports/${reportId}/print`}
+            className="shrink-0 rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25"
+          >
+            {tp("exportPdf")}
+          </Link>
+        </div>
         <p className="text-sm text-black/50 dark:text-white/50">
           {ts(report.status)}
           {report.is_backdated ? ` · ${tr("backdatedBadge")}` : ""}

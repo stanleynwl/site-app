@@ -301,6 +301,12 @@
     "unlockSuccess": "报告已解锁，作者可重新编辑并提交。",
     "unlockError": "无法解锁，请重试。"
   },
+  "Pdf": {
+    "exportPdf": "导出 / 打印 PDF",
+    "printSave": "打印 / 另存为 PDF",
+    "backToReport": "返回报告",
+    "generated": "生成于 {date}"
+  },
   "Locale": {
     "label": "语言",
     "en": "English",

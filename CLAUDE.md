@@ -35,7 +35,8 @@ next-intl v4 without routing. Locale via `locale` cookie. Messages: `src/message
 - **Phase 3 (offline sync / PowerSync):** ⏸ not started — needs a PowerSync account + deps (external setup), deferred.
 - **Phase 4 (purchase requests):** 🔧 Code built & build-verified 2026-05-27. **Migration `0009` PENDING apply to hosted Supabase.**
 - **Phase 5 (operations):** ✅ Built — machinery (daily-report section) + weekly stock counts + visitors (daily-report section). Equipment is covered by machinery's "Other" row. **Migrations `0011`, `0012`, `0013` PENDING.**
-- **Phase 6–7:** not started.
+- **Phase 6 (PDF export):** 🔧 v1 built 2026-05-27 — print-optimized per-report page → browser "Save as PDF" (zero deps, no migration). Three-audience templates (consultant/client/boss) + project-level/date-range export = future.
+- **Phase 7 (pilot):** not started.
 
 ## Phase 1 (done)
 - **Soft-edit window:** Author can edit submitted report for 15 min. Edits logged to `report_edits`. PMs can unlock after hard-lock with a reason (sets status back to `draft`).
@@ -74,6 +75,9 @@ Capture-only procurement. Supervisor raises a request at `/app/projects/[id]/req
 
 ## Migrations
 **Applied through 0010 + storage_setup on hosted Supabase (0009 + 0010 applied 2026-05-27). PENDING apply (in order): `0011` (stock counts), `0012` (machinery-in-report — also drops the now-unused 0010 `machines`/`machine_logs`), `0013` (visitor_entries).**
+
+## Phase 6 PDF export (v1 — print-to-PDF)
+Zero-dependency approach: a print-optimized page `/office/projects/[id]/reports/[reportId]/print` renders one daily report cleanly (header + manpower/machinery/visitors/issues/work-done/notes, localized) with a `PrintButton` (`window.print()`). `globals.css` `@media print` forces light colours, hides the office `aside` sidebar + `.no-print` elements, sets page margins. Linked from the office report view ("Export / Print PDF"). i18n `Pdf` namespace. **No migration, no new deps** (deliberately avoided puppeteer/@react-pdf for Vercel simplicity). Future: three-audience templates (consultant/client/boss) + project/date-range export; swap to true server-side PDF if one-click is needed.
 
 ## Visitors (daily-report section)
 Optional secondary section on the daily report (like issues, shown for all report types): name + purpose. **No pre-fill** (policy). `visitor_entries` table (migration `0013`, RLS mirrors manpower). Persisted in `saveReport` (outside the normal-only block, so it saves on no-work days too). Shown in the office report view + locked read-only view. i18n `Report.visitors`/`visitorName`/`visitorPurpose`.

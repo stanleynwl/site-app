@@ -301,6 +301,12 @@
     "unlockSuccess": "Report unlocked. The author can now edit and re-submit.",
     "unlockError": "Could not unlock. Please try again."
   },
+  "Pdf": {
+    "exportPdf": "Export / Print PDF",
+    "printSave": "Print / Save as PDF",
+    "backToReport": "Back to report",
+    "generated": "Generated {date}"
+  },
   "Locale": {
     "label": "Language",
     "en": "English",

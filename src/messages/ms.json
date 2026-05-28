@@ -301,6 +301,12 @@
     "unlockSuccess": "Laporan dibuka kunci. Penulis boleh mengedit dan menghantar semula.",
     "unlockError": "Tidak dapat membuka kunci. Sila cuba lagi."
   },
+  "Pdf": {
+    "exportPdf": "Eksport / Cetak PDF",
+    "printSave": "Cetak / Simpan sebagai PDF",
+    "backToReport": "Kembali ke laporan",
+    "generated": "Dijana {date}"
+  },
   "Locale": {
     "label": "Bahasa",
     "en": "English",
