@@ -602,6 +602,48 @@ export async function logMachine(
   return { ok: true };
 }
 
+export type StockCountState =
+  | { ok: true }
+  | { error: "save" | "auth" | "validation" | "not-configured" }
+  | undefined;
+
+// Supervisor records a physical stock count for a catalog material on a date
+// (project member). Upsert keyed on (project, material, date). Consumption is
+// derived at read time (see stock.ts) — never stored.
+export async function recordStockCount(
+  _prev: StockCountState,
+  formData: FormData,
+): Promise<StockCountState> {
+  if (!isSupabaseConfigured) return { error: "not-configured" };
+  const user = await getSessionUser();
+  if (!user) return { error: "auth" };
+
+  const projectId = String(formData.get("project_id") ?? "");
+  const materialId = String(formData.get("material_id") ?? "");
+  const qty = parseQty(formData.get("quantity"));
+  if (!projectId || !materialId || qty == null) return { error: "validation" };
+  const countDate = String(formData.get("count_date") ?? "") || todayISO();
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("stock_counts").upsert(
+    {
+      project_id: projectId,
+      material_id: materialId,
+      count_date: countDate,
+      quantity: qty,
+      unit: String(formData.get("unit") ?? "").trim() || null,
+      note: String(formData.get("note") ?? "").trim() || null,
+      counted_by: user.id,
+    },
+    { onConflict: "project_id,material_id,count_date" },
+  );
+  if (error) return { error: "save" };
+
+  revalidatePath(`/app/projects/${projectId}/stock`);
+  revalidatePath(`/office/projects/${projectId}`);
+  return { ok: true };
+}
+
 export type SaveReportState =
   | { ok: true; submitted: boolean }
   | { error: "locked" | "save" | "not-configured" | "auth" }

@@ -18,6 +18,7 @@ import {
   PR_OPEN_STATUSES,
 } from "@/lib/data/purchase-requests";
 import { getProjectMachineLogs } from "@/lib/data/machinery";
+import { getStockSummary } from "@/lib/data/stock";
 import {
   setDeliveryOfficeFields,
   createProjectTag,
@@ -43,6 +44,7 @@ export default async function OfficeProjectDetail({
   const tp = await getTranslations("Photos");
   const tk = await getTranslations("Tags");
   const tm = await getTranslations("Machinery");
+  const tst = await getTranslations("Stock");
   const [
     reports,
     rawDeliveries,
@@ -52,6 +54,7 @@ export default async function OfficeProjectDetail({
     rawPhotos,
     requests,
     machineLogs,
+    stockSummary,
   ] = await Promise.all([
     getProjectReports(id),
     getProjectDeliveries(id),
@@ -61,6 +64,7 @@ export default async function OfficeProjectDetail({
     getProjectPhotos(id),
     getProjectPurchaseRequests(id),
     getProjectMachineLogs(id),
+    getStockSummary(id),
   ]);
   const deliveries = await withSignedUrls(rawDeliveries);
   const photos = await withSignedPhotoUrls(rawPhotos);
@@ -434,6 +438,34 @@ export default async function OfficeProjectDetail({
                     {l.breakdown_note ? `: ${l.breakdown_note}` : ""}
                   </span>
                 )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* Stock on site (latest count + derived consumption) ------------- */}
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold">{tst("onHand")}</h2>
+        {stockSummary.length === 0 ? (
+          <p className="text-sm text-black/50 dark:text-white/50">{tst("none")}</p>
+        ) : (
+          <ul className="divide-y divide-black/10 rounded-xl border border-black/10 dark:divide-white/10 dark:border-white/15">
+            {stockSummary.map((s) => (
+              <li key={s.material_id} className="space-y-1 px-4 py-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{s.material_name}</span>
+                  <span>
+                    {s.latest_qty}
+                    {s.unit ? ` ${s.unit}` : ""}
+                  </span>
+                </div>
+                <div className="text-xs text-black/50 dark:text-white/50">
+                  {tst("countedOn", { date: s.latest_date })}
+                  {s.consumption != null
+                    ? ` · ${tst("consumedSince", { qty: s.consumption, date: s.previous_date ?? "" })}`
+                    : ` · ${tst("firstCount")}`}
+                </div>
               </li>
             ))}
           </ul>

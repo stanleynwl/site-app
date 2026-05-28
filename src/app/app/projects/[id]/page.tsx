@@ -80,6 +80,9 @@ export default async function ReportPage({
           <Link href={`/app/projects/${id}/machinery`} className="text-sm underline">
             {t("machinery")}
           </Link>
+          <Link href={`/app/projects/${id}/stock`} className="text-sm underline">
+            {t("stock")}
+          </Link>
         </div>
       </div>
 
