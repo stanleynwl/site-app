@@ -4,8 +4,10 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Material } from "@/lib/data/catalog";
 
-const inputClass =
-  "w-full rounded-lg border border-black/15 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
+// No width here — callers set width (w-full / flex-1 / w-20). Mixing w-full with
+// flex-1/w-20 produces conflicting width rules, which squashed the quantity field.
+const baseInput =
+  "rounded-lg border border-black/15 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
 
 type Row = { query: string; materialId: string; unit: string; quantity: string };
 
@@ -68,7 +70,7 @@ export function RequestItemsField({ materials }: { materials: Material[] }) {
                 }
                 placeholder={t("searchMaterial")}
                 autoComplete="off"
-                className={inputClass}
+                className={`${baseInput} w-full`}
               />
               {showList && (
                 <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-black/15 bg-background shadow-lg dark:border-white/20">
@@ -105,14 +107,14 @@ export function RequestItemsField({ materials }: { materials: Material[] }) {
                 value={row.quantity}
                 onChange={(e) => patch(i, { quantity: e.target.value })}
                 placeholder={t("quantity")}
-                className={`${inputClass} flex-1`}
+                className={`${baseInput} min-w-0 flex-1`}
               />
               <input
                 name="request_unit"
                 value={row.unit}
                 onChange={(e) => patch(i, { unit: e.target.value })}
                 placeholder={t("unit")}
-                className={`${inputClass} w-20`}
+                className={`${baseInput} w-20 shrink-0`}
               />
               <button
                 type="button"
