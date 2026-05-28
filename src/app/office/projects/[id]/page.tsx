@@ -17,6 +17,7 @@ import {
   prMaterialName,
   PR_OPEN_STATUSES,
 } from "@/lib/data/purchase-requests";
+import { getProjectMachineLogs } from "@/lib/data/machinery";
 import {
   setDeliveryOfficeFields,
   createProjectTag,
@@ -41,16 +42,26 @@ export default async function OfficeProjectDetail({
   const td = await getTranslations("Deliveries");
   const tp = await getTranslations("Photos");
   const tk = await getTranslations("Tags");
-  const [reports, rawDeliveries, suppliers, materials, tags, rawPhotos, requests] =
-    await Promise.all([
-      getProjectReports(id),
-      getProjectDeliveries(id),
-      getSuppliers(),
-      getMaterials(),
-      getProjectTags(id),
-      getProjectPhotos(id),
-      getProjectPurchaseRequests(id),
-    ]);
+  const tm = await getTranslations("Machinery");
+  const [
+    reports,
+    rawDeliveries,
+    suppliers,
+    materials,
+    tags,
+    rawPhotos,
+    requests,
+    machineLogs,
+  ] = await Promise.all([
+    getProjectReports(id),
+    getProjectDeliveries(id),
+    getSuppliers(),
+    getMaterials(),
+    getProjectTags(id),
+    getProjectPhotos(id),
+    getProjectPurchaseRequests(id),
+    getProjectMachineLogs(id),
+  ]);
   const deliveries = await withSignedUrls(rawDeliveries);
   const photos = await withSignedPhotoUrls(rawPhotos);
   const approvedTags = tags.filter((tg) => tg.approved);
@@ -389,6 +400,39 @@ export default async function OfficeProjectDetail({
                       {tk("save")}
                     </button>
                   </form>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* Machinery (recent logs, read-only) ----------------------------- */}
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold">{tm("title")}</h2>
+        {machineLogs.length === 0 ? (
+          <p className="text-sm text-black/50 dark:text-white/50">{tm("none")}</p>
+        ) : (
+          <ul className="divide-y divide-black/10 rounded-xl border border-black/10 dark:divide-white/10 dark:border-white/15">
+            {machineLogs.map((l) => (
+              <li key={l.id} className="space-y-1 px-4 py-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{l.machine?.name ?? "—"}</span>
+                  <span className="text-black/50 dark:text-white/50">
+                    {l.log_date}
+                  </span>
+                </div>
+                <div className="text-black/60 dark:text-white/60">
+                  {l.present ? tm("present") : tm("absent")}
+                  {l.hours_worked != null ? ` · ${l.hours_worked}h` : ""}
+                  {l.fuel_litres != null ? ` · ${l.fuel_litres}L` : ""}
+                  {l.operator ? ` · ${l.operator}` : ""}
+                </div>
+                {l.breakdown && (
+                  <span className="inline-block rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-300">
+                    {tm("breakdown")}
+                    {l.breakdown_note ? `: ${l.breakdown_note}` : ""}
+                  </span>
                 )}
               </li>
             ))}

@@ -536,6 +536,72 @@ export async function closePurchaseRequest(formData: FormData): Promise<void> {
   await updatePurchaseRequest(formData, { status: "closed" });
 }
 
+// --- Phase 5 operations: machinery ------------------------------------------
+
+// Add a company machine (pm/office) — reference data like suppliers/materials.
+export async function createMachine(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "pm" && profile.role !== "office") return;
+
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+
+  const supabase = await createClient();
+  await supabase.from("machines").insert({
+    name,
+    code: String(formData.get("code") ?? "").trim() || null,
+    kind: String(formData.get("kind") ?? "").trim() || null,
+    company_id: profile.company_id,
+  });
+  revalidatePath("/office/catalog");
+}
+
+export type MachineLogState =
+  | { ok: true }
+  | { error: "save" | "auth" | "validation" | "not-configured" }
+  | undefined;
+
+// Supervisor logs a machine for a day (project member). Upsert keyed on
+// (project, machine, date) so re-logging the same machine updates that day.
+export async function logMachine(
+  _prev: MachineLogState,
+  formData: FormData,
+): Promise<MachineLogState> {
+  if (!isSupabaseConfigured) return { error: "not-configured" };
+  const user = await getSessionUser();
+  if (!user) return { error: "auth" };
+
+  const projectId = String(formData.get("project_id") ?? "");
+  const machineId = String(formData.get("machine_id") ?? "");
+  if (!projectId || !machineId) return { error: "validation" };
+  const logDate = String(formData.get("log_date") ?? "") || todayISO();
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("machine_logs").upsert(
+    {
+      project_id: projectId,
+      machine_id: machineId,
+      log_date: logDate,
+      present: formData.get("present") === "on",
+      hours_worked: parseQty(formData.get("hours_worked")),
+      breakdown: formData.get("breakdown") === "on",
+      breakdown_note: String(formData.get("breakdown_note") ?? "").trim() || null,
+      operator: String(formData.get("operator") ?? "").trim() || null,
+      fuel_litres: parseQty(formData.get("fuel_litres")),
+      fuel_note: String(formData.get("fuel_note") ?? "").trim() || null,
+      created_by: user.id,
+    },
+    { onConflict: "project_id,machine_id,log_date" },
+  );
+  if (error) return { error: "save" };
+
+  revalidatePath(`/app/projects/${projectId}/machinery`);
+  revalidatePath(`/office/projects/${projectId}`);
+  return { ok: true };
+}
+
 export type SaveReportState =
   | { ok: true; submitted: boolean }
   | { error: "locked" | "save" | "not-configured" | "auth" }
