@@ -301,6 +301,46 @@
     "unlockSuccess": "Laporan dibuka kunci. Penulis boleh mengedit dan menghantar semula.",
     "unlockError": "Tidak dapat membuka kunci. Sila cuba lagi."
   },
+  "Export": {
+    "title": "Eksport PDF",
+    "intro": "Pilih projek, julat tarikh dan penerima, kemudian Jana dan Simpan sebagai PDF.",
+    "project": "Projek",
+    "from": "Dari",
+    "to": "Hingga",
+    "audience": "Penerima",
+    "generate": "Jana",
+    "noProjects": "Tiada projek lagi.",
+    "audienceOpt": {
+      "consultant": "Perunding",
+      "client": "Klien",
+      "boss": "Bos"
+    },
+    "audienceHint": {
+      "consultant": "Bukti EOT",
+      "client": "Kemajuan + foto",
+      "boss": "Pengecualian sahaja"
+    },
+    "consultantTitle": "Laporan perunding — bukti EOT",
+    "clientTitle": "Laporan kemajuan",
+    "bossTitle": "Ringkasan pengecualian",
+    "range": "{from} hingga {to}",
+    "summary": "{days} hari laporan · {manDays} hari-pekerja · {rain}j hujan dalam {rainDays} hari",
+    "colDate": "Tarikh",
+    "colWeather": "Cuaca",
+    "colRain": "Hujan (j)",
+    "colWorkers": "Pekerja",
+    "delays": "Kelewatan & isu",
+    "workNarrative": "Kerja disiapkan",
+    "photos": "Foto",
+    "noPhotos": "Tiada foto dalam tempoh ini.",
+    "openRequests": "Permintaan terbuka / tertunggak",
+    "variances": "Varians penghantaran",
+    "openIssues": "Isu terbuka",
+    "noExceptions": "Tiada pengecualian — tiada yang tertunggak.",
+    "waiting": "menunggu {hours}j",
+    "none": "Tiada.",
+    "noData": "Tiada data dalam tempoh ini."
+  },
   "Pdf": {
     "exportPdf": "Eksport / Cetak PDF",
     "printSave": "Cetak / Simpan sebagai PDF",

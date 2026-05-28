@@ -301,6 +301,46 @@
     "unlockSuccess": "Report unlocked. The author can now edit and re-submit.",
     "unlockError": "Could not unlock. Please try again."
   },
+  "Export": {
+    "title": "PDF export",
+    "intro": "Pick a project, date range and audience, then Generate and Save as PDF.",
+    "project": "Project",
+    "from": "From",
+    "to": "To",
+    "audience": "Audience",
+    "generate": "Generate",
+    "noProjects": "No projects yet.",
+    "audienceOpt": {
+      "consultant": "Consultant",
+      "client": "Client",
+      "boss": "Boss"
+    },
+    "audienceHint": {
+      "consultant": "EOT evidence",
+      "client": "Progress + photos",
+      "boss": "Exceptions only"
+    },
+    "consultantTitle": "Consultant report — EOT evidence",
+    "clientTitle": "Progress report",
+    "bossTitle": "Exceptions summary",
+    "range": "{from} to {to}",
+    "summary": "{days} report day(s) · {manDays} man-days · {rain}h rain over {rainDays} day(s)",
+    "colDate": "Date",
+    "colWeather": "Weather",
+    "colRain": "Rain (h)",
+    "colWorkers": "Workers",
+    "delays": "Delays & issues",
+    "workNarrative": "Work done",
+    "photos": "Photos",
+    "noPhotos": "No photos in this period.",
+    "openRequests": "Open / overdue requests",
+    "variances": "Delivery variances",
+    "openIssues": "Open issues",
+    "noExceptions": "No exceptions — nothing outstanding.",
+    "waiting": "{hours}h waiting",
+    "none": "None.",
+    "noData": "No data in this period."
+  },
   "Pdf": {
     "exportPdf": "Export / Print PDF",
     "printSave": "Print / Save as PDF",

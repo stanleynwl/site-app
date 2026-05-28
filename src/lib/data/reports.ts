@@ -91,6 +91,25 @@ export async function getReportById(
   return (data as ReportWithChildren) ?? null;
 }
 
+// Reports with their children over an inclusive date range — for the date-range
+// PDF exports (consultant / client / boss). Ascending by date.
+export async function getReportsInRange(
+  projectId: string,
+  from: string,
+  to: string,
+): Promise<ReportWithChildren[]> {
+  if (!isSupabaseConfigured) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("daily_reports")
+    .select(`${REPORT_COLUMNS}, ${REPORT_CHILDREN}`)
+    .eq("project_id", projectId)
+    .gte("report_date", from)
+    .lte("report_date", to)
+    .order("report_date", { ascending: true });
+  return (data ?? []) as ReportWithChildren[];
+}
+
 export async function getProjectReports(
   projectId: string,
 ): Promise<DailyReport[]> {

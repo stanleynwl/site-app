@@ -35,7 +35,7 @@ next-intl v4 without routing. Locale via `locale` cookie. Messages: `src/message
 - **Phase 3 (offline sync / PowerSync):** ⏸ not started — needs a PowerSync account + deps (external setup), deferred.
 - **Phase 4 (purchase requests):** 🔧 Code built & build-verified 2026-05-27. **Migration `0009` PENDING apply to hosted Supabase.**
 - **Phase 5 (operations):** ✅ Built — machinery (daily-report section) + weekly stock counts + visitors (daily-report section). Equipment is covered by machinery's "Other" row. **Migrations `0011`, `0012`, `0013` PENDING.**
-- **Phase 6 (PDF export):** 🔧 v1 built 2026-05-27 — print-optimized per-report page → browser "Save as PDF" (zero deps, no migration). Three-audience templates (consultant/client/boss) + project-level/date-range export = future.
+- **Phase 6 (PDF export):** ✅ Built 2026-05-27 — per-report print-to-PDF **and** three-audience date-range exports (consultant EOT / client progress+photos / boss exceptions) at `/office/export`. Zero deps, no migration.
 - **Phase 7 (pilot):** not started.
 
 ## Phase 1 (done)
@@ -76,8 +76,14 @@ Capture-only procurement. Supervisor raises a request at `/app/projects/[id]/req
 ## Migrations
 **Applied through 0010 + storage_setup on hosted Supabase (0009 + 0010 applied 2026-05-27). PENDING apply (in order): `0011` (stock counts), `0012` (machinery-in-report — also drops the now-unused 0010 `machines`/`machine_logs`), `0013` (visitor_entries).**
 
-## Phase 6 PDF export (v1 — print-to-PDF)
-Zero-dependency approach: a print-optimized page `/office/projects/[id]/reports/[reportId]/print` renders one daily report cleanly (header + manpower/machinery/visitors/issues/work-done/notes, localized) with a `PrintButton` (`window.print()`). `globals.css` `@media print` forces light colours, hides the office `aside` sidebar + `.no-print` elements, sets page margins. Linked from the office report view ("Export / Print PDF"). i18n `Pdf` namespace. **No migration, no new deps** (deliberately avoided puppeteer/@react-pdf for Vercel simplicity). Future: three-audience templates (consultant/client/boss) + project/date-range export; swap to true server-side PDF if one-click is needed.
+## Phase 6 PDF export (print-to-PDF, zero deps)
+Zero-dependency approach throughout (deliberately avoided puppeteer/@react-pdf for Vercel simplicity): clean print-optimized pages + browser "Save as PDF" via `PrintButton` (`window.print()`). `globals.css` `@media print` forces light, hides the office `aside` + `.no-print`, sets margins.
+- **Per-report:** `/office/projects/[id]/reports/[reportId]/print` — one daily report (manpower/machinery/visitors/issues/work-done/notes). Linked from the office report view.
+- **Three-audience date-range exports:** `/office/export` (nav "PDF export", now a real page) → `export-form.tsx` (project + from/to + audience) → `/office/export/print?project=&audience=&from=&to=`. Templates in that print page (async server sub-components, each calls its own `getTranslations`):
+  - **consultant** (EOT evidence): per-day weather/rain/workers table + totals (rain hours, man-days) + delays/issues list. Uses `getReportsInRange`.
+  - **client** (progress): per-day work-done narrative + progress-photo grid (signed URLs, filtered to range).
+  - **boss** (exceptions): open/overdue purchase requests (aged, 48h+ red), delivery variances (`deliveryVariance != 0`), unresolved issues. "No exceptions" when clean.
+- Data helper added: `getReportsInRange(projectId, from, to)` in reports.ts. i18n `Export` + `Pdf` namespaces. **Future:** true one-click server-side PDF if browser-print isn't enough.
 
 ## Visitors (daily-report section)
 Optional secondary section on the daily report (like issues, shown for all report types): name + purpose. **No pre-fill** (policy). `visitor_entries` table (migration `0013`, RLS mirrors manpower). Persisted in `saveReport` (outside the normal-only block, so it saves on no-work days too). Shown in the office report view + locked read-only view. i18n `Report.visitors`/`visitorName`/`visitorPurpose`.

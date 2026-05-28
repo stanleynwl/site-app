@@ -301,6 +301,46 @@
     "unlockSuccess": "报告已解锁，作者可重新编辑并提交。",
     "unlockError": "无法解锁，请重试。"
   },
+  "Export": {
+    "title": "PDF 导出",
+    "intro": "选择项目、日期范围和对象，然后生成并另存为 PDF。",
+    "project": "项目",
+    "from": "起始",
+    "to": "结束",
+    "audience": "对象",
+    "generate": "生成",
+    "noProjects": "暂无项目。",
+    "audienceOpt": {
+      "consultant": "顾问",
+      "client": "客户",
+      "boss": "老板"
+    },
+    "audienceHint": {
+      "consultant": "工期延长证据",
+      "client": "进度 + 照片",
+      "boss": "仅例外事项"
+    },
+    "consultantTitle": "顾问报告 — 工期延长证据",
+    "clientTitle": "进度报告",
+    "bossTitle": "例外事项摘要",
+    "range": "{from} 至 {to}",
+    "summary": "{days} 个报告日 · {manDays} 人日 · {rainDays} 天共 {rain} 小时降雨",
+    "colDate": "日期",
+    "colWeather": "天气",
+    "colRain": "降雨（时）",
+    "colWorkers": "人数",
+    "delays": "延误与问题",
+    "workNarrative": "完成的工作",
+    "photos": "照片",
+    "noPhotos": "此期间无照片。",
+    "openRequests": "未结 / 逾期申请",
+    "variances": "送货差异",
+    "openIssues": "未解决问题",
+    "noExceptions": "无例外事项 — 无未结事项。",
+    "waiting": "已等待 {hours} 小时",
+    "none": "无。",
+    "noData": "此期间无数据。"
+  },
   "Pdf": {
     "exportPdf": "导出 / 打印 PDF",
     "printSave": "打印 / 另存为 PDF",
