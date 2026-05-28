@@ -41,7 +41,10 @@
     "unitHint": "cth. m3, beg, tan",
     "countRequired": "Perlu dikira semasa penghantaran",
     "countRequiredBadge": "Perlu dikira",
-    "inactive": "Tidak aktif"
+    "inactive": "Tidak aktif",
+    "save": "Simpan",
+    "activate": "Aktifkan",
+    "deactivate": "Nyahaktif"
   },
   "Today": {
     "title": "Laporan hari ini",

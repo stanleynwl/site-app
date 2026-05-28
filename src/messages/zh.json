@@ -41,7 +41,10 @@
     "unitHint": "如 m3、包、吨",
     "countRequired": "交货时需清点",
     "countRequiredBadge": "需清点",
-    "inactive": "停用"
+    "inactive": "停用",
+    "save": "保存",
+    "activate": "启用",
+    "deactivate": "停用"
   },
   "Today": {
     "title": "今日报告",

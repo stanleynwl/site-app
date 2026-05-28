@@ -1,9 +1,20 @@
 import { getTranslations } from "next-intl/server";
 import { getSuppliers, getMaterials } from "@/lib/data/catalog";
-import { createSupplier, createMaterial } from "@/lib/data/actions";
+import {
+  createSupplier,
+  createMaterial,
+  updateSupplier,
+  setSupplierActive,
+  updateMaterial,
+  setMaterialActive,
+} from "@/lib/data/actions";
 
 const inputClass =
   "w-full rounded-lg border border-black/15 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
+const editInput =
+  "rounded-lg border border-black/15 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
+const smallBtn =
+  "rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25";
 
 export default async function CatalogPage() {
   const t = await getTranslations("Catalog");
@@ -49,21 +60,40 @@ export default async function CatalogPage() {
         ) : (
           <ul className="divide-y divide-black/10 rounded-xl border border-black/10 dark:divide-white/10 dark:border-white/15">
             {suppliers.map((s) => (
-              <li key={s.id} className="flex items-center justify-between px-4 py-3 text-sm">
-                <span>
-                  <span className="font-medium">{s.name}</span>
-                  {s.code && (
-                    <span className="ml-2 text-black/50 dark:text-white/50">{s.code}</span>
-                  )}
-                  {s.phone && (
-                    <span className="ml-2 text-black/50 dark:text-white/50">· {s.phone}</span>
-                  )}
-                </span>
-                {!s.active && (
-                  <span className="text-xs text-black/40 dark:text-white/40">
-                    {t("inactive")}
-                  </span>
-                )}
+              <li
+                key={s.id}
+                className={`flex flex-wrap items-end gap-2 px-4 py-3 text-sm ${s.active ? "" : "opacity-50"}`}
+              >
+                <form action={updateSupplier} className="flex flex-wrap items-end gap-2">
+                  <input type="hidden" name="supplier_id" value={s.id} />
+                  <input
+                    name="name"
+                    defaultValue={s.name}
+                    required
+                    aria-label={t("name")}
+                    className={editInput}
+                  />
+                  <input
+                    name="code"
+                    defaultValue={s.code ?? ""}
+                    placeholder={t("code")}
+                    className={`${editInput} w-24`}
+                  />
+                  <input
+                    name="phone"
+                    defaultValue={s.phone ?? ""}
+                    placeholder={t("phone")}
+                    className={`${editInput} w-32`}
+                  />
+                  <button className={smallBtn}>{t("save")}</button>
+                </form>
+                <form action={setSupplierActive}>
+                  <input type="hidden" name="supplier_id" value={s.id} />
+                  <input type="hidden" name="active" value={s.active ? "false" : "true"} />
+                  <button className={smallBtn}>
+                    {s.active ? t("deactivate") : t("activate")}
+                  </button>
+                </form>
               </li>
             ))}
           </ul>
@@ -107,25 +137,43 @@ export default async function CatalogPage() {
         ) : (
           <ul className="divide-y divide-black/10 rounded-xl border border-black/10 dark:divide-white/10 dark:border-white/15">
             {materials.map((m) => (
-              <li key={m.id} className="flex items-center justify-between px-4 py-3 text-sm">
-                <span>
-                  <span className="font-medium">{m.name}</span>
-                  {m.unit && (
-                    <span className="ml-2 text-black/50 dark:text-white/50">{m.unit}</span>
-                  )}
-                </span>
-                <span className="flex items-center gap-3">
-                  {m.count_required && (
-                    <span className="rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">
-                      {t("countRequiredBadge")}
-                    </span>
-                  )}
-                  {!m.active && (
-                    <span className="text-xs text-black/40 dark:text-white/40">
-                      {t("inactive")}
-                    </span>
-                  )}
-                </span>
+              <li
+                key={m.id}
+                className={`flex flex-wrap items-end gap-2 px-4 py-3 text-sm ${m.active ? "" : "opacity-50"}`}
+              >
+                <form action={updateMaterial} className="flex flex-wrap items-end gap-2">
+                  <input type="hidden" name="material_id" value={m.id} />
+                  <input
+                    name="name"
+                    defaultValue={m.name}
+                    required
+                    aria-label={t("name")}
+                    className={editInput}
+                  />
+                  <input
+                    name="unit"
+                    defaultValue={m.unit ?? ""}
+                    placeholder={t("unit")}
+                    className={`${editInput} w-20`}
+                  />
+                  <label className="flex items-center gap-1 text-xs">
+                    <input
+                      type="checkbox"
+                      name="count_required"
+                      defaultChecked={m.count_required}
+                      className="h-4 w-4"
+                    />
+                    {t("countRequiredBadge")}
+                  </label>
+                  <button className={smallBtn}>{t("save")}</button>
+                </form>
+                <form action={setMaterialActive}>
+                  <input type="hidden" name="material_id" value={m.id} />
+                  <input type="hidden" name="active" value={m.active ? "false" : "true"} />
+                  <button className={smallBtn}>
+                    {m.active ? t("deactivate") : t("activate")}
+                  </button>
+                </form>
               </li>
             ))}
           </ul>

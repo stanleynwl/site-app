@@ -81,6 +81,73 @@ export async function createMaterial(formData: FormData): Promise<void> {
   revalidatePath("/office/catalog");
 }
 
+// Edit / retire catalog entries (pm/office). Deactivating hides an entry from the
+// request/delivery/stock pickers without deleting it (history is preserved).
+async function requireOfficeProfile() {
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "pm" && profile.role !== "office") return null;
+  return profile;
+}
+
+export async function updateSupplier(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  if (!(await requireOfficeProfile())) return;
+  const id = String(formData.get("supplier_id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!id || !name) return;
+  const supabase = await createClient();
+  await supabase
+    .from("suppliers")
+    .update({
+      name,
+      code: String(formData.get("code") ?? "").trim() || null,
+      phone: String(formData.get("phone") ?? "").trim() || null,
+    })
+    .eq("id", id);
+  revalidatePath("/office/catalog");
+}
+
+export async function setSupplierActive(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  if (!(await requireOfficeProfile())) return;
+  const id = String(formData.get("supplier_id") ?? "");
+  if (!id) return;
+  const active = String(formData.get("active") ?? "") === "true";
+  const supabase = await createClient();
+  await supabase.from("suppliers").update({ active }).eq("id", id);
+  revalidatePath("/office/catalog");
+}
+
+export async function updateMaterial(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  if (!(await requireOfficeProfile())) return;
+  const id = String(formData.get("material_id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!id || !name) return;
+  const supabase = await createClient();
+  await supabase
+    .from("materials")
+    .update({
+      name,
+      unit: String(formData.get("unit") ?? "").trim() || null,
+      count_required: formData.get("count_required") === "on",
+    })
+    .eq("id", id);
+  revalidatePath("/office/catalog");
+}
+
+export async function setMaterialActive(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  if (!(await requireOfficeProfile())) return;
+  const id = String(formData.get("material_id") ?? "");
+  if (!id) return;
+  const active = String(formData.get("active") ?? "") === "true";
+  const supabase = await createClient();
+  await supabase.from("materials").update({ active }).eq("id", id);
+  revalidatePath("/office/catalog");
+}
+
 // --- Phase 2 photo taxonomy: project tags + progress photos ------------------
 
 const TAG_KINDS = ["block", "level", "area", "activity"] as const;

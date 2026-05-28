@@ -41,7 +41,10 @@
     "unitHint": "e.g. m3, bag, tonne",
     "countRequired": "Count required at delivery",
     "countRequiredBadge": "Count required",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "save": "Save",
+    "activate": "Activate",
+    "deactivate": "Deactivate"
   },
   "Today": {
     "title": "Today's reports",
