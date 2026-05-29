@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getProject } from "@/lib/data/projects";
-import { getProjectBlocks } from "@/lib/data/structure";
+import { getProjectBlocks, withSignedBlockPhotos } from "@/lib/data/structure";
 import { addBlockStage } from "@/lib/data/actions";
 import { todayISO } from "@/lib/date";
 import { StageRow } from "@/components/stage-row";
@@ -23,7 +23,7 @@ export default async function ProjectStagesPage({
   if (!project) notFound();
 
   const t = await getTranslations("Stages");
-  const blocks = await getProjectBlocks(id);
+  const blocks = await withSignedBlockPhotos(await getProjectBlocks(id));
   const month = todayISO().slice(0, 7);
 
   return (
@@ -66,6 +66,23 @@ export default async function ProjectStagesPage({
                       </p>
                     )}
                   </div>
+
+                  {b.ref_photos.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {b.ref_photos.map((p) =>
+                        p.url ? (
+                          <a key={p.id} href={p.url} target="_blank" rel="noreferrer">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={p.url}
+                              alt=""
+                              className="h-24 w-24 rounded-lg object-cover"
+                            />
+                          </a>
+                        ) : null,
+                      )}
+                    </div>
+                  )}
 
                   {b.stages.length === 0 ? (
                     <p className="text-sm text-black/50 dark:text-white/50">
