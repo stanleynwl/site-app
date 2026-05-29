@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSessionUser, getProfile } from "@/lib/auth/dal";
 import { todayISO, isInSoftEditWindow, normalizeReportDate } from "@/lib/date";
+import { DEFAULT_STAGES } from "@/lib/stages";
 import type { IssueCategory, NoWorkReason, ReportType, Weather } from "./reports";
 
 const WEATHERS: Weather[] = ["sunny", "cloudy", "light_rain", "heavy_rain"];
@@ -536,7 +537,14 @@ export async function createPurchaseRequest(
     })
     .filter((it) => it.material_id || it.material_text);
 
-  if (items.length === 0) return { error: "validation" };
+  // A photo of the spec/sample can stand in for typing a long material name, so
+  // accept a request with photo(s) and no typed line items.
+  const photoPaths = formData.getAll("photo_path").map(String).filter(Boolean);
+  const photoTakenAt = formData.getAll("photo_taken_at").map(String);
+  const photoLat = formData.getAll("photo_lat").map(String);
+  const photoLng = formData.getAll("photo_lng").map(String);
+
+  if (items.length === 0 && photoPaths.length === 0) return { error: "validation" };
 
   const supabase = await createClient();
   const { data: request, error } = await supabase
@@ -552,10 +560,27 @@ export async function createPurchaseRequest(
     .single();
   if (error || !request) return { error: "save" };
 
-  const { error: itemsErr } = await supabase
-    .from("purchase_request_items")
-    .insert(items.map((it) => ({ ...it, request_id: request.id })));
-  if (itemsErr) return { error: "save" };
+  if (items.length > 0) {
+    const { error: itemsErr } = await supabase
+      .from("purchase_request_items")
+      .insert(items.map((it) => ({ ...it, request_id: request.id })));
+    if (itemsErr) return { error: "save" };
+  }
+
+  // Persist request photo metadata (binaries already uploaded to Storage).
+  if (photoPaths.length > 0) {
+    await supabase.from("photos").insert(
+      photoPaths.map((path, i) => ({
+        project_id: projectId,
+        purchase_request_id: request.id,
+        storage_path: path,
+        taken_at: photoTakenAt[i] || null,
+        gps_lat: parseCoord(photoLat[i] ?? null),
+        gps_lng: parseCoord(photoLng[i] ?? null),
+        uploaded_by: user.id,
+      })),
+    );
+  }
 
   revalidatePath(`/app/projects/${projectId}/requests`);
   revalidatePath("/office/requests");
@@ -930,4 +955,211 @@ export async function unlockReport(
   revalidatePath(`/office/projects/${report.project_id}`);
   revalidatePath(`/office/projects/${report.project_id}/reports/${reportId}`);
   return { ok: true };
+}
+
+// --- Project lifecycle: permanent delete (office/pm) -------------------------
+
+// Permanently delete a project and EVERYTHING under it. All child rows cascade
+// from the projects FK (on delete cascade), but Storage binaries don't — so we
+// purge the project's photo files first, then delete the row. Irreversible; the
+// UI gates this behind a type-the-name confirmation.
+export async function deleteProject(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "pm" && profile.role !== "office") return;
+
+  const id = String(formData.get("project_id") ?? "");
+  if (!id) return;
+
+  const supabase = await createClient();
+
+  // Remove all of the project's photo binaries from Storage (rows cascade).
+  const { data: photos } = await supabase
+    .from("photos")
+    .select("storage_path")
+    .eq("project_id", id);
+  const paths = (photos ?? []).map((p) => p.storage_path).filter(Boolean);
+  // Storage.remove caps batch size; chunk to be safe on big projects.
+  for (let i = 0; i < paths.length; i += 100) {
+    await supabase.storage.from("site-photos").remove(paths.slice(i, i + 100));
+  }
+
+  await supabase.from("projects").delete().eq("id", id);
+
+  revalidatePath("/office/projects");
+  revalidatePath("/office");
+  redirect("/office/projects");
+}
+
+// --- Phase 8: project structure (blocks + stages) ---------------------------
+
+// Office defines a building block and its unit range, then seeds the default
+// construction stages onto it. Office/pm only.
+export async function createProjectBlock(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "pm" && profile.role !== "office") return;
+
+  const projectId = String(formData.get("project_id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!projectId || !name) return;
+
+  const supabase = await createClient();
+  const { data: block } = await supabase
+    .from("project_blocks")
+    .insert({
+      project_id: projectId,
+      name,
+      unit_from: String(formData.get("unit_from") ?? "").trim() || null,
+      unit_to: String(formData.get("unit_to") ?? "").trim() || null,
+    })
+    .select("id")
+    .single();
+
+  // Seed the default stages (office can edit per block afterwards).
+  if (block) {
+    await supabase.from("block_stages").insert(
+      DEFAULT_STAGES.map((name, i) => ({
+        block_id: block.id,
+        name,
+        sort_order: i,
+        is_custom: false,
+      })),
+    );
+  }
+
+  revalidatePath(`/office/projects/${projectId}`);
+  revalidatePath(`/app/projects/${projectId}/stages`);
+}
+
+// Office edits a block's name / unit range. Office/pm only.
+export async function updateProjectBlock(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "pm" && profile.role !== "office") return;
+
+  const id = String(formData.get("block_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!id || !name) return;
+
+  const supabase = await createClient();
+  await supabase
+    .from("project_blocks")
+    .update({
+      name,
+      unit_from: String(formData.get("unit_from") ?? "").trim() || null,
+      unit_to: String(formData.get("unit_to") ?? "").trim() || null,
+    })
+    .eq("id", id);
+
+  revalidatePath(`/office/projects/${projectId}`);
+  revalidatePath(`/app/projects/${projectId}/stages`);
+}
+
+// Office deletes a block (stages cascade). Office/pm only.
+export async function deleteProjectBlock(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "pm" && profile.role !== "office") return;
+
+  const id = String(formData.get("block_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!id) return;
+
+  const supabase = await createClient();
+  await supabase.from("project_blocks").delete().eq("id", id);
+
+  revalidatePath(`/office/projects/${projectId}`);
+  revalidatePath(`/app/projects/${projectId}/stages`);
+}
+
+// Add a stage / custom item to a block. Any project member (office extends the
+// template; site adds extras like painting/fencing). is_custom marks site extras.
+export async function addBlockStage(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+
+  const blockId = String(formData.get("block_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!blockId || !name) return;
+  const isOffice = profile.role === "pm" || profile.role === "office";
+
+  const supabase = await createClient();
+  // Append after the current last stage on this block.
+  const { data: last } = await supabase
+    .from("block_stages")
+    .select("sort_order")
+    .eq("block_id", blockId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  await supabase.from("block_stages").insert({
+    block_id: blockId,
+    name,
+    sort_order: (last?.sort_order ?? -1) + 1,
+    is_custom: !isOffice,
+  });
+
+  revalidatePath(`/office/projects/${projectId}`);
+  revalidatePath(`/app/projects/${projectId}/stages`);
+}
+
+// Toggle a stage complete / not complete. Any project member — site marks
+// progress directly, no approval. Pass `done=1` to complete, else it clears.
+export async function setStageComplete(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+
+  const stageId = String(formData.get("stage_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!stageId) return;
+  const done = String(formData.get("done") ?? "") === "1";
+
+  const supabase = await createClient();
+  await supabase
+    .from("block_stages")
+    .update({
+      completed_at: done ? new Date().toISOString() : null,
+      completed_by: done ? user.id : null,
+    })
+    .eq("id", stageId);
+
+  revalidatePath(`/app/projects/${projectId}/stages`);
+  revalidatePath(`/office/projects/${projectId}`);
+}
+
+// Delete a stage. Office/pm can delete any; site members may delete only their
+// own custom extras (not the office template stages).
+export async function deleteBlockStage(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+
+  const stageId = String(formData.get("stage_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!stageId) return;
+  const isOffice = profile.role === "pm" || profile.role === "office";
+
+  const supabase = await createClient();
+  if (!isOffice) {
+    const { data: stage } = await supabase
+      .from("block_stages")
+      .select("is_custom")
+      .eq("id", stageId)
+      .maybeSingle();
+    if (!stage?.is_custom) return; // site can't delete office template stages
+  }
+  await supabase.from("block_stages").delete().eq("id", stageId);
+
+  revalidatePath(`/office/projects/${projectId}`);
+  revalidatePath(`/app/projects/${projectId}/stages`);
 }

@@ -31,6 +31,13 @@ export type PurchaseRequestItem = {
   unit: string | null;
 };
 
+export type RequestPhoto = {
+  id: string;
+  storage_path: string;
+  archived_at: string | null;
+  url?: string | null; // resolved by withSignedRequestPhotos
+};
+
 export type PurchaseRequest = {
   id: string;
   project_id: string;
@@ -43,11 +50,12 @@ export type PurchaseRequest = {
   rejected_reason: string | null;
   created_at: string;
   items: PurchaseRequestItem[];
+  photos: RequestPhoto[];
   project?: { name: string } | null; // set only in the cross-project queue
 };
 
 const PR_COLUMNS =
-  "id, project_id, needed_by, urgency_reason, note, status, po_number, rejected_reason, created_at, supplier:suppliers(name), items:purchase_request_items(id, material_text, quantity, unit, material:materials(name, unit))";
+  "id, project_id, needed_by, urgency_reason, note, status, po_number, rejected_reason, created_at, supplier:suppliers(name), items:purchase_request_items(id, material_text, quantity, unit, material:materials(name, unit)), photos(id, storage_path, archived_at)";
 
 export async function getProjectPurchaseRequests(
   projectId: string,
@@ -95,5 +103,28 @@ export function prAgeHours(r: PurchaseRequest): number {
   return Math.max(
     0,
     Math.floor((Date.now() - new Date(r.created_at).getTime()) / 3_600_000),
+  );
+}
+
+// Resolve short-lived signed URLs for each request's photos (skip archived ones,
+// whose binaries have moved to the local archive). Mirrors withSignedPhotoUrls.
+export async function withSignedRequestPhotos(
+  requests: PurchaseRequest[],
+): Promise<PurchaseRequest[]> {
+  if (!isSupabaseConfigured) return requests;
+  const supabase = await createClient();
+  return Promise.all(
+    requests.map(async (r) => ({
+      ...r,
+      photos: await Promise.all(
+        r.photos.map(async (p) => {
+          if (p.archived_at != null) return { ...p, url: null };
+          const { data } = await supabase.storage
+            .from("site-photos")
+            .createSignedUrl(p.storage_path, 3600);
+          return { ...p, url: data?.signedUrl ?? null };
+        }),
+      ),
+    })),
   );
 }

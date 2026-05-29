@@ -18,14 +18,20 @@ import {
   PR_OPEN_STATUSES,
 } from "@/lib/data/purchase-requests";
 import { getStockSummary } from "@/lib/data/stock";
+import { getProjectBlocks } from "@/lib/data/structure";
 import {
   setDeliveryOfficeFields,
   createProjectTag,
   approveProjectTag,
   deleteProjectTag,
   setPhotoTags,
+  createProjectBlock,
+  deleteProjectBlock,
+  addBlockStage,
+  deleteBlockStage,
 } from "@/lib/data/actions";
 import { DeleteDeliveryButton } from "@/components/delete-delivery-button";
+import { DeleteProjectButton } from "@/components/delete-project-button";
 
 export default async function OfficeProjectDetail({
   params,
@@ -43,6 +49,8 @@ export default async function OfficeProjectDetail({
   const tp = await getTranslations("Photos");
   const tk = await getTranslations("Tags");
   const tst = await getTranslations("Stock");
+  const tsg = await getTranslations("Stages");
+  const tp2 = await getTranslations("Projects");
   const [
     reports,
     rawDeliveries,
@@ -52,6 +60,7 @@ export default async function OfficeProjectDetail({
     rawPhotos,
     requests,
     stockSummary,
+    blocks,
   ] = await Promise.all([
     getProjectReports(id),
     getProjectDeliveries(id),
@@ -61,6 +70,7 @@ export default async function OfficeProjectDetail({
     getProjectPhotos(id),
     getProjectPurchaseRequests(id),
     getStockSummary(id),
+    getProjectBlocks(id),
   ]);
   const deliveries = await withSignedUrls(rawDeliveries);
   const photos = await withSignedPhotoUrls(rawPhotos);
@@ -433,6 +443,125 @@ export default async function OfficeProjectDetail({
             ))}
           </ul>
         )}
+      </section>
+
+      {/* Project structure: blocks + stages ----------------------------- */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold">{tsg("officeTitle")}</h2>
+          <p className="text-xs text-black/50 dark:text-white/50">
+            {tsg("officeIntro")}
+          </p>
+        </div>
+
+        <form
+          action={createProjectBlock}
+          className="flex flex-wrap items-end gap-2 rounded-xl border border-black/10 p-4 text-sm dark:border-white/15"
+        >
+          <input type="hidden" name="project_id" value={id} />
+          <span className="w-full font-semibold">{tsg("newBlock")}</span>
+          <input
+            name="name"
+            required
+            placeholder={tsg("blockNameHint")}
+            className={inputCls}
+          />
+          <input name="unit_from" placeholder={tsg("unitFrom")} className={inputCls} />
+          <input name="unit_to" placeholder={tsg("unitTo")} className={inputCls} />
+          <button className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25">
+            {tsg("addBlock")}
+          </button>
+        </form>
+
+        {blocks.length === 0 ? (
+          <p className="text-sm text-black/50 dark:text-white/50">
+            {tsg("noBlocks")}
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {blocks.map((b) => (
+              <li
+                key={b.id}
+                className="space-y-2 rounded-xl border border-black/10 p-4 text-sm dark:border-white/15"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">{b.name}</p>
+                    {(b.unit_from || b.unit_to) && (
+                      <p className="text-xs text-black/50 dark:text-white/50">
+                        {tsg("unitRange", {
+                          from: b.unit_from ?? "—",
+                          to: b.unit_to ?? "—",
+                        })}
+                      </p>
+                    )}
+                  </div>
+                  <form action={deleteProjectBlock}>
+                    <input type="hidden" name="block_id" value={b.id} />
+                    <input type="hidden" name="project_id" value={id} />
+                    <button className="text-xs text-red-600 underline">
+                      {tsg("deleteBlock")}
+                    </button>
+                  </form>
+                </div>
+
+                {b.stages.length > 0 && (
+                  <ul className="flex flex-wrap gap-2">
+                    {b.stages.map((s) => (
+                      <li
+                        key={s.id}
+                        className="flex items-center gap-1 rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10"
+                      >
+                        <span
+                          className={
+                            s.completed_at != null
+                              ? "text-green-700 dark:text-green-400"
+                              : ""
+                          }
+                        >
+                          {s.completed_at != null ? "✓ " : ""}
+                          {s.name}
+                        </span>
+                        <form action={deleteBlockStage} className="inline">
+                          <input type="hidden" name="stage_id" value={s.id} />
+                          <input type="hidden" name="project_id" value={id} />
+                          <button aria-label={tsg("removeStage")} className="text-red-600">
+                            ✕
+                          </button>
+                        </form>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <form action={addBlockStage} className="flex items-end gap-2">
+                  <input type="hidden" name="block_id" value={b.id} />
+                  <input type="hidden" name="project_id" value={id} />
+                  <input
+                    name="name"
+                    required
+                    placeholder={tsg("stageName")}
+                    className={`${inputCls} flex-1`}
+                  />
+                  <button className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25">
+                    {tsg("addStage")}
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* Danger zone: permanent project delete -------------------------- */}
+      <section className="space-y-2 rounded-xl border border-red-300 p-4 dark:border-red-800/60">
+        <h2 className="text-sm font-semibold text-red-700 dark:text-red-400">
+          {tp2("danger")}
+        </h2>
+        <p className="text-xs text-black/50 dark:text-white/50">
+          {tp2("deleteHint")}
+        </p>
+        <DeleteProjectButton projectId={id} projectName={project.name} />
       </section>
     </div>
   );

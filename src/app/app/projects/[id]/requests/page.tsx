@@ -6,6 +6,7 @@ import { getMaterials } from "@/lib/data/catalog";
 import {
   getProjectPurchaseRequests,
   prItemsLabel,
+  withSignedRequestPhotos,
 } from "@/lib/data/purchase-requests";
 import { confirmDeliveredPurchaseRequest } from "@/lib/data/actions";
 import { todayISO } from "@/lib/date";
@@ -29,7 +30,9 @@ export default async function ProjectRequestsPage({
     getMaterials(),
     getProjectPurchaseRequests(id),
   ]);
-  const requests = allRequests.filter((r) => SITE_VISIBLE.includes(r.status));
+  const requests = await withSignedRequestPhotos(
+    allRequests.filter((r) => SITE_VISIBLE.includes(r.status)),
+  );
 
   return (
     <div className="space-y-4">
@@ -63,6 +66,22 @@ export default async function ProjectRequestsPage({
                     {t(`status.${r.status}`)}
                   </span>
                 </div>
+                {r.photos.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {r.photos.map((p) =>
+                      p.url ? (
+                        <a key={p.id} href={p.url} target="_blank" rel="noreferrer">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={p.url}
+                            alt=""
+                            className="h-16 w-16 rounded-lg object-cover"
+                          />
+                        </a>
+                      ) : null,
+                    )}
+                  </div>
+                )}
                 <div className="text-black/60 dark:text-white/60">
                   {r.needed_by ? `${t("neededBy")}: ${r.needed_by}` : ""}
                   {r.po_number ? ` · PO ${r.po_number}` : ""}

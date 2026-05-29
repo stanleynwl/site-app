@@ -8,7 +8,7 @@ import {
   yesterdayISO,
   daysAgoISO,
   normalizeReportDate,
-  softEditMinutesLeft,
+  isInSoftEditWindow,
   MAX_BACKDATE_DAYS,
 } from "@/lib/date";
 import { DailyReportForm } from "@/components/daily-report-form";
@@ -61,8 +61,9 @@ export default async function ReportPage({
         }))
       : null;
 
-  const minutesLeft =
-    report?.status === "submitted" ? softEditMinutesLeft(report.submitted_at) : 0;
+  // Author may still amend a submitted report until end of the day it was sent.
+  const canSoftEdit =
+    report?.status === "submitted" && isInSoftEditWindow(report.submitted_at);
 
   return (
     <div className="space-y-4">
@@ -81,7 +82,10 @@ export default async function ReportPage({
             {t("deliveries")}
           </Link>
           <Link href={`/app/projects/${id}/photos`} className="text-sm underline">
-            {t("photos")}
+            {t("progress")}
+          </Link>
+          <Link href={`/app/projects/${id}/stages`} className="text-sm underline">
+            {t("stages")}
           </Link>
           <Link href={`/app/projects/${id}/requests`} className="text-sm underline">
             {t("requests")}
@@ -110,7 +114,7 @@ export default async function ReportPage({
         report={report}
         preFillManpower={preFillManpower}
         preFillMachinery={preFillMachinery}
-        softEditMinutesLeft={minutesLeft}
+        canSoftEdit={canSoftEdit}
       />
     </div>
   );

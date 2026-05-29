@@ -33,6 +33,7 @@ export async function getProjectPhotos(
     .select(PHOTO_COLUMNS)
     .eq("project_id", projectId)
     .is("delivery_id", null) // progress photos only — exclude delivery/DO photos
+    .is("purchase_request_id", null) // …and exclude purchase-request photos
     .order("created_at", { ascending: false });
 
   return (data ?? []).map((row) => {

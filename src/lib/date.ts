@@ -32,7 +32,9 @@ export function yesterdayISO(tz: string = APP_TIMEZONE): string {
 }
 
 // How far back a missed daily report may be backfilled (calendar days).
-export const MAX_BACKDATE_DAYS = 14;
+// Also the "hold" window for an unsubmitted draft: if a day's report is never
+// submitted, the supervisor can still open and finish it for this many days.
+export const MAX_BACKDATE_DAYS = 10;
 
 // Validates a YYYY-MM-DD report date for backfill: well-formed, not in the
 // future, and within the allowed backdate window. Returns the date or null.
@@ -48,18 +50,20 @@ export function normalizeReportDate(
   return raw;
 }
 
-const SOFT_EDIT_WINDOW_MS = 15 * 60 * 1000;
-
-// True while the original author's 15-minute edit window is still open.
-// Safe to call from both server and client code.
-export function isInSoftEditWindow(submittedAt: string | null): boolean {
-  if (!submittedAt) return false;
-  return Date.now() - new Date(submittedAt).getTime() < SOFT_EDIT_WINDOW_MS;
+// The MYT calendar date (YYYY-MM-DD) an ISO timestamp falls on.
+function mytDateOf(iso: string, tz: string = APP_TIMEZONE): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(iso));
 }
 
-// Whole minutes remaining in the soft-edit window (0 when expired).
-export function softEditMinutesLeft(submittedAt: string | null): number {
-  if (!submittedAt) return 0;
-  const elapsed = Date.now() - new Date(submittedAt).getTime();
-  return Math.max(0, Math.ceil((SOFT_EDIT_WINDOW_MS - elapsed) / 60_000));
+// Amend window: the original author may keep editing a submitted report until
+// the END OF THE DAY (Malaysia time) on which it was submitted. After midnight
+// it hard-locks and needs a PM unlock. Safe on both server and client.
+export function isInSoftEditWindow(submittedAt: string | null): boolean {
+  if (!submittedAt) return false;
+  return mytDateOf(submittedAt) === todayISO();
 }

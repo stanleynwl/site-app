@@ -7,6 +7,7 @@ import {
   type PurchaseRequestState,
 } from "@/lib/data/actions";
 import { RequestItemsField } from "@/components/request-items-field";
+import { PhotoCapture } from "@/components/photo-capture";
 import type { Material } from "@/lib/data/catalog";
 
 const inputClass =
@@ -64,6 +65,14 @@ export function PurchaseRequestForm({
         <span className="mb-1 block">{t("note")}</span>
         <textarea name="note" rows={2} className={inputClass} />
       </label>
+
+      <div className="space-y-1 text-sm">
+        <span className="block font-medium">{t("photo")}</span>
+        <span className="block text-xs text-black/50 dark:text-white/50">
+          {t("photoHint")}
+        </span>
+        <PhotoCapture projectId={projectId} month={today.slice(0, 7)} />
+      </div>
 
       {message && (
         <p

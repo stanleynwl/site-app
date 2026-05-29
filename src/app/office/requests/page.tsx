@@ -4,6 +4,7 @@ import {
   getOpenPurchaseRequests,
   itemName,
   prAgeHours,
+  withSignedRequestPhotos,
 } from "@/lib/data/purchase-requests";
 import { getSuppliers } from "@/lib/data/catalog";
 import {
@@ -27,10 +28,11 @@ function ageClass(hours: number): string {
 
 export default async function OfficeRequestsPage() {
   const t = await getTranslations("Requests");
-  const [requests, suppliers] = await Promise.all([
+  const [rawRequests, suppliers] = await Promise.all([
     getOpenPurchaseRequests(),
     getSuppliers(),
   ]);
+  const requests = await withSignedRequestPhotos(rawRequests);
   const activeSuppliers = suppliers.filter((s) => s.active);
 
   return (
@@ -90,6 +92,23 @@ export default async function OfficeRequestsPage() {
                     </p>
                   </div>
                 </div>
+
+                {r.photos.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {r.photos.map((p) =>
+                      p.url ? (
+                        <a key={p.id} href={p.url} target="_blank" rel="noreferrer">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={p.url}
+                            alt=""
+                            className="h-20 w-20 rounded-lg object-cover"
+                          />
+                        </a>
+                      ) : null,
+                    )}
+                  </div>
+                )}
 
                 {r.urgency_reason && (
                   <p className="text-black/60 dark:text-white/60">

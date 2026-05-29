@@ -34,7 +34,7 @@ export function DailyReportForm({
   report,
   preFillManpower,
   preFillMachinery,
-  softEditMinutesLeft,
+  canSoftEdit,
 }: {
   projectId: string;
   // Calendar date this report is for (today, or a past date being backfilled).
@@ -44,12 +44,13 @@ export function DailyReportForm({
   // null means no pre-fill available (no yesterday report, or today draft already exists).
   preFillManpower: ManpowerRow[] | null;
   preFillMachinery: MachinerySource[] | null;
-  softEditMinutesLeft: number;
+  // True while the author may still amend a submitted report (same MYT day).
+  canSoftEdit: boolean;
 }) {
   const t = useTranslations("Report");
 
-  // A submitted report with time left is still soft-editable by the author.
-  const isSoftEditable = report?.status === "submitted" && softEditMinutesLeft > 0;
+  // A submitted report is still author-editable until end of the day it was sent.
+  const isSoftEditable = report?.status === "submitted" && canSoftEdit;
 
   // Hard-locked: status=locked, OR status=submitted with expired window.
   const isHardLocked =
@@ -157,10 +158,10 @@ export function DailyReportForm({
       <input type="hidden" name="project_id" value={projectId} />
       <input type="hidden" name="report_date" value={reportDate} />
 
-      {/* Soft-edit window banner */}
+      {/* Amend window banner (author can edit until end of the submission day) */}
       {isSoftEditable && (
         <p className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:bg-blue-950/40 dark:text-blue-300">
-          {t("softEditNotice", { minutes: softEditMinutesLeft })}
+          {t("softEditNotice")}
         </p>
       )}
 
