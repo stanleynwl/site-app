@@ -134,11 +134,13 @@ export function PhotoCapture({
         ))}
       </div>
 
+      {/* No `capture` attribute: phones then offer a chooser (take a new photo
+          OR pick an existing one from the gallery) — supervisors often shoot a
+          photo earlier and submit it later. */}
       <input
         ref={inputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         multiple
         onChange={(e) => handleFiles(e.target.files)}
         className="hidden"
