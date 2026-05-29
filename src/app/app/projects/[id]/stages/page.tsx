@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getProject } from "@/lib/data/projects";
 import { getProjectBlocks } from "@/lib/data/structure";
-import { setStageComplete, addBlockStage, deleteBlockStage } from "@/lib/data/actions";
+import { addBlockStage } from "@/lib/data/actions";
+import { todayISO } from "@/lib/date";
+import { StageRow } from "@/components/stage-row";
 
 const inputCls =
   "rounded-lg border border-black/15 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
@@ -21,6 +23,7 @@ export default async function ProjectStagesPage({
 
   const t = await getTranslations("Stages");
   const blocks = await getProjectBlocks(id);
+  const month = todayISO().slice(0, 7);
 
   return (
     <div className="space-y-4">
@@ -61,67 +64,19 @@ export default async function ProjectStagesPage({
                   {t("noStages")}
                 </p>
               ) : (
-                <ul className="divide-y divide-black/10 dark:divide-white/10">
-                  {b.stages.map((s) => {
-                    const done = s.completed_at != null;
-                    return (
-                      <li
-                        key={s.id}
-                        className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"
-                      >
-                        <span
-                          className={
-                            done
-                              ? "text-black/50 line-through dark:text-white/50"
-                              : "font-medium"
-                          }
-                        >
-                          {s.name}
-                          {s.is_custom && (
-                            <span className="ml-2 rounded-full bg-black/5 px-2 py-0.5 text-[10px] dark:bg-white/10">
-                              {t("custom")}
-                            </span>
-                          )}
-                          {done && (
-                            <span className="ml-2 text-xs text-green-700 dark:text-green-400">
-                              {t("completedOn", {
-                                date: s.completed_at!.slice(0, 10),
-                              })}
-                            </span>
-                          )}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <form action={setStageComplete}>
-                            <input type="hidden" name="stage_id" value={s.id} />
-                            <input type="hidden" name="project_id" value={id} />
-                            <input type="hidden" name="done" value={done ? "0" : "1"} />
-                            <button
-                              className={
-                                done
-                                  ? "text-xs text-black/50 underline dark:text-white/50"
-                                  : `${btnCls} text-green-700 dark:text-green-400`
-                              }
-                            >
-                              {done ? t("undo") : t("markComplete")}
-                            </button>
-                          </form>
-                          {s.is_custom && (
-                            <form action={deleteBlockStage}>
-                              <input type="hidden" name="stage_id" value={s.id} />
-                              <input type="hidden" name="project_id" value={id} />
-                              <button
-                                aria-label={t("removeStage")}
-                                className="text-red-600"
-                              >
-                                ✕
-                              </button>
-                            </form>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                <div className="divide-y divide-black/10 dark:divide-white/10">
+                  {b.stages.map((s) => (
+                    <StageRow
+                      key={s.id}
+                      stageId={s.id}
+                      projectId={id}
+                      name={s.name}
+                      isCustom={s.is_custom}
+                      completedAt={s.completed_at}
+                      month={month}
+                    />
+                  ))}
+                </div>
               )}
 
               {/* Site adds custom items outside the office template */}

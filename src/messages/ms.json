@@ -65,7 +65,9 @@
     "deleteHint": "Memadam projek ini dan SEMUA laporan, foto, permintaan, penghantaran dan peringkatnya secara kekal. Tindakan ini tidak boleh dibatalkan.",
     "deletePrompt": "Taip nama projek untuk mengesahkan pemadaman:",
     "deleteMismatch": "Nama tidak sepadan — projek tidak dipadam.",
-    "deleting": "Memadam…"
+    "deleting": "Memadam…",
+    "editName": "Nama projek",
+    "rename": "Tukar nama"
   },
   "Status": {
     "todayDone": "Dihantar hari ini",
@@ -367,6 +369,16 @@
     "backToReport": "Kembali ke laporan",
     "generated": "Dijana {date}"
   },
+  "Progress": {
+    "title": "Kemajuan",
+    "intro": "Kemas kini berapa unit telah siap bagi setiap item. Anda boleh lampirkan foto. Tiada kelulusan diperlukan.",
+    "noBlocks": "Tiada blok lagi — pejabat menetapkannya.",
+    "noItems": "Tiada item kemajuan lagi.",
+    "units": "{count} unit",
+    "unitsDone": "Unit siap",
+    "addPhoto": "Foto",
+    "save": "Simpan"
+  },
   "Stages": {
     "title": "Peringkat",
     "intro": "Tandakan setiap peringkat selesai apabila ia siap. Tambah item tambahan (mengecat, pagar, cerucuk…) di bawah. Tiada kelulusan diperlukan.",
@@ -378,7 +390,11 @@
     "blockNameHint": "cth. Blok A",
     "unitFrom": "Unit dari",
     "unitTo": "Unit hingga",
+    "unitCount": "Unit",
+    "units": "{count} unit",
     "unitRange": "{from} → {to}",
+    "progressRollup": "Kemajuan",
+    "addPhoto": "Foto",
     "addBlock": "Tambah blok",
     "deleteBlock": "Padam blok",
     "confirmDeleteBlock": "Padam blok ini dan semua peringkatnya?",

@@ -65,7 +65,9 @@
     "deleteHint": "Permanently deletes this project and ALL its reports, photos, requests, deliveries and stages. This cannot be undone.",
     "deletePrompt": "Type the project name to confirm deletion:",
     "deleteMismatch": "Name did not match — project was not deleted.",
-    "deleting": "Deleting…"
+    "deleting": "Deleting…",
+    "editName": "Project name",
+    "rename": "Rename"
   },
   "Status": {
     "todayDone": "Submitted today",
@@ -367,6 +369,16 @@
     "backToReport": "Back to report",
     "generated": "Generated {date}"
   },
+  "Progress": {
+    "title": "Progress",
+    "intro": "Update how many units are done for each item. You can attach a photo. No approval needed.",
+    "noBlocks": "No blocks yet — the office sets these up.",
+    "noItems": "No progress items yet.",
+    "units": "{count} units",
+    "unitsDone": "Units done",
+    "addPhoto": "Photo",
+    "save": "Save"
+  },
   "Stages": {
     "title": "Stages",
     "intro": "Mark each stage complete as it finishes. Add extra items (painting, fencing, piling…) below. No approval needed.",
@@ -378,7 +390,11 @@
     "blockNameHint": "e.g. Block A",
     "unitFrom": "Unit from",
     "unitTo": "Unit to",
+    "unitCount": "Units",
+    "units": "{count} units",
     "unitRange": "{from} → {to}",
+    "progressRollup": "Progress",
+    "addPhoto": "Photo",
     "addBlock": "Add block",
     "deleteBlock": "Delete block",
     "confirmDeleteBlock": "Delete this block and all its stages?",

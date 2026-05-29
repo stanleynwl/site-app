@@ -7,6 +7,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSessionUser, getProfile } from "@/lib/auth/dal";
 import { todayISO, isInSoftEditWindow, normalizeReportDate } from "@/lib/date";
 import { DEFAULT_STAGES } from "@/lib/stages";
+import { progressSeedRows } from "@/lib/progress-template";
 import type { IssueCategory, NoWorkReason, ReportType, Weather } from "./reports";
 
 const WEATHERS: Weather[] = ["sunny", "cloudy", "light_rain", "heavy_rain"];
@@ -329,6 +330,41 @@ function parseCoord(raw: FormDataEntryValue | null): number | null {
   if (s === "") return null;
   const n = Number(s);
   return Number.isFinite(n) ? n : null;
+}
+
+// Non-negative integer (block unit count, units done). Null when blank/invalid.
+function parseCount(raw: FormDataEntryValue | null): number | null {
+  const s = String(raw ?? "").trim();
+  if (s === "") return null;
+  const n = Number.parseInt(s, 10);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+// Insert any photos uploaded with a submission (paths already in Storage),
+// attaching them via the given column (progress_item_id / block_stage_id).
+async function attachSubmissionPhotos(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  formData: FormData,
+  projectId: string,
+  userId: string,
+  link: { column: "progress_item_id" | "block_stage_id"; id: string },
+): Promise<void> {
+  const paths = formData.getAll("photo_path").map(String).filter(Boolean);
+  if (paths.length === 0) return;
+  const takenAt = formData.getAll("photo_taken_at").map(String);
+  const lat = formData.getAll("photo_lat").map(String);
+  const lng = formData.getAll("photo_lng").map(String);
+  await supabase.from("photos").insert(
+    paths.map((path, i) => ({
+      project_id: projectId,
+      [link.column]: link.id,
+      storage_path: path,
+      taken_at: takenAt[i] || null,
+      gps_lat: parseCoord(lat[i] ?? null),
+      gps_lng: parseCoord(lng[i] ?? null),
+      uploaded_by: userId,
+    })),
+  );
 }
 
 // Supervisor logs a delivery — photo-first. The fast path is a photo (+ optional
@@ -1016,11 +1052,13 @@ export async function createProjectBlock(formData: FormData): Promise<void> {
       name,
       unit_from: String(formData.get("unit_from") ?? "").trim() || null,
       unit_to: String(formData.get("unit_to") ?? "").trim() || null,
+      unit_count: parseCount(formData.get("unit_count")),
     })
     .select("id")
     .single();
 
-  // Seed the default stages (office can edit per block afterwards).
+  // Seed both trackers: the default stages (binary, editable) and the fixed A–L
+  // progress items (unit-tracked). Office can prune afterwards.
   if (block) {
     await supabase.from("block_stages").insert(
       DEFAULT_STAGES.map((name, i) => ({
@@ -1030,10 +1068,19 @@ export async function createProjectBlock(formData: FormData): Promise<void> {
         is_custom: false,
       })),
     );
+    await supabase.from("block_progress_items").insert(
+      progressSeedRows().map((r) => ({
+        block_id: block.id,
+        category: r.category,
+        name: r.name,
+        sort_order: r.sort_order,
+      })),
+    );
   }
 
   revalidatePath(`/office/projects/${projectId}`);
   revalidatePath(`/app/projects/${projectId}/stages`);
+  revalidatePath(`/app/projects/${projectId}/progress`);
 }
 
 // Office edits a block's name / unit range. Office/pm only.
@@ -1055,11 +1102,13 @@ export async function updateProjectBlock(formData: FormData): Promise<void> {
       name,
       unit_from: String(formData.get("unit_from") ?? "").trim() || null,
       unit_to: String(formData.get("unit_to") ?? "").trim() || null,
+      unit_count: parseCount(formData.get("unit_count")),
     })
     .eq("id", id);
 
   revalidatePath(`/office/projects/${projectId}`);
   revalidatePath(`/app/projects/${projectId}/stages`);
+  revalidatePath(`/app/projects/${projectId}/progress`);
 }
 
 // Office deletes a block (stages cascade). Office/pm only.
@@ -1135,8 +1184,78 @@ export async function setStageComplete(formData: FormData): Promise<void> {
     })
     .eq("id", stageId);
 
+  // Optional photo when marking complete (documents the finished stage).
+  if (done) {
+    await attachSubmissionPhotos(supabase, formData, projectId, user.id, {
+      column: "block_stage_id",
+      id: stageId,
+    });
+  }
+
   revalidatePath(`/app/projects/${projectId}/stages`);
   revalidatePath(`/office/projects/${projectId}`);
+}
+
+// --- Phase 8 redesign: unit-tracked Progress --------------------------------
+
+// Site reports how many units of a block are done for a progress item. Value is
+// CUMULATIVE (the running total done so far — latest submission wins, e.g. 4
+// then 8 → 8), clamped to the block's unit_count. Any project member; no
+// approval. Optional photo attaches to the item.
+export async function submitProgress(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+
+  const itemId = String(formData.get("item_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!itemId) return;
+  let unitsDone = parseCount(formData.get("units_done"));
+  if (unitsDone == null) return;
+
+  const supabase = await createClient();
+
+  // Clamp to the block's unit_count (can't complete more units than exist).
+  const { data: item } = await supabase
+    .from("block_progress_items")
+    .select("block_id, project_blocks(unit_count)")
+    .eq("id", itemId)
+    .maybeSingle();
+  const cap = (item as unknown as { project_blocks?: { unit_count: number | null } } | null)
+    ?.project_blocks?.unit_count;
+  if (cap != null && unitsDone > cap) unitsDone = cap;
+
+  await supabase
+    .from("block_progress_items")
+    .update({ units_done: unitsDone })
+    .eq("id", itemId);
+
+  await attachSubmissionPhotos(supabase, formData, projectId, user.id, {
+    column: "progress_item_id",
+    id: itemId,
+  });
+
+  revalidatePath(`/app/projects/${projectId}/progress`);
+  revalidatePath(`/office/projects/${projectId}`);
+}
+
+// Office/pm renames a project.
+export async function updateProjectName(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "pm" && profile.role !== "office") return;
+
+  const id = String(formData.get("project_id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!id || !name) return;
+
+  const supabase = await createClient();
+  await supabase.from("projects").update({ name }).eq("id", id);
+
+  revalidatePath(`/office/projects/${id}`);
+  revalidatePath("/office/projects");
+  revalidatePath("/office");
 }
 
 // Delete a stage. Office/pm can delete any; site members may delete only their

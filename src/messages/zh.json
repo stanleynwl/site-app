@@ -65,7 +65,9 @@
     "deleteHint": "永久删除此项目及其所有报告、照片、申请、送货和阶段。此操作无法撤销。",
     "deletePrompt": "输入项目名称以确认删除：",
     "deleteMismatch": "名称不匹配 — 项目未删除。",
-    "deleting": "删除中…"
+    "deleting": "删除中…",
+    "editName": "项目名称",
+    "rename": "重命名"
   },
   "Status": {
     "todayDone": "今日已提交",
@@ -367,6 +369,16 @@
     "backToReport": "返回报告",
     "generated": "生成于 {date}"
   },
+  "Progress": {
+    "title": "进度",
+    "intro": "更新每个项目已完成的单位数。可附上照片。无需审批。",
+    "noBlocks": "暂无栋号 — 由办公室设定。",
+    "noItems": "暂无进度项目。",
+    "units": "{count} 个单位",
+    "unitsDone": "已完成单位",
+    "addPhoto": "照片",
+    "save": "保存"
+  },
   "Stages": {
     "title": "阶段",
     "intro": "各阶段完成后请勾选完成。可在下方添加额外项目（油漆、围篱、打桩…）。无需审批。",
@@ -378,7 +390,11 @@
     "blockNameHint": "例如 Block A",
     "unitFrom": "单位从",
     "unitTo": "单位至",
+    "unitCount": "单位数",
+    "units": "{count} 个单位",
     "unitRange": "{from} → {to}",
+    "progressRollup": "进度",
+    "addPhoto": "照片",
     "addBlock": "添加栋号",
     "deleteBlock": "删除栋号",
     "confirmDeleteBlock": "删除此栋号及其所有阶段？",

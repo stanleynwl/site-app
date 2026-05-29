@@ -18,7 +18,11 @@ import {
   PR_OPEN_STATUSES,
 } from "@/lib/data/purchase-requests";
 import { getStockSummary } from "@/lib/data/stock";
-import { getProjectBlocks } from "@/lib/data/structure";
+import {
+  getProjectBlocks,
+  groupProgressByCategory,
+  blockProgressPercent,
+} from "@/lib/data/structure";
 import {
   setDeliveryOfficeFields,
   createProjectTag,
@@ -29,6 +33,7 @@ import {
   deleteProjectBlock,
   addBlockStage,
   deleteBlockStage,
+  updateProjectName,
 } from "@/lib/data/actions";
 import { DeleteDeliveryButton } from "@/components/delete-delivery-button";
 import { DeleteProjectButton } from "@/components/delete-project-button";
@@ -96,6 +101,19 @@ export default async function OfficeProjectDetail({
         <p className="text-sm text-black/50 dark:text-white/50">
           {[project.code, project.location].filter(Boolean).join(" · ")}
         </p>
+        <form action={updateProjectName} className="mt-2 flex items-center gap-2">
+          <input type="hidden" name="project_id" value={id} />
+          <input
+            name="name"
+            defaultValue={project.name}
+            required
+            aria-label={tp2("editName")}
+            className={`${inputCls} w-64`}
+          />
+          <button className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25">
+            {tp2("rename")}
+          </button>
+        </form>
       </div>
 
       <section>
@@ -344,9 +362,9 @@ export default async function OfficeProjectDetail({
         )}
       </section>
 
-      {/* Progress photos (gallery + tag editing) ------------------------ */}
+      {/* Photos (gallery + tag editing) --------------------------------- */}
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold">{tp("title")}</h2>
+        <h2 className="text-sm font-semibold">{tp("recent")}</h2>
         {photos.length === 0 ? (
           <p className="text-sm text-black/50 dark:text-white/50">{tp("none")}</p>
         ) : (
@@ -468,6 +486,13 @@ export default async function OfficeProjectDetail({
           />
           <input name="unit_from" placeholder={tsg("unitFrom")} className={inputCls} />
           <input name="unit_to" placeholder={tsg("unitTo")} className={inputCls} />
+          <input
+            name="unit_count"
+            type="number"
+            min="0"
+            placeholder={tsg("unitCount")}
+            className={`${inputCls} w-28`}
+          />
           <button className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25">
             {tsg("addBlock")}
           </button>
@@ -486,7 +511,19 @@ export default async function OfficeProjectDetail({
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="font-semibold">{b.name}</p>
+                    <p className="font-semibold">
+                      {b.name}
+                      {b.unit_count != null && (
+                        <span className="ml-2 text-xs font-normal text-black/50 dark:text-white/50">
+                          {tsg("units", { count: b.unit_count })}
+                        </span>
+                      )}
+                      {blockProgressPercent(b) != null && (
+                        <span className="ml-2 rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">
+                          {blockProgressPercent(b)}%
+                        </span>
+                      )}
+                    </p>
                     {(b.unit_from || b.unit_to) && (
                       <p className="text-xs text-black/50 dark:text-white/50">
                         {tsg("unitRange", {
@@ -533,6 +570,31 @@ export default async function OfficeProjectDetail({
                     ))}
                   </ul>
                 )}
+
+                {/* Progress rollup — items with any units done (latest / total) */}
+                {(() => {
+                  const started = b.progress_items.filter((p) => p.units_done > 0);
+                  if (started.length === 0) return null;
+                  return (
+                    <div>
+                      <p className="text-xs font-semibold text-black/60 dark:text-white/60">
+                        {tsg("progressRollup")}
+                      </p>
+                      <ul className="mt-1 space-y-0.5">
+                        {started.map((p) => (
+                          <li key={p.id} className="text-xs">
+                            <span className="text-black/60 dark:text-white/60">
+                              {p.name ? `${p.category} - ${p.name}` : p.category}
+                            </span>
+                            <span className="ml-2 font-medium">
+                              {p.units_done} / {b.unit_count ?? "—"}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })()}
 
                 <form action={addBlockStage} className="flex items-end gap-2">
                   <input type="hidden" name="block_id" value={b.id} />
