@@ -10,6 +10,7 @@ export const DEFAULT_MACHINES = [
   { key: "excavator", canonical: "Excavator" },
   { key: "backhoe", canonical: "Backhoe" },
   { key: "backpusher", canonical: "Backpusher" },
+  { key: "crane", canonical: "Crane" },
 ] as const;
 
 export type DefaultMachineKey = (typeof DEFAULT_MACHINES)[number]["key"];

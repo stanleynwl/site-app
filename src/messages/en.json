@@ -82,7 +82,8 @@
     "machineTypes": {
       "excavator": "Excavator",
       "backhoe": "Backhoe",
-      "backpusher": "Backpusher"
+      "backpusher": "Backpusher",
+      "crane": "Crane"
     },
     "reportDate": "Date",
     "backToToday": "Back to today",

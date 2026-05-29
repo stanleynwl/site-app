@@ -82,7 +82,8 @@
     "machineTypes": {
       "excavator": "Jengkaut",
       "backhoe": "Backhoe",
-      "backpusher": "Backpusher"
+      "backpusher": "Backpusher",
+      "crane": "Kren"
     },
     "reportDate": "Tarikh",
     "backToToday": "Kembali ke hari ini",

@@ -82,7 +82,8 @@
     "machineTypes": {
       "excavator": "挖掘机",
       "backhoe": "挖土机",
-      "backpusher": "推土机"
+      "backpusher": "推土机",
+      "crane": "起重机"
     },
     "reportDate": "日期",
     "backToToday": "返回今天",
