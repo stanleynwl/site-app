@@ -619,6 +619,30 @@ export async function closePurchaseRequest(formData: FormData): Promise<void> {
   await updatePurchaseRequest(formData, { status: "closed" });
 }
 
+// Supervisor (any project member) confirms an ordered request has arrived. Only
+// transitions from po_issued ("Ordered") → delivered. RLS allows member update.
+export async function confirmDeliveredPurchaseRequest(
+  formData: FormData,
+): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+
+  const id = String(formData.get("request_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!id) return;
+
+  const supabase = await createClient();
+  await supabase
+    .from("purchase_requests")
+    .update({ status: "delivered" })
+    .eq("id", id)
+    .eq("status", "po_issued");
+
+  revalidatePath(`/app/projects/${projectId}/requests`);
+  revalidatePath("/office/requests");
+}
+
 // --- Phase 5 operations: stock counts ---------------------------------------
 // (Machinery moved into the daily report — see saveReport's machinery_entries
 //  handling and src/lib/machines.ts.)

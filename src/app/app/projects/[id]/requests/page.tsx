@@ -7,8 +7,13 @@ import {
   getProjectPurchaseRequests,
   prItemsLabel,
 } from "@/lib/data/purchase-requests";
+import { confirmDeliveredPurchaseRequest } from "@/lib/data/actions";
 import { todayISO } from "@/lib/date";
 import { PurchaseRequestForm } from "@/components/purchase-request-form";
+
+// Site sees only live requests: pending, accepted, ordered. Rejected ones drop
+// off, and once the supervisor confirms delivery (delivered) it's gone too.
+const SITE_VISIBLE = ["pending", "approved", "po_issued"];
 
 export default async function ProjectRequestsPage({
   params,
@@ -20,10 +25,11 @@ export default async function ProjectRequestsPage({
   if (!project) notFound();
 
   const t = await getTranslations("Requests");
-  const [materials, requests] = await Promise.all([
+  const [materials, allRequests] = await Promise.all([
     getMaterials(),
     getProjectPurchaseRequests(id),
   ]);
+  const requests = allRequests.filter((r) => SITE_VISIBLE.includes(r.status));
 
   return (
     <div className="space-y-4">
@@ -66,10 +72,14 @@ export default async function ProjectRequestsPage({
                     {r.urgency_reason}
                   </p>
                 )}
-                {r.status === "rejected" && r.rejected_reason && (
-                  <p className="text-red-600">
-                    {t("status.rejected")}: {r.rejected_reason}
-                  </p>
+                {r.status === "po_issued" && (
+                  <form action={confirmDeliveredPurchaseRequest}>
+                    <input type="hidden" name="request_id" value={r.id} />
+                    <input type="hidden" name="project_id" value={id} />
+                    <button className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25">
+                      {t("confirmDelivered")}
+                    </button>
+                  </form>
                 )}
               </li>
             ))}
