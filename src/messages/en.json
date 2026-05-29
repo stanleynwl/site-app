@@ -372,6 +372,7 @@
   "Progress": {
     "title": "Progress",
     "intro": "Update how many units are done for each item. You can attach a photo. No approval needed.",
+    "searchBlock": "Search block…",
     "noBlocks": "No blocks yet — the office sets these up.",
     "noItems": "No progress items yet.",
     "units": "{count} units",
@@ -382,6 +383,7 @@
   "Stages": {
     "title": "Stages",
     "intro": "Mark each stage complete as it finishes. Add extra items (painting, fencing, piling…) below. No approval needed.",
+    "searchBlock": "Search block…",
     "officeTitle": "Project structure",
     "officeIntro": "Define the buildings/blocks and their unit range. Each block gets the default stages; add or remove stages per block.",
     "noBlocks": "No blocks yet.",

@@ -372,6 +372,7 @@
   "Progress": {
     "title": "Kemajuan",
     "intro": "Kemas kini berapa unit telah siap bagi setiap item. Anda boleh lampirkan foto. Tiada kelulusan diperlukan.",
+    "searchBlock": "Cari blok…",
     "noBlocks": "Tiada blok lagi — pejabat menetapkannya.",
     "noItems": "Tiada item kemajuan lagi.",
     "units": "{count} unit",
@@ -382,6 +383,7 @@
   "Stages": {
     "title": "Peringkat",
     "intro": "Tandakan setiap peringkat selesai apabila ia siap. Tambah item tambahan (mengecat, pagar, cerucuk…) di bawah. Tiada kelulusan diperlukan.",
+    "searchBlock": "Cari blok…",
     "officeTitle": "Struktur projek",
     "officeIntro": "Tetapkan bangunan/blok dan julat unitnya. Setiap blok mendapat peringkat lalai; tambah atau buang peringkat bagi setiap blok.",
     "noBlocks": "Tiada blok lagi.",
