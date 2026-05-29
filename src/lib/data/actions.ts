@@ -846,8 +846,10 @@ export async function saveReport(
       await supabase.from("manpower_entries").insert(manpower);
     }
 
-    // Machinery — one row per machine + hours; drop empty/zero-hour rows (so two
-    // backhoes on different hours are simply two rows).
+    // Machinery — one row per machine + hours (repeat a type for multiple units).
+    // Persist any row that has a machine type; hours are optional so a selected
+    // machine isn't silently dropped (and doesn't "revert" to a default) when the
+    // supervisor saves before entering hours.
     const machineTypes = formData.getAll("machinery_type").map(String);
     const machineHours = formData.getAll("machinery_hours").map(String);
     const machinery = machineTypes
@@ -856,7 +858,7 @@ export async function saveReport(
         machine_type: type.trim(),
         hours_worked: parseQty(machineHours[i] ?? null),
       }))
-      .filter((row) => row.machine_type !== "" && (row.hours_worked ?? 0) > 0);
+      .filter((row) => row.machine_type !== "");
 
     await supabase.from("machinery_entries").delete().eq("report_id", report.id);
     if (machinery.length) {

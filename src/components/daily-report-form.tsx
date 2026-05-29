@@ -85,8 +85,12 @@ export function DailyReportForm({
     (r) => defaultTradeKey(r.trade) == null,
   );
 
-  // Machinery rows: existing report > yesterday pre-fill > the default machine
-  // types. Each row is one machine + hours (repeat a type for multiple units).
+  // Machinery rows: existing report > yesterday pre-fill > none. Each row is one
+  // machine + hours (repeat a type for multiple units). We do NOT pre-seed the
+  // default machine types as blank rows: that previously reappeared after saving
+  // a draft (a row picked but left hours-blank is dropped on save, so the form
+  // re-seeded defaults starting with Excavator — looking like Backhoe "reverted"
+  // to Excavator). The supervisor adds the machines actually on site.
   const sourceMachinery: MachinerySource[] | null =
     report?.machinery_entries.map((m) => ({
       machine_type: m.machine_type,
@@ -95,15 +99,12 @@ export function DailyReportForm({
     preFillMachinery ??
     null;
 
-  const initialMachinery: MachineryRow[] =
-    sourceMachinery && sourceMachinery.length > 0
-      ? sourceMachinery.map((m) => {
-          const hours = m.hours_worked != null ? String(m.hours_worked) : "";
-          return defaultMachineKey(m.machine_type)
-            ? { type: m.machine_type, custom: "", hours }
-            : { type: "__other__", custom: m.machine_type, hours };
-        })
-      : DEFAULT_MACHINES.map((d) => ({ type: d.canonical, custom: "", hours: "" }));
+  const initialMachinery: MachineryRow[] = (sourceMachinery ?? []).map((m) => {
+    const hours = m.hours_worked != null ? String(m.hours_worked) : "";
+    return defaultMachineKey(m.machine_type)
+      ? { type: m.machine_type, custom: "", hours }
+      : { type: "__other__", custom: m.machine_type, hours };
+  });
 
   const [reportType, setReportType] = useState<ReportType>(
     report?.report_type ?? "normal",
