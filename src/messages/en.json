@@ -386,7 +386,7 @@
     "intro": "Mark each stage complete as it finishes. Add extra items (painting, fencing, piling…) below. No approval needed.",
     "searchBlock": "Search block…",
     "refPhotos": "Reference photos",
-    "refPhotosHint": "Show the site which block this is. Upload 1–2 photos.",
+    "refPhotosHint": "1–2 photos of the project, shown to the site at the top of Progress and Stages.",
     "saveRefPhoto": "Save photo",
     "officeTitle": "Project structure",
     "officeIntro": "Define the buildings/blocks and their unit range. Each block gets the default stages; add or remove stages per block.",

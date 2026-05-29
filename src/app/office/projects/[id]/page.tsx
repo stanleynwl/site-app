@@ -20,7 +20,7 @@ import {
 import { getStockSummary } from "@/lib/data/stock";
 import {
   getProjectBlocks,
-  withSignedBlockPhotos,
+  getProjectRefPhotos,
   groupProgressByCategory,
   blockProgressPercent,
 } from "@/lib/data/structure";
@@ -35,8 +35,8 @@ import {
   deleteProjectBlock,
   addBlockStage,
   deleteBlockStage,
-  addBlockPhoto,
-  deleteBlockPhoto,
+  addProjectRefPhoto,
+  deleteProjectRefPhoto,
   updateProjectName,
 } from "@/lib/data/actions";
 import { DeleteDeliveryButton } from "@/components/delete-delivery-button";
@@ -72,6 +72,7 @@ export default async function OfficeProjectDetail({
     requests,
     stockSummary,
     blocks,
+    refPhotos,
   ] = await Promise.all([
     getProjectReports(id),
     getProjectDeliveries(id),
@@ -82,10 +83,10 @@ export default async function OfficeProjectDetail({
     getProjectPurchaseRequests(id),
     getStockSummary(id),
     getProjectBlocks(id),
+    getProjectRefPhotos(id),
   ]);
   const deliveries = await withSignedUrls(rawDeliveries);
   const photos = await withSignedPhotoUrls(rawPhotos);
-  const blocksWithPhotos = await withSignedBlockPhotos(blocks);
   const month = todayISO().slice(0, 7);
   const approvedTags = tags.filter((tg) => tg.approved);
   const pendingTags = tags.filter((tg) => !tg.approved);
@@ -471,6 +472,52 @@ export default async function OfficeProjectDetail({
         )}
       </section>
 
+      {/* Project reference photos (shown atop site Progress/Stages) ------ */}
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold">{tsg("refPhotos")}</h2>
+        <p className="text-xs text-black/50 dark:text-white/50">
+          {tsg("refPhotosHint")}
+        </p>
+        {refPhotos.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {refPhotos.map((p) =>
+              p.url ? (
+                <div key={p.id} className="relative">
+                  <a href={p.url} target="_blank" rel="noreferrer">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={p.url}
+                      alt=""
+                      className="h-24 w-24 rounded-lg object-cover"
+                    />
+                  </a>
+                  <form
+                    action={deleteProjectRefPhoto}
+                    className="absolute -right-2 -top-2"
+                  >
+                    <input type="hidden" name="photo_id" value={p.id} />
+                    <input type="hidden" name="project_id" value={id} />
+                    <button
+                      aria-label={tsg("removeStage")}
+                      className="flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs text-white"
+                    >
+                      ✕
+                    </button>
+                  </form>
+                </div>
+              ) : null,
+            )}
+          </div>
+        )}
+        <form action={addProjectRefPhoto} className="flex items-end gap-2">
+          <input type="hidden" name="project_id" value={id} />
+          <PhotoCapture projectId={id} month={month} />
+          <button className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25">
+            {tsg("saveRefPhoto")}
+          </button>
+        </form>
+      </section>
+
       {/* Project structure: blocks + stages ----------------------------- */}
       <section className="space-y-3">
         <div>
@@ -512,7 +559,7 @@ export default async function OfficeProjectDetail({
           </p>
         ) : (
           <ul className="space-y-3">
-            {blocksWithPhotos.map((b) => (
+            {blocks.map((b) => (
               <li
                 key={b.id}
                 className="space-y-2 rounded-xl border border-black/10 p-4 text-sm dark:border-white/15"
@@ -589,50 +636,6 @@ export default async function OfficeProjectDetail({
                     {tsg("saveBlock")}
                   </button>
                 </form>
-
-                {/* Reference photos: office shows site which block this is */}
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold">{tsg("refPhotos")}</p>
-                  <p className="text-xs text-black/50 dark:text-white/50">
-                    {tsg("refPhotosHint")}
-                  </p>
-                  {b.ref_photos.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {b.ref_photos.map((p) =>
-                        p.url ? (
-                          <div key={p.id} className="relative">
-                            <a href={p.url} target="_blank" rel="noreferrer">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={p.url}
-                                alt=""
-                                className="h-20 w-20 rounded-lg object-cover"
-                              />
-                            </a>
-                            <form action={deleteBlockPhoto} className="absolute -right-2 -top-2">
-                              <input type="hidden" name="photo_id" value={p.id} />
-                              <input type="hidden" name="project_id" value={id} />
-                              <button
-                                aria-label={tsg("removeStage")}
-                                className="flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs text-white"
-                              >
-                                ✕
-                              </button>
-                            </form>
-                          </div>
-                        ) : null,
-                      )}
-                    </div>
-                  )}
-                  <form action={addBlockPhoto} className="flex items-end gap-2">
-                    <input type="hidden" name="block_id" value={b.id} />
-                    <input type="hidden" name="project_id" value={id} />
-                    <PhotoCapture projectId={id} month={month} />
-                    <button className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25">
-                      {tsg("saveRefPhoto")}
-                    </button>
-                  </form>
-                </div>
 
                 {b.stages.length > 0 && (
                   <ul className="flex flex-wrap gap-2">

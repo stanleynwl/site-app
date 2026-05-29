@@ -1,18 +1,18 @@
--- SiteApp Phase 8 — reference photos per block.
--- Office attaches 1–2 photos to each block so the site supervisor can recognise
--- which physical building is which. Stored in the shared photos table, linked to
--- the block. Additive + idempotent.
+-- SiteApp Phase 8 — project reference photos.
+-- Office attaches 1–2 reference photos to a PROJECT (not per block) so the site
+-- supervisor sees them at the top of the Progress / Stages screens and knows the
+-- site at a glance. Stored in the shared photos table with an is_project_ref
+-- flag. Additive + idempotent.
 --
--- Like delivery_id / purchase_request_id, block_id is a discriminator: block
+-- is_project_ref is a discriminator like delivery_id / purchase_request_id:
 -- reference photos must NOT appear in the progress gallery, so getProjectPhotos
--- also filters block_id IS NULL.
+-- also filters is_project_ref = false.
 
 alter table public.photos
-  add column if not exists block_id uuid
-  references public.project_blocks(id) on delete cascade;
+  add column if not exists is_project_ref boolean not null default false;
 
-create index if not exists photos_block_idx
-  on public.photos (block_id);
+create index if not exists photos_project_ref_idx
+  on public.photos (project_id, is_project_ref);
 
 -- Grants (explicit; complements the default privileges set in 0004) -----------
 grant all privileges on all tables in schema public

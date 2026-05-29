@@ -1128,8 +1128,7 @@ export async function updateProjectBlock(formData: FormData): Promise<void> {
   revalidatePath(`/app/projects/${projectId}/progress`);
 }
 
-// Office deletes a block (stages + progress items + ref photos cascade).
-// Storage binaries don't cascade, so purge the block's photo files first.
+// Office deletes a block (stages + progress items cascade). Office/pm only.
 export async function deleteProjectBlock(formData: FormData): Promise<void> {
   if (!isSupabaseConfigured) return;
   const profile = await getProfile();
@@ -1141,16 +1140,6 @@ export async function deleteProjectBlock(formData: FormData): Promise<void> {
   if (!id) return;
 
   const supabase = await createClient();
-
-  const { data: photos } = await supabase
-    .from("photos")
-    .select("storage_path")
-    .eq("block_id", id);
-  const paths = (photos ?? []).map((p) => p.storage_path).filter(Boolean);
-  if (paths.length > 0) {
-    await supabase.storage.from("site-photos").remove(paths);
-  }
-
   await supabase.from("project_blocks").delete().eq("id", id);
 
   revalidatePath(`/office/projects/${projectId}`);
@@ -1158,17 +1147,17 @@ export async function deleteProjectBlock(formData: FormData): Promise<void> {
   revalidatePath(`/app/projects/${projectId}/progress`);
 }
 
-// Office attaches reference photo(s) to a block (binaries already uploaded to
-// Storage client-side via PhotoCapture). Office/pm only.
-export async function addBlockPhoto(formData: FormData): Promise<void> {
+// Office attaches reference photo(s) to a PROJECT (binaries already uploaded to
+// Storage client-side via PhotoCapture). Shown atop the site's Progress/Stages
+// screens. Office/pm only.
+export async function addProjectRefPhoto(formData: FormData): Promise<void> {
   if (!isSupabaseConfigured) return;
   const profile = await getProfile();
   if (!profile) redirect("/login");
   if (profile.role !== "pm" && profile.role !== "office") return;
 
-  const blockId = String(formData.get("block_id") ?? "");
   const projectId = String(formData.get("project_id") ?? "");
-  if (!blockId || !projectId) return;
+  if (!projectId) return;
 
   const photoPaths = formData.getAll("photo_path").map(String).filter(Boolean);
   if (photoPaths.length === 0) return;
@@ -1180,7 +1169,7 @@ export async function addBlockPhoto(formData: FormData): Promise<void> {
   await supabase.from("photos").insert(
     photoPaths.map((path, i) => ({
       project_id: projectId,
-      block_id: blockId,
+      is_project_ref: true,
       storage_path: path,
       taken_at: photoTakenAt[i] || null,
       gps_lat: parseCoord(photoLat[i] ?? null),
@@ -1194,8 +1183,8 @@ export async function addBlockPhoto(formData: FormData): Promise<void> {
   revalidatePath(`/app/projects/${projectId}/stages`);
 }
 
-// Office removes a block reference photo (Storage file + row). Office/pm only.
-export async function deleteBlockPhoto(formData: FormData): Promise<void> {
+// Office removes a project reference photo (Storage file + row). Office/pm only.
+export async function deleteProjectRefPhoto(formData: FormData): Promise<void> {
   if (!isSupabaseConfigured) return;
   const profile = await getProfile();
   if (!profile) redirect("/login");

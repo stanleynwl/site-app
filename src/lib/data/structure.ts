@@ -24,13 +24,6 @@ export type ProgressItem = {
   units_done: number;
 };
 
-export type BlockPhoto = {
-  id: string;
-  storage_path: string;
-  archived_at: string | null;
-  url?: string | null; // resolved by withSignedBlockPhotos
-};
-
 export type ProjectBlock = {
   id: string;
   project_id: string;
@@ -41,11 +34,10 @@ export type ProjectBlock = {
   sort_order: number;
   stages: BlockStage[];
   progress_items: ProgressItem[];
-  ref_photos: BlockPhoto[];
 };
 
 const BLOCK_COLUMNS =
-  "id, project_id, name, unit_from, unit_to, unit_count, sort_order, stages:block_stages(id, block_id, name, sort_order, is_custom, completed_at), progress_items:block_progress_items(id, block_id, category, name, sort_order, units_done), ref_photos:photos!block_id(id, storage_path, archived_at)";
+  "id, project_id, name, unit_from, unit_to, unit_count, sort_order, stages:block_stages(id, block_id, name, sort_order, is_custom, completed_at), progress_items:block_progress_items(id, block_id, category, name, sort_order, units_done)";
 
 export async function getProjectBlocks(
   projectId: string,
@@ -66,30 +58,40 @@ export async function getProjectBlocks(
     ...b,
     stages: b.stages ?? [],
     progress_items: b.progress_items ?? [],
-    ref_photos: b.ref_photos ?? [],
   }));
 }
 
-// Resolve short-lived signed URLs for each block's reference photos (skip
-// archived ones). Mirrors withSignedPhotoUrls / withSignedRequestPhotos.
-export async function withSignedBlockPhotos(
-  blocks: ProjectBlock[],
-): Promise<ProjectBlock[]> {
-  if (!isSupabaseConfigured) return blocks;
+// Project-level reference photos (office uploads 1–2 so site recognises the
+// project). Shown atop the Progress / Stages screens. is_project_ref flags them
+// and keeps them out of the progress gallery.
+export type RefPhoto = {
+  id: string;
+  storage_path: string;
+  archived_at: string | null;
+  url?: string | null;
+};
+
+export async function getProjectRefPhotos(
+  projectId: string,
+): Promise<RefPhoto[]> {
+  if (!isSupabaseConfigured) return [];
   const supabase = await createClient();
+  const { data } = await supabase
+    .from("photos")
+    .select("id, storage_path, archived_at")
+    .eq("project_id", projectId)
+    .eq("is_project_ref", true)
+    .order("created_at", { ascending: true });
+
+  const photos = (data ?? []) as RefPhoto[];
   return Promise.all(
-    blocks.map(async (b) => ({
-      ...b,
-      ref_photos: await Promise.all(
-        b.ref_photos.map(async (p) => {
-          if (p.archived_at != null) return { ...p, url: null };
-          const { data } = await supabase.storage
-            .from("site-photos")
-            .createSignedUrl(p.storage_path, 3600);
-          return { ...p, url: data?.signedUrl ?? null };
-        }),
-      ),
-    })),
+    photos.map(async (p) => {
+      if (p.archived_at != null) return { ...p, url: null };
+      const { data: signed } = await supabase.storage
+        .from("site-photos")
+        .createSignedUrl(p.storage_path, 3600);
+      return { ...p, url: signed?.signedUrl ?? null };
+    }),
   );
 }
 

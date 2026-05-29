@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getProject } from "@/lib/data/projects";
-import { getProjectBlocks, withSignedBlockPhotos } from "@/lib/data/structure";
+import { getProjectBlocks, getProjectRefPhotos } from "@/lib/data/structure";
+import { RefPhotoStrip } from "@/components/ref-photo-strip";
 import { addBlockStage } from "@/lib/data/actions";
 import { todayISO } from "@/lib/date";
 import { StageRow } from "@/components/stage-row";
@@ -23,7 +24,10 @@ export default async function ProjectStagesPage({
   if (!project) notFound();
 
   const t = await getTranslations("Stages");
-  const blocks = await withSignedBlockPhotos(await getProjectBlocks(id));
+  const [blocks, refPhotos] = await Promise.all([
+    getProjectBlocks(id),
+    getProjectRefPhotos(id),
+  ]);
   const month = todayISO().slice(0, 7);
 
   return (
@@ -38,6 +42,8 @@ export default async function ProjectStagesPage({
         <h1 className="mt-1 text-lg font-semibold">{t("title")}</h1>
         <p className="text-sm text-black/50 dark:text-white/50">{t("intro")}</p>
       </div>
+
+      <RefPhotoStrip photos={refPhotos} />
 
       {blocks.length === 0 ? (
         <p className="text-sm text-black/50 dark:text-white/50">{t("noBlocks")}</p>
@@ -66,23 +72,6 @@ export default async function ProjectStagesPage({
                       </p>
                     )}
                   </div>
-
-                  {b.ref_photos.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {b.ref_photos.map((p) =>
-                        p.url ? (
-                          <a key={p.id} href={p.url} target="_blank" rel="noreferrer">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={p.url}
-                              alt=""
-                              className="h-24 w-24 rounded-lg object-cover"
-                            />
-                          </a>
-                        ) : null,
-                      )}
-                    </div>
-                  )}
 
                   {b.stages.length === 0 ? (
                     <p className="text-sm text-black/50 dark:text-white/50">
