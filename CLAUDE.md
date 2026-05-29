@@ -36,7 +36,8 @@ next-intl v4 without routing. Locale via `locale` cookie. Messages: `src/message
 - **Phase 4 (purchase requests):** ✅ Built — **multi-item** (header + line items), type-to-search material picker, and the **Accepted → Ordered** office flow with **site Confirm-delivered**. 0009 applied; **migrations `0014` (line items) + `0015` (member update RLS) PENDING.**
 - **Phase 5 (operations):** ✅ Built — machinery (daily-report section) + weekly stock counts + visitors (daily-report section). Equipment is covered by machinery's "Other" row. **Migrations `0011`, `0012`, `0013` PENDING.**
 - **Phase 6 (PDF export):** ✅ Built 2026-05-27 — per-report print-to-PDF **and** three-audience date-range exports (consultant EOT / client progress+photos / boss exceptions) at `/office/export`. Zero deps, no migration.
-- **Phase 7 (pilot):** not started.
+- **Phase 7 (pilot):** in progress — onsite supervisor trying it; repo went **public** (Hobby-plan deploy fix), commits now authored as `stanleynwl`.
+- **Phase 8 (pilot feedback batch):** ✅ Built 2026-05-29 — request photos, end-of-day amend window, permanent project delete, Photos→Progress rename, project blocks/stages. Migrations `0016` + `0017` **APPLIED**. **NEXT (in design): progress redesign — A–L unit-tracked template + block unit counts + report rollup (see "Phase 8 redesign" below).**
 
 ## Phase 1 (done)
 - **Soft-edit window:** Author can edit submitted report for 15 min. Edits logged to `report_edits`. PMs can unlock after hard-lock with a reason (sets status back to `draft`).
@@ -60,7 +61,7 @@ next-intl v4 without routing. Locale via `locale` cookie. Messages: `src/message
 - `src/components/delivery-form.tsx` — photo-first delivery capture
 - `src/components/photo-capture.tsx` — camera input + canvas compress + Storage upload
 - `src/components/delete-delivery-button.tsx`, `report-date-nav.tsx`
-- `src/lib/date.ts` — tz helpers, soft-edit window, `MAX_BACKDATE_DAYS=14`, `normalizeReportDate`
+- `src/lib/date.ts` — tz helpers, amend window (`isInSoftEditWindow` = same MYT day as submit), `MAX_BACKDATE_DAYS=10`, `normalizeReportDate`
 - `src/lib/trades.ts` — canonical↔key trade map
 - `supabase/migrations/` — 0001 init · 0002 projects+reports · 0003 soft-edit+no_work · 0004 grants · 0005 backdated · 0006 Phase 2 schema · 0007 delivery issues+`photos.delivery_id` · 0008 `photos.archived_at`
 - `supabase/storage_setup.sql` — `site-photos` bucket + storage RLS
@@ -76,7 +77,24 @@ Capture-only procurement. A request is a **header** (needed-by / urgency / note 
 **Weekly stock counts.** Supervisor records a physical count of a catalog material on a date at `/app/projects/[id]/stock` (`stock-count-form.tsx`, upsert on project+material+date). **Consumption is DERIVED, never stored** (Design Principle #3): per material, `consumption = previous_count + deliveries_in_(prev,latest] − latest_count`, where a delivery contributes `received_quantity ?? do_quantity` and only catalog-material (`material_id`) deliveries match. Computed in `getStockSummary` (stock.ts). Office project page + supervisor stock page show on-hand latest + derived "used since" per material. Action `recordStockCount`. Migration `0011_stock_counts.sql`. **Remaining Phase 5: visitors/equipment as secondary fields on the daily report.**
 
 ## Migrations
-**Applied through 0013 + storage_setup on hosted Supabase (0009–0013 applied 2026-05-27). PENDING apply: `0014` (purchase_request_items + `deliveries.purchase_request_item_id`), `0015` (relax purchase_requests UPDATE RLS to members).**
+**Applied through 0017 on hosted Supabase.** (0001–0008 earlier; 0009–0013 on 2026-05-27; 0014 + 0015 on 2026-05-28/29; 0016 + 0017 on 2026-05-29.) `0016` = `photos.purchase_request_id` (request photos). `0017` = `project_blocks` + `block_stages`.
+
+## Phase 8 (pilot feedback batch — built 2026-05-29, migrations 0016+0017 APPLIED)
+- **Request photos.** Purchase-request form has an optional `PhotoCapture` (snap a long material spec/sample instead of typing). Photos stored as `photos` rows with `purchase_request_id` set; shown on the site request list + office queue (signed URLs via `withSignedRequestPhotos` in `purchase-requests.ts`). **Progress gallery excludes them** — `getProjectPhotos` filters `delivery_id IS NULL AND purchase_request_id IS NULL`. Migration `0016`.
+- **End-of-day amend window.** Replaced the 15-min soft-edit with **until end of the submission day (MYT)**: `isInSoftEditWindow` now compares the submitted_at MYT date to today. Author edits all day, hard-locks at midnight (PM unlock unchanged). `softEditMinutesLeft` removed; form takes a `canSoftEdit` boolean; `Report.softEditNotice` no longer has `{minutes}`. **`MAX_BACKDATE_DAYS` changed 14 → 10** (also the unsubmitted-draft hold window).
+- **Permanent project delete (office/pm).** `deleteProject` action purges the project's photo binaries from Storage (chunked) then deletes the project row (children cascade). UI = red "Danger zone" on the office project page + `delete-project-button.tsx` (type-the-exact-name confirm). Irreversible by design (Stanley's call).
+- **Photos → "Progress".** Site nav link + `Photos.title` relabelled (en/ms/zh). Feature unchanged.
+- **Project blocks + stages (v1 — being redesigned, see below).** Office defines blocks (`project_blocks`: name + unit_from/unit_to text range) on the office project page; each block seeded with 5 default stages (`block_stages`, `src/lib/stages.ts` `DEFAULT_STAGES`), editable. Site `Stages` screen (`/app/projects/[id]/stages`) marks a stage complete + adds custom items (is_custom). No approval. Data: `src/lib/data/structure.ts` (`getProjectBlocks`). Actions: `createProjectBlock`/`updateProjectBlock`/`deleteProjectBlock`/`addBlockStage`/`setStageComplete`/`deleteBlockStage`. i18n `Stages` namespace. Migration `0017`.
+- **Machinery "reverts to Excavator" fix (commit f9cd073).** Form no longer pre-seeds the 3 default machine rows (they reappeared after a draft save because `saveReport` dropped 0-hour rows, re-seeding Excavator-first). Now machinery starts empty (still pre-fills from yesterday), and `saveReport` keeps any row **with a type** (hours optional) so a picked machine is never silently dropped.
+
+## Phase 8 REDESIGN (in design 2026-05-29 — NOT yet built)
+Stanley wants the block/stage model reworked into a **standard work-breakdown template with unit tracking**:
+- **Seed template** = a fixed two-level list (categories A–L, each with leaf items), displayed `"<CATEGORY> - <item>"`, e.g. `K. FLOOR FINISHES - Toilet & Kitchen tiles`. Some categories have no sub-items (E. WALL AND PARTITIONS, G. CEILING) → the category itself is the leaf. Full list in project memory. Replaces `DEFAULT_STAGES`.
+- **Block unit count.** Office sets *how many units* are in a block (e.g. Block A = 14 units), alongside the existing unit range.
+- **Site reports units-done per progress item** (cumulative: submit 4 then 8 → shows **8 of 14**, latest value wins, not summed).
+- **Report rollup.** Daily/office report summarises progress (units done / total per block per item) and stages.
+- **"Stage" vs "progress"** distinction + entry location (daily report vs dedicated screen) being clarified with Stanley before building — likely a new migration superseding parts of 0017.
+- **Also queued:** edit project name on office side.
 
 ## Phase 6 PDF export (print-to-PDF, zero deps)
 Zero-dependency approach throughout (deliberately avoided puppeteer/@react-pdf for Vercel simplicity): clean print-optimized pages + browser "Save as PDF" via `PrintButton` (`window.print()`). `globals.css` `@media print` forces light, hides the office `aside` + `.no-print`, sets margins.
