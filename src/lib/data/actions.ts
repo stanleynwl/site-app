@@ -1106,6 +1106,23 @@ export async function updateProjectBlock(formData: FormData): Promise<void> {
     })
     .eq("id", id);
 
+  // Backfill the A–L progress items for blocks created before the template
+  // existed (so editing an old block populates its Progress tracker).
+  const { count } = await supabase
+    .from("block_progress_items")
+    .select("id", { count: "exact", head: true })
+    .eq("block_id", id);
+  if (!count) {
+    await supabase.from("block_progress_items").insert(
+      progressSeedRows().map((r) => ({
+        block_id: id,
+        category: r.category,
+        name: r.name,
+        sort_order: r.sort_order,
+      })),
+    );
+  }
+
   revalidatePath(`/office/projects/${projectId}`);
   revalidatePath(`/app/projects/${projectId}/stages`);
   revalidatePath(`/app/projects/${projectId}/progress`);

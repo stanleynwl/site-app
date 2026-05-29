@@ -396,6 +396,7 @@
     "progressRollup": "进度",
     "addPhoto": "照片",
     "addBlock": "添加栋号",
+    "saveBlock": "保存栋号",
     "deleteBlock": "删除栋号",
     "confirmDeleteBlock": "删除此栋号及其所有阶段？",
     "stages": "阶段",

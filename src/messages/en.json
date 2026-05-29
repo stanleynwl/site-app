@@ -396,6 +396,7 @@
     "progressRollup": "Progress",
     "addPhoto": "Photo",
     "addBlock": "Add block",
+    "saveBlock": "Save block",
     "deleteBlock": "Delete block",
     "confirmDeleteBlock": "Delete this block and all its stages?",
     "stages": "Stages",

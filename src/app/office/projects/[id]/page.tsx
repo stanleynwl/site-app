@@ -30,6 +30,7 @@ import {
   deleteProjectTag,
   setPhotoTags,
   createProjectBlock,
+  updateProjectBlock,
   deleteProjectBlock,
   addBlockStage,
   deleteBlockStage,
@@ -541,6 +542,46 @@ export default async function OfficeProjectDetail({
                     </button>
                   </form>
                 </div>
+
+                {/* Edit block: name / unit range / unit count (also backfills
+                    progress items for blocks made before the template existed) */}
+                <form
+                  action={updateProjectBlock}
+                  className="flex flex-wrap items-end gap-2"
+                >
+                  <input type="hidden" name="block_id" value={b.id} />
+                  <input type="hidden" name="project_id" value={id} />
+                  <input
+                    name="name"
+                    required
+                    defaultValue={b.name}
+                    placeholder={tsg("blockName")}
+                    className={inputCls}
+                  />
+                  <input
+                    name="unit_from"
+                    defaultValue={b.unit_from ?? ""}
+                    placeholder={tsg("unitFrom")}
+                    className={inputCls}
+                  />
+                  <input
+                    name="unit_to"
+                    defaultValue={b.unit_to ?? ""}
+                    placeholder={tsg("unitTo")}
+                    className={inputCls}
+                  />
+                  <input
+                    name="unit_count"
+                    type="number"
+                    min="0"
+                    defaultValue={b.unit_count ?? ""}
+                    placeholder={tsg("unitCount")}
+                    className={`${inputCls} w-28`}
+                  />
+                  <button className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25">
+                    {tsg("saveBlock")}
+                  </button>
+                </form>
 
                 {b.stages.length > 0 && (
                   <ul className="flex flex-wrap gap-2">
