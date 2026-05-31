@@ -204,7 +204,11 @@
     "none": "暂无送货记录。",
     "save": "保存",
     "delete": "删除",
-    "confirmDelete": "删除此送货记录及其照片？此操作无法撤销。"
+    "confirmDelete": "删除此送货记录及其照片？此操作无法撤销。",
+    "queueTitle": "送货单队列",
+    "queueHint": "工地已记录、但仍需办公室录入送货单数量的送货。最早的在前。",
+    "queueEmpty": "无待处理 — 所有送货都已有送货单数量。",
+    "loggedOn": "{date} 记录"
   },
   "Stock": {
     "title": "现场库存",

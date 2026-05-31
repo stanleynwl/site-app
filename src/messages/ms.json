@@ -204,7 +204,11 @@
     "none": "Tiada penghantaran lagi.",
     "save": "Simpan",
     "delete": "Padam",
-    "confirmDelete": "Padam penghantaran ini dan fotonya? Tindakan ini tidak boleh dibatalkan."
+    "confirmDelete": "Padam penghantaran ini dan fotonya? Tindakan ini tidak boleh dibatalkan.",
+    "queueTitle": "Baris DO",
+    "queueHint": "Penghantaran yang dilog oleh tapak yang masih perlu pejabat masukkan kuantiti DO. Paling lama dahulu.",
+    "queueEmpty": "Tiada yang menunggu — semua penghantaran sudah ada kuantiti DO.",
+    "loggedOn": "Dilog {date}"
   },
   "Stock": {
     "title": "Stok di tapak",

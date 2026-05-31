@@ -204,7 +204,11 @@
     "none": "No deliveries yet.",
     "save": "Save",
     "delete": "Delete",
-    "confirmDelete": "Delete this delivery and its photos? This cannot be undone."
+    "confirmDelete": "Delete this delivery and its photos? This cannot be undone.",
+    "queueTitle": "DO queue",
+    "queueHint": "Deliveries the site logged that still need the office to enter the DO quantity. Oldest first.",
+    "queueEmpty": "Nothing waiting — all deliveries have a DO quantity.",
+    "loggedOn": "Logged {date}"
   },
   "Stock": {
     "title": "Stock on site",

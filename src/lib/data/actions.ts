@@ -501,6 +501,7 @@ export async function setDeliveryOfficeFields(formData: FormData): Promise<void>
 
   if (itemId) revalidatePath("/office/requests");
   revalidatePath(`/office/projects/${projectId}`);
+  revalidatePath("/office/do-queue");
 }
 
 // Delete a delivery and its photos (Storage files + rows). pm/office only.

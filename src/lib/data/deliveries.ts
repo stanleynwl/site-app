@@ -60,6 +60,25 @@ export async function getProjectDeliveries(
   return (data ?? []) as unknown as Delivery[];
 }
 
+// A delivery still awaiting the office's DO entry, plus its project name.
+export type PendingDelivery = Delivery & { project: { name: string } | null };
+
+// Cross-project DO queue: deliveries the supervisor logged that the office has
+// not yet keyed the DO quantity for (do_quantity IS NULL). Oldest first so the
+// longest-waiting surface at the top. This is the office's delivery-data-entry
+// worklist (supplier / material / DO qty + link to a request).
+export async function getPendingDoDeliveries(): Promise<PendingDelivery[]> {
+  if (!isSupabaseConfigured) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("deliveries")
+    .select(`${DELIVERY_COLUMNS}, project:projects(name)`)
+    .is("do_quantity", null)
+    .order("delivered_on", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true });
+  return (data ?? []) as unknown as PendingDelivery[];
+}
+
 // Resolve a short-lived signed URL for each delivery photo so the office can
 // render thumbnails. Single place to swap to an R2 provider-aware resolver later.
 export async function withSignedUrls(
