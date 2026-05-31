@@ -6,6 +6,15 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 // range, e.g. PT 28426 → PT 28439) and the construction stages on each block.
 // Site marks stages complete and adds custom items. Progress needs no approval.
 
+// A photo attached to a structure child (progress item or stage), signed for
+// display. Reused as the shape for block reference photos too.
+export type StructurePhoto = {
+  id: string;
+  storage_path: string;
+  archived_at: string | null;
+  url?: string | null;
+};
+
 export type BlockStage = {
   id: string;
   block_id: string;
@@ -13,6 +22,7 @@ export type BlockStage = {
   sort_order: number;
   is_custom: boolean;
   completed_at: string | null;
+  photos: StructurePhoto[];
 };
 
 export type ProgressItem = {
@@ -22,6 +32,7 @@ export type ProgressItem = {
   name: string | null;
   sort_order: number;
   units_done: number;
+  photos: StructurePhoto[];
 };
 
 export type ProjectBlock = {
@@ -37,7 +48,7 @@ export type ProjectBlock = {
 };
 
 const BLOCK_COLUMNS =
-  "id, project_id, name, unit_from, unit_to, unit_count, sort_order, stages:block_stages(id, block_id, name, sort_order, is_custom, completed_at), progress_items:block_progress_items(id, block_id, category, name, sort_order, units_done)";
+  "id, project_id, name, unit_from, unit_to, unit_count, sort_order, stages:block_stages(id, block_id, name, sort_order, is_custom, completed_at, photos!block_stage_id(id, storage_path, archived_at)), progress_items:block_progress_items(id, block_id, category, name, sort_order, units_done, photos!progress_item_id(id, storage_path, archived_at))";
 
 export async function getProjectBlocks(
   projectId: string,
@@ -56,9 +67,42 @@ export async function getProjectBlocks(
 
   return ((data ?? []) as unknown as ProjectBlock[]).map((b) => ({
     ...b,
-    stages: b.stages ?? [],
-    progress_items: b.progress_items ?? [],
+    stages: (b.stages ?? []).map((s) => ({ ...s, photos: s.photos ?? [] })),
+    progress_items: (b.progress_items ?? []).map((p) => ({
+      ...p,
+      photos: p.photos ?? [],
+    })),
   }));
+}
+
+// Sign the progress-item / stage photos on each block (skip archived). Used by
+// the office read-only structure view so progress/stage photos show in place.
+export async function withSignedStructurePhotos(
+  blocks: ProjectBlock[],
+): Promise<ProjectBlock[]> {
+  if (!isSupabaseConfigured) return blocks;
+  const supabase = await createClient();
+  const sign = async (p: StructurePhoto): Promise<StructurePhoto> => {
+    if (p.archived_at != null) return { ...p, url: null };
+    const { data } = await supabase.storage
+      .from("site-photos")
+      .createSignedUrl(p.storage_path, 3600);
+    return { ...p, url: data?.signedUrl ?? null };
+  };
+  return Promise.all(
+    blocks.map(async (b) => ({
+      ...b,
+      stages: await Promise.all(
+        b.stages.map(async (s) => ({ ...s, photos: await Promise.all(s.photos.map(sign)) })),
+      ),
+      progress_items: await Promise.all(
+        b.progress_items.map(async (p) => ({
+          ...p,
+          photos: await Promise.all(p.photos.map(sign)),
+        })),
+      ),
+    })),
+  );
 }
 
 // Project-level reference photos (office uploads 1–2 so site recognises the

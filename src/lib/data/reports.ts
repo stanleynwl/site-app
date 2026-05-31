@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isSunday } from "@/lib/date";
 
 export type Weather = "sunny" | "cloudy" | "light_rain" | "heavy_rain";
 export type ReportStatus = "draft" | "submitted" | "locked";
@@ -121,4 +122,47 @@ export async function getProjectReports(
     .eq("project_id", projectId)
     .order("report_date", { ascending: false });
   return (data ?? []) as DailyReport[];
+}
+
+// The N most recent reports, optionally skipping Sunday-dated ones (the office
+// timeline shows the recent working week — Sundays don't count as a work day).
+export async function getRecentReports(
+  projectId: string,
+  limit: number,
+  opts: { excludeSunday?: boolean } = {},
+): Promise<DailyReport[]> {
+  const all = await getProjectReports(projectId);
+  const filtered = opts.excludeSunday
+    ? all.filter((r) => !isSunday(r.report_date))
+    : all;
+  return filtered.slice(0, limit);
+}
+
+// Photos attached to a daily report (signed for display). Skips archived ones.
+export type ReportPhoto = {
+  id: string;
+  storage_path: string;
+  archived_at: string | null;
+  url?: string | null;
+};
+
+export async function getReportPhotos(reportId: string): Promise<ReportPhoto[]> {
+  if (!isSupabaseConfigured) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("photos")
+    .select("id, storage_path, archived_at")
+    .eq("daily_report_id", reportId)
+    .order("created_at", { ascending: true });
+
+  const photos = (data ?? []) as ReportPhoto[];
+  return Promise.all(
+    photos.map(async (p) => {
+      if (p.archived_at != null) return { ...p, url: null };
+      const { data: signed } = await supabase.storage
+        .from("site-photos")
+        .createSignedUrl(p.storage_path, 3600);
+      return { ...p, url: signed?.signedUrl ?? null };
+    }),
+  );
 }

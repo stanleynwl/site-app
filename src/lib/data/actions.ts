@@ -501,6 +501,7 @@ export async function setDeliveryOfficeFields(formData: FormData): Promise<void>
 
   if (itemId) revalidatePath("/office/requests");
   revalidatePath(`/office/projects/${projectId}`);
+  revalidatePath(`/office/projects/${projectId}/deliveries`);
   revalidatePath("/office/do-queue");
 }
 
@@ -532,6 +533,7 @@ export async function deleteDelivery(formData: FormData): Promise<void> {
   await supabase.from("deliveries").delete().eq("id", id);
 
   revalidatePath(`/office/projects/${projectId}`);
+  revalidatePath(`/office/projects/${projectId}/deliveries`);
   revalidatePath(`/app/projects/${projectId}/deliveries`);
 }
 
@@ -922,6 +924,34 @@ export async function saveReport(
   await supabase.from("visitor_entries").delete().eq("report_id", report.id);
   if (visitors.length) {
     await supabase.from("visitor_entries").insert(visitors);
+  }
+
+  // Report photos (uploaded to Storage client-side). Insert only paths not yet
+  // linked to this report, so repeated draft-saves don't duplicate rows.
+  const reportPhotoPaths = formData.getAll("photo_path").map(String).filter(Boolean);
+  if (reportPhotoPaths.length > 0) {
+    const reportPhotoTakenAt = formData.getAll("photo_taken_at").map(String);
+    const reportPhotoLat = formData.getAll("photo_lat").map(String);
+    const reportPhotoLng = formData.getAll("photo_lng").map(String);
+    const { data: existingPhotos } = await supabase
+      .from("photos")
+      .select("storage_path")
+      .eq("daily_report_id", report.id);
+    const known = new Set((existingPhotos ?? []).map((p) => p.storage_path));
+    const newRows = reportPhotoPaths
+      .map((path, i) => ({
+        project_id: projectId,
+        daily_report_id: report.id,
+        storage_path: path,
+        taken_at: reportPhotoTakenAt[i] || null,
+        gps_lat: parseCoord(reportPhotoLat[i] ?? null),
+        gps_lng: parseCoord(reportPhotoLng[i] ?? null),
+        uploaded_by: user.id,
+      }))
+      .filter((row) => !known.has(row.storage_path));
+    if (newRows.length > 0) {
+      await supabase.from("photos").insert(newRows);
+    }
   }
 
   if (submit) {

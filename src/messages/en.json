@@ -208,7 +208,11 @@
     "queueTitle": "DO queue",
     "queueHint": "Deliveries the site logged that still need the office to enter the DO quantity. Oldest first.",
     "queueEmpty": "Nothing waiting — all deliveries have a DO quantity.",
-    "loggedOn": "Logged {date}"
+    "loggedOn": "Logged {date}",
+    "summary": "{deliveries} deliveries · {photos} photos",
+    "viewDeliveries": "View deliveries",
+    "downloadAll": "Download all",
+    "downloadSelected": "Download selected"
   },
   "Stock": {
     "title": "Stock on site",
@@ -315,6 +319,7 @@
     "timeline": "Report timeline",
     "noReports": "No reports yet.",
     "view": "View",
+    "viewAll": "View all",
     "backToProjects": "All projects",
     "reportOn": "Report — {date}",
     "noManpower": "No manpower recorded.",
@@ -369,6 +374,8 @@
   },
   "Pdf": {
     "exportPdf": "Export / Print PDF",
+    "printWeekly": "Print weekly",
+    "customRange": "Custom date range",
     "printSave": "Print / Save as PDF",
     "backToReport": "Back to report",
     "generated": "Generated {date}"
@@ -392,6 +399,7 @@
     "refPhotos": "Reference photos",
     "refPhotosHint": "1–2 photos of the project, shown to the site at the top of Progress and Stages.",
     "saveRefPhoto": "Save photo",
+    "edit": "Edit",
     "officeTitle": "Project structure",
     "officeIntro": "Define the buildings/blocks and their unit range. Each block gets the default stages; add or remove stages per block.",
     "noBlocks": "No blocks yet.",

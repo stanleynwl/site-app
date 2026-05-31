@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { saveReport, type SaveReportState } from "@/lib/data/actions";
 import { DEFAULT_TRADES, defaultTradeKey } from "@/lib/trades";
 import { DEFAULT_MACHINES, defaultMachineKey } from "@/lib/machines";
+import { PhotoCapture } from "@/components/photo-capture";
 import type {
   IssueCategory,
   NoWorkReason,
@@ -507,6 +508,12 @@ export function DailyReportForm({
             </button>
           </div>
         ))}
+      </section>
+
+      {/* Photos — optional; multiple, camera or gallery. Shown to office + PDF. */}
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold">{t("photos")}</h2>
+        <PhotoCapture projectId={projectId} month={reportDate.slice(0, 7)} />
       </section>
 
       {/* Notes — policy: NEVER pre-filled */}

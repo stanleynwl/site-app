@@ -50,6 +50,13 @@ export function normalizeReportDate(
   return raw;
 }
 
+// True if a YYYY-MM-DD date string is a Sunday. Parsed as UTC midnight so the
+// weekday is computed from the date itself, with no local-timezone drift.
+export function isSunday(dateISO: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return false;
+  return new Date(`${dateISO}T00:00:00Z`).getUTCDay() === 0;
+}
+
 // The MYT calendar date (YYYY-MM-DD) an ISO timestamp falls on.
 function mytDateOf(iso: string, tz: string = APP_TIMEZONE): string {
   return new Intl.DateTimeFormat("en-CA", {

@@ -19,7 +19,8 @@ export type DeliveryPhoto = {
   id: string;
   storage_path: string;
   archived_at: string | null;
-  url?: string | null; // resolved signed URL (set by withSignedUrls)
+  url?: string | null; // viewable signed URL (set by withSignedUrls)
+  downloadUrl?: string | null; // force-download signed URL (set by withDeliveryDownloadUrls)
 };
 
 export type Delivery = {
@@ -103,6 +104,43 @@ export async function withSignedUrls(
       ),
     })),
   );
+}
+
+// Like withSignedUrls but also sets a force-download URL per photo (Supabase
+// `download` flag adds &download= so the browser saves the file instead of
+// opening it). Used by the office deliveries detail page's photo downloader.
+export async function withDeliveryDownloadUrls(
+  deliveries: Delivery[],
+): Promise<Delivery[]> {
+  if (!isSupabaseConfigured) return deliveries;
+  const supabase = await createClient();
+  return Promise.all(
+    deliveries.map(async (d) => ({
+      ...d,
+      photos: await Promise.all(
+        d.photos
+          .filter((p) => p.archived_at == null)
+          .map(async (p) => {
+            const [view, dl] = await Promise.all([
+              supabase.storage.from(PHOTO_BUCKET).createSignedUrl(p.storage_path, 3600),
+              supabase.storage
+                .from(PHOTO_BUCKET)
+                .createSignedUrl(p.storage_path, 3600, { download: true }),
+            ]);
+            return {
+              ...p,
+              url: view.data?.signedUrl ?? null,
+              downloadUrl: dl.data?.signedUrl ?? null,
+            };
+          }),
+      ),
+    })),
+  );
+}
+
+// Total photo count across a list of deliveries (for the project-page summary).
+export function totalDeliveryPhotos(deliveries: Delivery[]): number {
+  return deliveries.reduce((n, d) => n + d.photos.length, 0);
 }
 
 // Display name for a delivery's material: catalog name, else free-text, else —.

@@ -208,7 +208,11 @@
     "queueTitle": "Baris DO",
     "queueHint": "Penghantaran yang dilog oleh tapak yang masih perlu pejabat masukkan kuantiti DO. Paling lama dahulu.",
     "queueEmpty": "Tiada yang menunggu — semua penghantaran sudah ada kuantiti DO.",
-    "loggedOn": "Dilog {date}"
+    "loggedOn": "Dilog {date}",
+    "summary": "{deliveries} penghantaran · {photos} foto",
+    "viewDeliveries": "Lihat penghantaran",
+    "downloadAll": "Muat turun semua",
+    "downloadSelected": "Muat turun pilihan"
   },
   "Stock": {
     "title": "Stok di tapak",
@@ -313,6 +317,7 @@
   },
   "Office": {
     "timeline": "Garis masa laporan",
+    "viewAll": "Lihat semua",
     "noReports": "Tiada laporan lagi.",
     "view": "Lihat",
     "backToProjects": "Semua projek",
@@ -369,6 +374,8 @@
   },
   "Pdf": {
     "exportPdf": "Eksport / Cetak PDF",
+    "printWeekly": "Cetak mingguan",
+    "customRange": "Julat tarikh tersuai",
     "printSave": "Cetak / Simpan sebagai PDF",
     "backToReport": "Kembali ke laporan",
     "generated": "Dijana {date}"
@@ -392,6 +399,7 @@
     "refPhotos": "Foto rujukan",
     "refPhotosHint": "1–2 foto projek, ditunjukkan kepada tapak di atas skrin Kemajuan dan Peringkat.",
     "saveRefPhoto": "Simpan foto",
+    "edit": "Edit",
     "officeTitle": "Struktur projek",
     "officeIntro": "Tetapkan bangunan/blok dan julat unitnya. Setiap blok mendapat peringkat lalai; tambah atau buang peringkat bagi setiap blok.",
     "noBlocks": "Tiada blok lagi.",

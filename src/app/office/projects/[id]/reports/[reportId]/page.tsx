@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { getReportById } from "@/lib/data/reports";
+import { getReportById, getReportPhotos } from "@/lib/data/reports";
 import { unlockReport, type UnlockReportState } from "@/lib/data/actions";
 import { getProfile } from "@/lib/auth/dal";
 import { isInSoftEditWindow } from "@/lib/date";
@@ -15,7 +15,11 @@ export default async function OfficeReportView({
   params: Promise<{ id: string; reportId: string }>;
 }) {
   const { id, reportId } = await params;
-  const [report, profile] = await Promise.all([getReportById(reportId), getProfile()]);
+  const [report, profile, photos] = await Promise.all([
+    getReportById(reportId),
+    getProfile(),
+    getReportPhotos(reportId),
+  ]);
   if (!report) notFound();
 
   const t = await getTranslations("Office");
@@ -166,6 +170,26 @@ export default async function OfficeReportView({
           <p className="whitespace-pre-wrap text-sm text-black/70 dark:text-white/70">
             {report.notes}
           </p>
+        </section>
+      )}
+
+      {photos.length > 0 && (
+        <section>
+          <h2 className="mb-1 text-sm font-semibold">{tr("photos")}</h2>
+          <div className="flex flex-wrap gap-2">
+            {photos.map((p) =>
+              p.url ? (
+                <a key={p.id} href={p.url} target="_blank" rel="noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={p.url}
+                    alt=""
+                    className="h-24 w-24 rounded-lg object-cover"
+                  />
+                </a>
+              ) : null,
+            )}
+          </div>
         </section>
       )}
 

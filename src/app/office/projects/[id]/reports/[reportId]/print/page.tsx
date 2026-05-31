@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getProject } from "@/lib/data/projects";
-import { getReportById } from "@/lib/data/reports";
+import { getReportById, getReportPhotos } from "@/lib/data/reports";
 import { defaultTradeKey } from "@/lib/trades";
 import { defaultMachineKey } from "@/lib/machines";
 import { todayISO } from "@/lib/date";
@@ -16,9 +16,10 @@ export default async function ReportPrintPage({
   params: Promise<{ id: string; reportId: string }>;
 }) {
   const { id, reportId } = await params;
-  const [project, report] = await Promise.all([
+  const [project, report, photos] = await Promise.all([
     getProject(id),
     getReportById(reportId),
+    getReportPhotos(reportId),
   ]);
   if (!project || !report) notFound();
 
@@ -147,6 +148,24 @@ export default async function ReportPrintPage({
         {report.notes && (
           <Section title={tr("notes")}>
             <span className="whitespace-pre-wrap">{report.notes}</span>
+          </Section>
+        )}
+
+        {photos.some((p) => p.url) && (
+          <Section title={tr("photos")}>
+            <div className="flex flex-wrap gap-2">
+              {photos.map((p) =>
+                p.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={p.id}
+                    src={p.url}
+                    alt=""
+                    className="h-32 w-32 rounded object-cover"
+                  />
+                ) : null,
+              )}
+            </div>
           </Section>
         )}
 

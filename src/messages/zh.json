@@ -208,7 +208,11 @@
     "queueTitle": "送货单队列",
     "queueHint": "工地已记录、但仍需办公室录入送货单数量的送货。最早的在前。",
     "queueEmpty": "无待处理 — 所有送货都已有送货单数量。",
-    "loggedOn": "{date} 记录"
+    "loggedOn": "{date} 记录",
+    "summary": "{deliveries} 个送货 · {photos} 张照片",
+    "viewDeliveries": "查看送货",
+    "downloadAll": "全部下载",
+    "downloadSelected": "下载所选"
   },
   "Stock": {
     "title": "现场库存",
@@ -313,6 +317,7 @@
   },
   "Office": {
     "timeline": "报告时间线",
+    "viewAll": "查看全部",
     "noReports": "暂无报告。",
     "view": "查看",
     "backToProjects": "所有项目",
@@ -369,6 +374,8 @@
   },
   "Pdf": {
     "exportPdf": "导出 / 打印 PDF",
+    "printWeekly": "打印周报",
+    "customRange": "自定义日期范围",
     "printSave": "打印 / 另存为 PDF",
     "backToReport": "返回报告",
     "generated": "生成于 {date}"
@@ -392,6 +399,7 @@
     "refPhotos": "参考照片",
     "refPhotosHint": "1–2 张项目照片，显示在工地的进度和阶段页面顶部。",
     "saveRefPhoto": "保存照片",
+    "edit": "编辑",
     "officeTitle": "项目结构",
     "officeIntro": "设定建筑/栋号及其单位范围。每栋默认包含标准阶段；可按栋增删阶段。",
     "noBlocks": "暂无栋号。",
