@@ -67,33 +67,45 @@ export default async function ReportPage({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-lg font-semibold">{project.name}</h1>
           <p className="text-xs text-black/50 dark:text-white/50">
             {t("title")} · {selectedDate}
           </p>
         </div>
-        <div className="flex gap-4">
+        <nav className="flex flex-wrap gap-x-4 gap-y-1">
           <Link
             href={`/app/projects/${id}/deliveries`}
-            className="text-sm underline"
+            className="whitespace-nowrap text-sm underline"
           >
             {t("deliveries")}
           </Link>
-          <Link href={`/app/projects/${id}/progress`} className="text-sm underline">
+          <Link
+            href={`/app/projects/${id}/progress`}
+            className="whitespace-nowrap text-sm underline"
+          >
             {t("progress")}
           </Link>
-          <Link href={`/app/projects/${id}/stages`} className="text-sm underline">
+          <Link
+            href={`/app/projects/${id}/stages`}
+            className="whitespace-nowrap text-sm underline"
+          >
             {t("stages")}
           </Link>
-          <Link href={`/app/projects/${id}/requests`} className="text-sm underline">
+          <Link
+            href={`/app/projects/${id}/requests`}
+            className="whitespace-nowrap text-sm underline"
+          >
             {t("requests")}
           </Link>
-          <Link href={`/app/projects/${id}/stock`} className="text-sm underline">
+          <Link
+            href={`/app/projects/${id}/stock`}
+            className="whitespace-nowrap text-sm underline"
+          >
             {t("stock")}
           </Link>
-        </div>
+        </nav>
       </div>
 
       <ReportDateNav

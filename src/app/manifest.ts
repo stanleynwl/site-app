@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "SiteApp",
     short_name: "SiteApp",
     description: "Daily site reports, organized by project and by day.",
-    start_url: "/app",
+    start_url: "/",
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#0a0a0a",
