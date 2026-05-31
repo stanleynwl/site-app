@@ -42,3 +42,11 @@ export async function requireProfile(): Promise<Profile> {
   if (!profile) redirect("/login");
   return profile;
 }
+
+// Office console is for office + pm only. Supervisors are bounced to the site
+// app (they can only access /app). Use in the office layout / office pages.
+export async function requireOfficeProfile(): Promise<Profile> {
+  const profile = await requireProfile();
+  if (profile.role === "supervisor") redirect("/app");
+  return profile;
+}

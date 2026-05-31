@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { requireProfile } from "@/lib/auth/dal";
+import { requireOfficeProfile } from "@/lib/auth/dal";
 import { signOut } from "@/lib/auth/actions";
 import { LocaleToggle } from "@/components/locale-toggle";
 
@@ -9,7 +9,7 @@ export default async function OfficeLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const profile = await requireProfile();
+  const profile = await requireOfficeProfile();
   const t = await getTranslations("Nav");
 
   const nav = [
