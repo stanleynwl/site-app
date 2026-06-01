@@ -8,5 +8,6 @@ import { getProfile } from "@/lib/auth/dal";
 export default async function Home() {
   const profile = await getProfile();
   if (!profile) redirect("/login");
-  redirect(profile.role === "supervisor" ? "/app" : "/office");
+  // Land on the area the user can access (office takes priority for office/admin).
+  redirect(profile.can_office ? "/office" : "/app");
 }

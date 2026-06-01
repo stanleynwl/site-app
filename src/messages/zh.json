@@ -21,6 +21,7 @@
     "requests": "申请",
     "doQueue": "送货单队列",
     "pdfExport": "导出 PDF",
+    "users": "用户",
     "office": "办公室",
     "signOut": "退出登录"
   },
@@ -430,6 +431,30 @@
     "undo": "撤销",
     "removeStage": "移除",
     "custom": "额外"
+  },
+  "Users": {
+    "title": "用户",
+    "intro": "创建登录账号并设置每个人可访问的范围。",
+    "addUser": "添加用户",
+    "adding": "创建中…",
+    "username": "用户名",
+    "usernameHint": "小写字母、数字、. _ -（至少 3 位）。用此登录。",
+    "password": "密码",
+    "fullName": "姓名",
+    "access": "访问权限",
+    "accessOpt": {
+      "office": "仅办公室",
+      "site": "仅工地",
+      "both": "办公室 + 工地"
+    },
+    "created": "已创建 {username}。",
+    "errExists": "该用户名已被使用。",
+    "errValidation": "请检查用户名（至少 3 位小写）和密码（至少 6 位）。",
+    "errNotAdmin": "只有管理员可以添加用户。",
+    "errSignup": "无法创建登录账号。Supabase 是否已启用注册？",
+    "existing": "现有用户",
+    "admin": "管理员",
+    "save": "保存"
   },
   "Locale": {
     "label": "语言",

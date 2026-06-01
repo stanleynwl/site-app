@@ -21,6 +21,7 @@
     "requests": "Permintaan",
     "doQueue": "Baris DO",
     "pdfExport": "Eksport PDF",
+    "users": "Pengguna",
     "office": "Pejabat",
     "signOut": "Log keluar"
   },
@@ -430,6 +431,30 @@
     "undo": "Buat asal",
     "removeStage": "Buang",
     "custom": "Tambahan"
+  },
+  "Users": {
+    "title": "Pengguna",
+    "intro": "Cipta log masuk dan tetapkan apa yang setiap orang boleh akses.",
+    "addUser": "Tambah pengguna",
+    "adding": "Mencipta…",
+    "username": "Nama pengguna",
+    "usernameHint": "Huruf kecil, nombor, . _ - (min 3). Mereka log masuk dengan ini.",
+    "password": "Kata laluan",
+    "fullName": "Nama penuh",
+    "access": "Akses",
+    "accessOpt": {
+      "office": "Pejabat sahaja",
+      "site": "Tapak sahaja",
+      "both": "Pejabat + Tapak"
+    },
+    "created": "{username} dicipta.",
+    "errExists": "Nama pengguna itu telah digunakan.",
+    "errValidation": "Semak nama pengguna (min 3, huruf kecil) dan kata laluan (min 6).",
+    "errNotAdmin": "Hanya admin boleh tambah pengguna.",
+    "errSignup": "Tidak dapat mencipta log masuk. Adakah signup dibenarkan dalam Supabase?",
+    "existing": "Pengguna sedia ada",
+    "admin": "Admin",
+    "save": "Simpan"
   },
   "Locale": {
     "label": "Bahasa",

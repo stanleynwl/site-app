@@ -21,6 +21,7 @@
     "requests": "Requests",
     "doQueue": "DO queue",
     "pdfExport": "PDF export",
+    "users": "Users",
     "office": "Office",
     "signOut": "Sign out"
   },
@@ -430,6 +431,30 @@
     "undo": "Undo",
     "removeStage": "Remove",
     "custom": "Extra"
+  },
+  "Users": {
+    "title": "Users",
+    "intro": "Create logins and set what each person can access.",
+    "addUser": "Add user",
+    "adding": "Creating…",
+    "username": "Username",
+    "usernameHint": "Lowercase letters, numbers, . _ - (min 3). They sign in with this.",
+    "password": "Password",
+    "fullName": "Full name",
+    "access": "Access",
+    "accessOpt": {
+      "office": "Office only",
+      "site": "Site only",
+      "both": "Office + Site"
+    },
+    "created": "Created {username}.",
+    "errExists": "That username is already taken.",
+    "errValidation": "Check the username (min 3, lowercase) and password (min 6).",
+    "errNotAdmin": "Only an admin can add users.",
+    "errSignup": "Could not create the login. Is signup enabled in Supabase?",
+    "existing": "Existing users",
+    "admin": "Admin",
+    "save": "Save"
   },
   "Locale": {
     "label": "Language",

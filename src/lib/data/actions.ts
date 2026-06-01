@@ -2,8 +2,13 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { createClient as createAnonClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import {
+  isSupabaseConfigured,
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY,
+} from "@/lib/supabase/env";
 import { getSessionUser, getProfile } from "@/lib/auth/dal";
 import { todayISO, isInSoftEditWindow, normalizeReportDate } from "@/lib/date";
 import { DEFAULT_STAGES } from "@/lib/stages";
@@ -1422,4 +1427,115 @@ export async function deleteBlockStage(formData: FormData): Promise<void> {
 
   revalidatePath(`/office/projects/${projectId}`);
   revalidatePath(`/app/projects/${projectId}/stages`);
+}
+
+// --- Admin: user management -------------------------------------------------
+
+type AccessChoice = "office" | "site" | "both";
+
+// Map an access choice to the access flags + a sensible default role.
+function accessToFlags(access: AccessChoice): {
+  can_office: boolean;
+  can_site: boolean;
+  role: "supervisor" | "office";
+} {
+  if (access === "office") return { can_office: true, can_site: false, role: "office" };
+  if (access === "site") return { can_office: false, can_site: true, role: "supervisor" };
+  return { can_office: true, can_site: true, role: "office" }; // both
+}
+
+export type CreateUserState =
+  | { ok: true; username: string }
+  | { error: "not-admin" | "validation" | "exists" | "signup" | "save" | "not-configured" }
+  | undefined;
+
+// Admin creates a login. Uses Supabase's normal signup (anon key — NO service
+// role key, which must never reach the web app); the handle_new_user trigger
+// creates the profile, then we set the access flags + role as admin (RLS
+// profiles_update_admin). Requires "Enable signups" ON in Supabase Auth.
+export async function createUser(
+  _prev: CreateUserState,
+  formData: FormData,
+): Promise<CreateUserState> {
+  if (!isSupabaseConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY)
+    return { error: "not-configured" };
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (!profile.is_admin) return { error: "not-admin" };
+
+  const username = String(formData.get("username") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
+  const fullName = String(formData.get("full_name") ?? "").trim() || null;
+  const accessRaw = String(formData.get("access") ?? "");
+  const access: AccessChoice =
+    accessRaw === "office" || accessRaw === "site" || accessRaw === "both"
+      ? accessRaw
+      : "site";
+
+  // Username: letters/digits/._- only; password min length.
+  if (!/^[a-z0-9._-]{3,}$/.test(username) || password.length < 6)
+    return { error: "validation" };
+
+  const supabase = await createClient();
+
+  // Reject a username already taken (admin can read all profiles via RLS).
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("username", username)
+    .maybeSingle();
+  if (existing) return { error: "exists" };
+
+  // Create the auth user without touching the admin's session.
+  const email = `${username}@siteapp.local`;
+  const anon = createAnonClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data: signUp, error: signUpErr } = await anon.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: fullName } },
+  });
+  if (signUpErr || !signUp.user) return { error: "signup" };
+
+  // Set access + role on the freshly-created profile (trigger already inserted it).
+  const flags = accessToFlags(access);
+  const { error: updErr } = await supabase
+    .from("profiles")
+    .update({
+      role: flags.role,
+      can_office: flags.can_office,
+      can_site: flags.can_site,
+      full_name: fullName,
+    })
+    .eq("id", signUp.user.id);
+  if (updErr) return { error: "save" };
+
+  revalidatePath("/office/users");
+  return { ok: true, username };
+}
+
+// Admin changes an existing user's access (office / site / both).
+export async function setUserAccess(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (!profile.is_admin) return;
+
+  const userId = String(formData.get("user_id") ?? "");
+  const accessRaw = String(formData.get("access") ?? "");
+  if (!userId) return;
+  const access: AccessChoice =
+    accessRaw === "office" || accessRaw === "site" || accessRaw === "both"
+      ? accessRaw
+      : "site";
+
+  const flags = accessToFlags(access);
+  const supabase = await createClient();
+  await supabase
+    .from("profiles")
+    .update({ can_office: flags.can_office, can_site: flags.can_site })
+    .eq("id", userId);
+
+  revalidatePath("/office/users");
 }
