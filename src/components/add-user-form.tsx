@@ -24,7 +24,7 @@ export function AddUserForm() {
             ? t("errValidation")
             : state.error === "not-admin"
               ? t("errNotAdmin")
-              : t("errSignup")
+              : `${t("errSignup")}${state.detail ? ` [${state.detail}]` : ""}`
         : null;
 
   return (

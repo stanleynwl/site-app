@@ -1446,7 +1446,16 @@ function accessToFlags(access: AccessChoice): {
 
 export type CreateUserState =
   | { ok: true; username: string }
-  | { error: "not-admin" | "validation" | "exists" | "signup" | "save" | "not-configured" }
+  | {
+      error:
+        | "not-admin"
+        | "validation"
+        | "exists"
+        | "signup"
+        | "save"
+        | "not-configured";
+      detail?: string;
+    }
   | undefined;
 
 // Admin creates a login. Uses Supabase's normal signup (anon key — NO service
@@ -1496,7 +1505,8 @@ export async function createUser(
     password,
     options: { data: { full_name: fullName } },
   });
-  if (signUpErr || !signUp.user) return { error: "signup" };
+  if (signUpErr || !signUp.user)
+    return { error: "signup", detail: signUpErr?.message };
 
   // Set access + role on the freshly-created profile (trigger already inserted it).
   const flags = accessToFlags(access);
@@ -1509,7 +1519,7 @@ export async function createUser(
       full_name: fullName,
     })
     .eq("id", signUp.user.id);
-  if (updErr) return { error: "save" };
+  if (updErr) return { error: "save", detail: updErr.message };
 
   revalidatePath("/office/users");
   return { ok: true, username };
