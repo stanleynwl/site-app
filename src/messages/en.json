@@ -454,7 +454,14 @@
     "errSignup": "Could not create the login. Is signup enabled in Supabase?",
     "existing": "Existing users",
     "admin": "Admin",
-    "save": "Save"
+    "save": "Save",
+    "manage": "Manage",
+    "newUsername": "New username",
+    "saveUsername": "Save username",
+    "newPassword": "New password",
+    "savePassword": "Set password",
+    "deleteUser": "Delete user",
+    "confirmDeleteUser": "Delete {username}? This removes their login and data and cannot be undone."
   },
   "Locale": {
     "label": "Language",

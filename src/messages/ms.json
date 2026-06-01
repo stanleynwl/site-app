@@ -454,7 +454,14 @@
     "errSignup": "Tidak dapat mencipta log masuk. Adakah signup dibenarkan dalam Supabase?",
     "existing": "Pengguna sedia ada",
     "admin": "Admin",
-    "save": "Simpan"
+    "save": "Simpan",
+    "manage": "Urus",
+    "newUsername": "Nama pengguna baharu",
+    "saveUsername": "Simpan nama pengguna",
+    "newPassword": "Kata laluan baharu",
+    "savePassword": "Tetapkan kata laluan",
+    "deleteUser": "Padam pengguna",
+    "confirmDeleteUser": "Padam {username}? Ini membuang log masuk dan datanya dan tidak boleh dibatalkan."
   },
   "Locale": {
     "label": "Bahasa",

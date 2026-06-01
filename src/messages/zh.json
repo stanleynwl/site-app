@@ -454,7 +454,14 @@
     "errSignup": "无法创建登录账号。Supabase 是否已启用注册？",
     "existing": "现有用户",
     "admin": "管理员",
-    "save": "保存"
+    "save": "保存",
+    "manage": "管理",
+    "newUsername": "新用户名",
+    "saveUsername": "保存用户名",
+    "newPassword": "新密码",
+    "savePassword": "设置密码",
+    "deleteUser": "删除用户",
+    "confirmDeleteUser": "删除 {username}？这将移除其登录账号和数据，且无法撤销。"
   },
   "Locale": {
     "label": "语言",

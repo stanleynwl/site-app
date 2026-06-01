@@ -1550,3 +1550,51 @@ export async function setUserAccess(formData: FormData): Promise<void> {
 
   revalidatePath("/office/users");
 }
+
+// Admin edits a user's login username (rewrites the synthetic email + profile).
+// Calls the security-definer admin_set_username (admin-checked in the DB).
+export async function setUserUsername(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (!profile.is_admin) return;
+
+  const userId = String(formData.get("user_id") ?? "");
+  const username = String(formData.get("username") ?? "").trim().toLowerCase();
+  if (!userId || !/^[a-z0-9._-]{3,}$/.test(username)) return;
+
+  const supabase = await createClient();
+  await supabase.rpc("admin_set_username", { target: userId, new_username: username });
+  revalidatePath("/office/users");
+}
+
+// Admin resets a user's password (security-definer admin_set_password).
+export async function setUserPassword(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (!profile.is_admin) return;
+
+  const userId = String(formData.get("user_id") ?? "");
+  const password = String(formData.get("password") ?? "");
+  if (!userId || password.length < 6) return;
+
+  const supabase = await createClient();
+  await supabase.rpc("admin_set_password", { target: userId, new_password: password });
+  revalidatePath("/office/users");
+}
+
+// Admin deletes a user (security-definer admin_delete_user; cascades their data).
+export async function deleteUser(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (!profile.is_admin) return;
+
+  const userId = String(formData.get("user_id") ?? "");
+  if (!userId || userId === profile.id) return;
+
+  const supabase = await createClient();
+  await supabase.rpc("admin_delete_user", { target: userId });
+  revalidatePath("/office/users");
+}

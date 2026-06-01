@@ -1,7 +1,12 @@
 import { getTranslations } from "next-intl/server";
 import { requireAdminProfile, listProfiles } from "@/lib/auth/dal";
-import { setUserAccess } from "@/lib/data/actions";
+import {
+  setUserAccess,
+  setUserUsername,
+  setUserPassword,
+} from "@/lib/data/actions";
 import { AddUserForm } from "@/components/add-user-form";
+import { DeleteUserButton } from "@/components/delete-user-button";
 
 const inputCls =
   "rounded-lg border border-black/15 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
@@ -55,21 +60,64 @@ export default async function UsersPage() {
                   {t(`accessOpt.${accessOf(p)}`)}
                 </span>
               ) : (
-                <form action={setUserAccess} className="flex items-center gap-2">
-                  <input type="hidden" name="user_id" value={p.id} />
-                  <select
-                    name="access"
-                    defaultValue={accessOf(p)}
-                    className={inputCls}
-                  >
-                    <option value="site">{t("accessOpt.site")}</option>
-                    <option value="office">{t("accessOpt.office")}</option>
-                    <option value="both">{t("accessOpt.both")}</option>
-                  </select>
-                  <button className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25">
-                    {t("save")}
-                  </button>
-                </form>
+                <div className="flex flex-col items-end gap-2">
+                  <form action={setUserAccess} className="flex items-center gap-2">
+                    <input type="hidden" name="user_id" value={p.id} />
+                    <select
+                      name="access"
+                      defaultValue={accessOf(p)}
+                      className={inputCls}
+                    >
+                      <option value="site">{t("accessOpt.site")}</option>
+                      <option value="office">{t("accessOpt.office")}</option>
+                      <option value="both">{t("accessOpt.both")}</option>
+                    </select>
+                    <button className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25">
+                      {t("save")}
+                    </button>
+                  </form>
+
+                  <details className="w-full">
+                    <summary className="cursor-pointer text-right text-xs underline">
+                      {t("manage")}
+                    </summary>
+                    <div className="mt-2 space-y-2">
+                      <form
+                        action={setUserUsername}
+                        className="flex items-center justify-end gap-2"
+                      >
+                        <input type="hidden" name="user_id" value={p.id} />
+                        <input
+                          name="username"
+                          defaultValue={p.username ?? ""}
+                          placeholder={t("newUsername")}
+                          className={inputCls}
+                        />
+                        <button className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25">
+                          {t("saveUsername")}
+                        </button>
+                      </form>
+                      <form
+                        action={setUserPassword}
+                        className="flex items-center justify-end gap-2"
+                      >
+                        <input type="hidden" name="user_id" value={p.id} />
+                        <input
+                          name="password"
+                          type="text"
+                          placeholder={t("newPassword")}
+                          className={inputCls}
+                        />
+                        <button className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25">
+                          {t("savePassword")}
+                        </button>
+                      </form>
+                      <div className="text-right">
+                        <DeleteUserButton userId={p.id} username={p.username ?? ""} />
+                      </div>
+                    </div>
+                  </details>
+                </div>
               )}
             </li>
           ))}
