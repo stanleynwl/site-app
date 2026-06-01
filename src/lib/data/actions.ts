@@ -10,6 +10,7 @@ import {
   SUPABASE_ANON_KEY,
 } from "@/lib/supabase/env";
 import { getSessionUser, getProfile } from "@/lib/auth/dal";
+import { usernameToEmail } from "@/lib/auth/username";
 import { todayISO, isInSoftEditWindow, normalizeReportDate } from "@/lib/date";
 import { DEFAULT_STAGES } from "@/lib/stages";
 import { progressSeedRows } from "@/lib/progress-template";
@@ -1496,7 +1497,7 @@ export async function createUser(
   if (existing) return { error: "exists" };
 
   // Create the auth user without touching the admin's session.
-  const email = `${username}@siteapp.local`;
+  const email = usernameToEmail(username);
   const anon = createAnonClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
