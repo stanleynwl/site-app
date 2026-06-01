@@ -318,6 +318,7 @@
   "Office": {
     "timeline": "报告时间线",
     "viewAll": "查看全部",
+    "newBadge": "新",
     "noReports": "暂无报告。",
     "view": "查看",
     "backToProjects": "所有项目",
@@ -400,6 +401,7 @@
     "refPhotosHint": "1–2 张项目照片，显示在工地的进度和阶段页面顶部。",
     "saveRefPhoto": "保存照片",
     "edit": "编辑",
+    "completedSummary": "{stage} 已完成",
     "officeTitle": "项目结构",
     "officeIntro": "设定建筑/栋号及其单位范围。每栋默认包含标准阶段；可按栋增删阶段。",
     "noBlocks": "暂无栋号。",

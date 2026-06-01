@@ -32,6 +32,7 @@ export type ProgressItem = {
   name: string | null;
   sort_order: number;
   units_done: number;
+  updated_at: string;
   photos: StructurePhoto[];
 };
 
@@ -48,7 +49,7 @@ export type ProjectBlock = {
 };
 
 const BLOCK_COLUMNS =
-  "id, project_id, name, unit_from, unit_to, unit_count, sort_order, stages:block_stages(id, block_id, name, sort_order, is_custom, completed_at, photos!block_stage_id(id, storage_path, archived_at)), progress_items:block_progress_items(id, block_id, category, name, sort_order, units_done, photos!progress_item_id(id, storage_path, archived_at))";
+  "id, project_id, name, unit_from, unit_to, unit_count, sort_order, stages:block_stages(id, block_id, name, sort_order, is_custom, completed_at, photos!block_stage_id(id, storage_path, archived_at)), progress_items:block_progress_items(id, block_id, category, name, sort_order, units_done, updated_at, photos!progress_item_id(id, storage_path, archived_at))";
 
 export async function getProjectBlocks(
   projectId: string,
@@ -151,6 +152,51 @@ export function groupProgressByCategory(
     else out.push({ category: it.category, items: [it] });
   }
   return out;
+}
+
+// The furthest-along completed stage on a block (highest sort_order among
+// completed; tie-break by completed_at). Null when nothing is completed. Used
+// for the office Stages summary ("Block A — RC structure completed").
+export function latestCompletedStage(block: ProjectBlock): BlockStage | null {
+  const done = block.stages.filter((s) => s.completed_at != null);
+  if (done.length === 0) return null;
+  return done.reduce((best, s) =>
+    s.sort_order > best.sort_order ||
+    (s.sort_order === best.sort_order &&
+      (s.completed_at ?? "") > (best.completed_at ?? ""))
+      ? s
+      : best,
+  );
+}
+
+// The most-recently-updated progress item with any units done (max updated_at).
+// Null when nothing has progress. Used for the office Progress summary line.
+export function latestProgressItem(block: ProjectBlock): ProgressItem | null {
+  const started = block.progress_items.filter((p) => p.units_done > 0);
+  if (started.length === 0) return null;
+  return started.reduce((best, p) =>
+    p.updated_at > best.updated_at ? p : best,
+  );
+}
+
+// "New" = the site updated something after the office's last-seen marker (or the
+// marker is null and there's any activity). Compared against project.*_seen_at.
+export function hasNewStages(
+  block: ProjectBlock,
+  seenAt: string | null,
+): boolean {
+  return block.stages.some(
+    (s) => s.completed_at != null && (seenAt == null || s.completed_at > seenAt),
+  );
+}
+
+export function hasNewProgress(
+  block: ProjectBlock,
+  seenAt: string | null,
+): boolean {
+  return block.progress_items.some(
+    (p) => p.units_done > 0 && (seenAt == null || p.updated_at > seenAt),
+  );
 }
 
 // Block-level progress %: average of each item's units_done / unit_count.

@@ -11,15 +11,12 @@ import { getStockSummary } from "@/lib/data/stock";
 import {
   getProjectBlocks,
   getProjectRefPhotos,
-  withSignedStructurePhotos,
-  blockProgressPercent,
+  latestCompletedStage,
+  latestProgressItem,
+  hasNewStages,
+  hasNewProgress,
 } from "@/lib/data/structure";
 import {
-  createProjectBlock,
-  updateProjectBlock,
-  deleteProjectBlock,
-  addBlockStage,
-  deleteBlockStage,
   addProjectRefPhoto,
   deleteProjectRefPhoto,
   updateProjectName,
@@ -48,9 +45,10 @@ export default async function OfficeProjectDetail({
   const td = await getTranslations("Deliveries");
   const tst = await getTranslations("Stock");
   const tsg = await getTranslations("Stages");
+  const tpr = await getTranslations("Progress");
   const tp2 = await getTranslations("Projects");
 
-  const [reports, deliveries, stockSummary, rawBlocks, refPhotos] =
+  const [reports, deliveries, stockSummary, blocks, refPhotos] =
     await Promise.all([
       getRecentReports(id, 6, { excludeSunday: true }),
       getProjectDeliveries(id),
@@ -58,9 +56,21 @@ export default async function OfficeProjectDetail({
       getProjectBlocks(id),
       getProjectRefPhotos(id),
     ]);
-  const blocks = await withSignedStructurePhotos(rawBlocks);
   const month = todayISO().slice(0, 7);
   const deliveryPhotoCount = totalDeliveryPhotos(deliveries);
+
+  // Progress / Stages summaries — only blocks with activity. "New" badge when
+  // the site updated after the office's last-seen marker.
+  const stageRows = blocks
+    .map((b) => ({ block: b, stage: latestCompletedStage(b) }))
+    .filter((r) => r.stage != null);
+  const progressRows = blocks
+    .map((b) => ({ block: b, item: latestProgressItem(b) }))
+    .filter((r) => r.item != null);
+  const stagesNew = blocks.some((b) => hasNewStages(b, project.stages_seen_at));
+  const progressNew = blocks.some((b) =>
+    hasNewProgress(b, project.progress_seen_at),
+  );
 
   return (
     <div className="space-y-6">
@@ -221,250 +231,77 @@ export default async function OfficeProjectDetail({
         </form>
       </section>
 
-      {/* Project structure: read-only status, with Edit disclosures */}
-      <section className="space-y-3">
-        <div>
-          <h2 className="text-sm font-semibold">{tsg("officeTitle")}</h2>
-          <p className="text-xs text-black/50 dark:text-white/50">
-            {tsg("officeIntro")}
-          </p>
+      {/* Progress summary — latest updated item per block with activity */}
+      <section className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold">{tpr("title")}</h2>
+            {progressNew && (
+              <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-medium text-white">
+                {t("newBadge")}
+              </span>
+            )}
+          </div>
+          <div className="flex gap-3 text-xs">
+            <Link href={`/office/projects/${id}/progress`} className="underline">
+              {t("viewAll")}
+            </Link>
+            <Link href={`/office/projects/${id}/structure`} className="underline">
+              {tsg("edit")}
+            </Link>
+          </div>
         </div>
-
-        {/* Add a block (edit-only) */}
-        <details className="rounded-xl border border-black/10 dark:border-white/15">
-          <summary className="cursor-pointer px-4 py-2 text-sm font-medium">
-            + {tsg("newBlock")}
-          </summary>
-          <form
-            action={createProjectBlock}
-            className="flex flex-wrap items-end gap-2 px-4 pb-4 text-sm"
-          >
-            <input type="hidden" name="project_id" value={id} />
-            <input
-              name="name"
-              required
-              placeholder={tsg("blockNameHint")}
-              className={inputCls}
-            />
-            <input name="unit_from" placeholder={tsg("unitFrom")} className={inputCls} />
-            <input name="unit_to" placeholder={tsg("unitTo")} className={inputCls} />
-            <input
-              name="unit_count"
-              type="number"
-              min="0"
-              placeholder={tsg("unitCount")}
-              className={`${inputCls} w-28`}
-            />
-            <button className={btnCls}>{tsg("addBlock")}</button>
-          </form>
-        </details>
-
-        {blocks.length === 0 ? (
-          <p className="text-sm text-black/50 dark:text-white/50">
-            {tsg("noBlocks")}
-          </p>
+        {progressRows.length === 0 ? (
+          <p className="text-sm text-black/50 dark:text-white/50">{tpr("noItems")}</p>
         ) : (
-          <ul className="space-y-3">
-            {blocks.map((b) => {
-              const pct = blockProgressPercent(b);
-              const startedItems = b.progress_items.filter((p) => p.units_done > 0);
-              return (
-                <li
-                  key={b.id}
-                  className="space-y-3 rounded-xl border border-black/10 p-4 text-sm dark:border-white/15"
-                >
-                  {/* Read-only header */}
-                  <div>
-                    <p className="font-semibold">
-                      {b.name}
-                      {b.unit_count != null && (
-                        <span className="ml-2 text-xs font-normal text-black/50 dark:text-white/50">
-                          {tsg("units", { count: b.unit_count })}
-                        </span>
-                      )}
-                      {pct != null && (
-                        <span className="ml-2 rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">
-                          {pct}%
-                        </span>
-                      )}
-                    </p>
-                    {(b.unit_from || b.unit_to) && (
-                      <p className="text-xs text-black/50 dark:text-white/50">
-                        {tsg("unitRange", {
-                          from: b.unit_from ?? "—",
-                          to: b.unit_to ?? "—",
-                        })}
-                      </p>
-                    )}
-                  </div>
+          <ul className="divide-y divide-black/10 rounded-xl border border-black/10 dark:divide-white/10 dark:border-white/15">
+            {progressRows.map(({ block, item }) => (
+              <li key={block.id} className="px-4 py-2 text-sm">
+                <span className="font-medium">{block.name}</span>
+                <span className="mx-1 text-black/40">—</span>
+                <span className="text-black/70 dark:text-white/70">
+                  {item!.name ? `${item!.category} - ${item!.name}` : item!.category}{" "}
+                  {item!.units_done}/{block.unit_count ?? "—"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
-                  {/* Read-only stages */}
-                  {b.stages.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {b.stages.map((s) => (
-                        <span
-                          key={s.id}
-                          className={`rounded-full px-2 py-0.5 text-xs ${
-                            s.completed_at != null
-                              ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400"
-                              : "bg-black/5 dark:bg-white/10"
-                          }`}
-                        >
-                          {s.completed_at != null ? "✓ " : ""}
-                          {s.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Read-only progress rollup (items with any units done) */}
-                  {startedItems.length > 0 && (
-                    <div>
-                      <p className="text-xs font-semibold text-black/60 dark:text-white/60">
-                        {tsg("progressRollup")}
-                      </p>
-                      <ul className="mt-1 space-y-1">
-                        {startedItems.map((p) => (
-                          <li key={p.id} className="text-xs">
-                            <div>
-                              <span className="text-black/60 dark:text-white/60">
-                                {p.name ? `${p.category} - ${p.name}` : p.category}
-                              </span>
-                              <span className="ml-2 font-medium">
-                                {p.units_done} / {b.unit_count ?? "—"}
-                              </span>
-                            </div>
-                            {p.photos.some((ph) => ph.url) && (
-                              <div className="mt-1 flex flex-wrap gap-1">
-                                {p.photos.map((ph) =>
-                                  ph.url ? (
-                                    <a key={ph.id} href={ph.url} target="_blank" rel="noreferrer">
-                                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                                      <img
-                                        src={ph.url}
-                                        alt=""
-                                        className="h-14 w-14 rounded object-cover"
-                                      />
-                                    </a>
-                                  ) : null,
-                                )}
-                              </div>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Stage photos (read-only) */}
-                  {b.stages.some((s) => s.photos.some((ph) => ph.url)) && (
-                    <div className="flex flex-wrap gap-1">
-                      {b.stages.flatMap((s) =>
-                        s.photos.map((ph) =>
-                          ph.url ? (
-                            <a key={ph.id} href={ph.url} target="_blank" rel="noreferrer">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={ph.url}
-                                alt=""
-                                className="h-14 w-14 rounded object-cover"
-                              />
-                            </a>
-                          ) : null,
-                        ),
-                      )}
-                    </div>
-                  )}
-
-                  {/* Edit controls (disclosure) */}
-                  <details className="rounded-lg border border-black/10 dark:border-white/15">
-                    <summary className="cursor-pointer px-3 py-1.5 text-xs font-medium">
-                      {tsg("edit")}
-                    </summary>
-                    <div className="space-y-2 px-3 pb-3">
-                      <form
-                        action={updateProjectBlock}
-                        className="flex flex-wrap items-end gap-2"
-                      >
-                        <input type="hidden" name="block_id" value={b.id} />
-                        <input type="hidden" name="project_id" value={id} />
-                        <input
-                          name="name"
-                          required
-                          defaultValue={b.name}
-                          placeholder={tsg("blockName")}
-                          className={inputCls}
-                        />
-                        <input
-                          name="unit_from"
-                          defaultValue={b.unit_from ?? ""}
-                          placeholder={tsg("unitFrom")}
-                          className={inputCls}
-                        />
-                        <input
-                          name="unit_to"
-                          defaultValue={b.unit_to ?? ""}
-                          placeholder={tsg("unitTo")}
-                          className={inputCls}
-                        />
-                        <input
-                          name="unit_count"
-                          type="number"
-                          min="0"
-                          defaultValue={b.unit_count ?? ""}
-                          placeholder={tsg("unitCount")}
-                          className={`${inputCls} w-28`}
-                        />
-                        <button className={btnCls}>{tsg("saveBlock")}</button>
-                      </form>
-
-                      {b.stages.length > 0 && (
-                        <ul className="flex flex-wrap gap-2">
-                          {b.stages.map((s) => (
-                            <li
-                              key={s.id}
-                              className="flex items-center gap-1 rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10"
-                            >
-                              <span>{s.name}</span>
-                              <form action={deleteBlockStage} className="inline">
-                                <input type="hidden" name="stage_id" value={s.id} />
-                                <input type="hidden" name="project_id" value={id} />
-                                <button
-                                  aria-label={tsg("removeStage")}
-                                  className="text-red-600"
-                                >
-                                  ✕
-                                </button>
-                              </form>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-
-                      <form action={addBlockStage} className="flex items-end gap-2">
-                        <input type="hidden" name="block_id" value={b.id} />
-                        <input type="hidden" name="project_id" value={id} />
-                        <input
-                          name="name"
-                          required
-                          placeholder={tsg("stageName")}
-                          className={`${inputCls} flex-1`}
-                        />
-                        <button className={btnCls}>{tsg("addStage")}</button>
-                      </form>
-
-                      <form action={deleteProjectBlock}>
-                        <input type="hidden" name="block_id" value={b.id} />
-                        <input type="hidden" name="project_id" value={id} />
-                        <button className="text-xs text-red-600 underline">
-                          {tsg("deleteBlock")}
-                        </button>
-                      </form>
-                    </div>
-                  </details>
-                </li>
-              );
-            })}
+      {/* Stages summary — latest completed stage per block */}
+      <section className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold">{tsg("title")}</h2>
+            {stagesNew && (
+              <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-medium text-white">
+                {t("newBadge")}
+              </span>
+            )}
+          </div>
+          <div className="flex gap-3 text-xs">
+            <Link href={`/office/projects/${id}/stages`} className="underline">
+              {t("viewAll")}
+            </Link>
+            <Link href={`/office/projects/${id}/structure`} className="underline">
+              {tsg("edit")}
+            </Link>
+          </div>
+        </div>
+        {stageRows.length === 0 ? (
+          <p className="text-sm text-black/50 dark:text-white/50">{tsg("noStages")}</p>
+        ) : (
+          <ul className="divide-y divide-black/10 rounded-xl border border-black/10 dark:divide-white/10 dark:border-white/15">
+            {stageRows.map(({ block, stage }) => (
+              <li key={block.id} className="px-4 py-2 text-sm">
+                <span className="font-medium">{block.name}</span>
+                <span className="mx-1 text-black/40">—</span>
+                <span className="text-green-700 dark:text-green-400">
+                  {tsg("completedSummary", { stage: stage!.name })}
+                </span>
+              </li>
+            ))}
           </ul>
         )}
       </section>

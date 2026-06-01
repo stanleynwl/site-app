@@ -1339,7 +1339,7 @@ export async function submitProgress(formData: FormData): Promise<void> {
 
   await supabase
     .from("block_progress_items")
-    .update({ units_done: unitsDone })
+    .update({ units_done: unitsDone, updated_at: new Date().toISOString() })
     .eq("id", itemId);
 
   await attachSubmissionPhotos(supabase, formData, projectId, user.id, {
@@ -1349,6 +1349,33 @@ export async function submitProgress(formData: FormData): Promise<void> {
 
   revalidatePath(`/app/projects/${projectId}/progress`);
   revalidatePath(`/office/projects/${projectId}`);
+}
+
+// Office marks the Progress / Stages summary as seen, clearing the "New" badge
+// until the site submits again. Office/pm only. (Per-project, not per-user.)
+async function markStructureSeen(
+  projectId: string,
+  column: "progress_seen_at" | "stages_seen_at",
+): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "pm" && profile.role !== "office") return;
+  if (!projectId) return;
+  const supabase = await createClient();
+  await supabase
+    .from("projects")
+    .update({ [column]: new Date().toISOString() })
+    .eq("id", projectId);
+  revalidatePath(`/office/projects/${projectId}`);
+}
+
+export async function markProgressSeen(projectId: string): Promise<void> {
+  await markStructureSeen(projectId, "progress_seen_at");
+}
+
+export async function markStagesSeen(projectId: string): Promise<void> {
+  await markStructureSeen(projectId, "stages_seen_at");
 }
 
 // Office/pm renames a project.

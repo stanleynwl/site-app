@@ -13,13 +13,16 @@ export type Project = {
   start_date: string | null;
   status: ProjectStatus;
   created_by: string | null;
+  progress_seen_at: string | null;
+  stages_seen_at: string | null;
 };
 
 export type ProjectWithLatest = Project & {
   latest: { report_date: string; status: ReportStatus; weather: Weather | null } | null;
 };
 
-const PROJECT_COLUMNS = "id, name, code, location, start_date, status, created_by";
+const PROJECT_COLUMNS =
+  "id, name, code, location, start_date, status, created_by, progress_seen_at, stages_seen_at";
 
 export async function getMyProjects(): Promise<Project[]> {
   if (!isSupabaseConfigured) return [];
