@@ -7,7 +7,7 @@ import {
   getProjectPurchaseRequests,
   itemName,
   withSignedRequestPhotos,
-  isVisibleToSite,
+  isRequestVisible,
 } from "@/lib/data/purchase-requests";
 import {
   confirmDeliveredPurchaseRequest,
@@ -31,7 +31,7 @@ export default async function ProjectRequestsPage({
     getProjectPurchaseRequests(id),
   ]);
   const requests = await withSignedRequestPhotos(
-    allRequests.filter(isVisibleToSite),
+    allRequests.filter(isRequestVisible),
   );
 
   return (

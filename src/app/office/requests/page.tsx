@@ -87,9 +87,11 @@ export default async function OfficeRequestsPage() {
                     <span className="rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">
                       {t(`status.${r.status}`)}
                     </span>
-                    <p className={`mt-1 text-xs ${ageClass(age)}`}>
-                      {t("waiting", { hours: age })}
-                    </p>
+                    {r.status !== "delivered" && (
+                      <p className={`mt-1 text-xs ${ageClass(age)}`}>
+                        {t("waiting", { hours: age })}
+                      </p>
+                    )}
                   </div>
                 </div>
 

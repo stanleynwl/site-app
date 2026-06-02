@@ -62,9 +62,10 @@ export type PurchaseRequest = {
 const PR_COLUMNS =
   "id, project_id, needed_by, urgency_reason, note, status, po_number, rejected_reason, created_at, delivered_at, supplier:suppliers(name), items:purchase_request_items(id, material_text, quantity, unit, material:materials(name, unit)), photos(id, storage_path, archived_at)";
 
-// Requests the supervisor should see on the site list: all open ones, plus
-// delivered ones for a short hold window (DELIVERED_HOLD_DAYS) after delivery.
-export function isVisibleToSite(r: PurchaseRequest): boolean {
+// Requests still worth showing: all open ones, plus delivered ones for a short
+// hold window (DELIVERED_HOLD_DAYS) after delivery. Used by BOTH the supervisor's
+// site list and the office queue so they drop off together.
+export function isRequestVisible(r: PurchaseRequest): boolean {
   if (PR_OPEN_STATUSES.includes(r.status)) return true;
   if (r.status === "delivered" && r.delivered_at) {
     const ageMs = Date.now() - new Date(r.delivered_at).getTime();
@@ -86,17 +87,19 @@ export async function getProjectPurchaseRequests(
   return (data ?? []) as unknown as PurchaseRequest[];
 }
 
-// Office queue: open requests across all the user's projects, oldest first so
-// the longest-waiting ones surface at the top (aging is derived in the view).
+// Office queue: open requests across all the user's projects (oldest first so
+// the longest-waiting ones surface at the top), plus recently delivered ones
+// kept for the hold window — same visibility as the supervisor's site list.
 export async function getOpenPurchaseRequests(): Promise<PurchaseRequest[]> {
   if (!isSupabaseConfigured) return [];
   const supabase = await createClient();
   const { data } = await supabase
     .from("purchase_requests")
     .select(`${PR_COLUMNS}, project:projects(name)`)
-    .in("status", PR_OPEN_STATUSES)
+    .in("status", [...PR_OPEN_STATUSES, "delivered"])
     .order("created_at", { ascending: true });
-  return (data ?? []) as unknown as PurchaseRequest[];
+  const rows = (data ?? []) as unknown as PurchaseRequest[];
+  return rows.filter(isRequestVisible);
 }
 
 export function itemName(item: PurchaseRequestItem): string {
