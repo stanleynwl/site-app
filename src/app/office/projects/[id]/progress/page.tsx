@@ -81,17 +81,17 @@ export default async function OfficeProgressPage({
                     <div className="space-y-2">
                       {groupProgressByCategory(b.progress_items).map((grp) => (
                         <div key={grp.category}>
-                          <p className="text-xs font-semibold text-black/60 dark:text-white/60">
+                          <p className="rounded bg-black/[0.06] px-2 py-1 text-xs font-semibold dark:bg-white/[0.08]">
                             {grp.category}
                           </p>
-                          <ul className="mt-1 space-y-1">
+                          <ul className="mt-1 space-y-1 pl-1">
                             {grp.items.map((p) => (
                               <li key={p.id} className="text-xs">
-                                <div>
+                                <div className="flex items-baseline justify-between gap-2">
                                   <span className="text-black/60 dark:text-white/60">
                                     {p.name ? `${p.category} - ${p.name}` : p.category}
                                   </span>
-                                  <span className="ml-2 font-medium">
+                                  <span className="shrink-0 font-medium tabular-nums">
                                     {p.units_done} / {b.unit_count ?? "—"}
                                   </span>
                                 </div>
