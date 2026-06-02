@@ -16,7 +16,11 @@ import {
 } from "@/lib/data/purchase-requests";
 import { setDeliveryOfficeFields } from "@/lib/data/actions";
 import { DeleteDeliveryButton } from "@/components/delete-delivery-button";
-import { DeliveryPhotoDownloader } from "@/components/delivery-photo-downloader";
+import {
+  DeliveryDownloadProvider,
+  DeliveryDownloadButtons,
+  DeliveryThumbs,
+} from "@/components/delivery-photo-downloader";
 
 const inputCls =
   "rounded-lg border border-black/15 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
@@ -39,6 +43,13 @@ export default async function OfficeDeliveriesPage({
     getProjectPurchaseRequests(id),
   ]);
   const deliveries = await withDeliveryDownloadUrls(rawDeliveries);
+  const allPhotos = deliveries.flatMap((d) =>
+    d.photos.map((p) => ({
+      id: p.id,
+      url: p.url ?? null,
+      downloadUrl: p.downloadUrl ?? null,
+    })),
+  );
   const openItems = requests
     .filter((r) => PR_OPEN_STATUSES.includes(r.status))
     .flatMap((r) => r.items.map((it) => ({ it })));
@@ -58,6 +69,11 @@ export default async function OfficeDeliveriesPage({
       {deliveries.length === 0 ? (
         <p className="text-sm text-black/50 dark:text-white/50">{td("none")}</p>
       ) : (
+        <DeliveryDownloadProvider allPhotos={allPhotos}>
+        {/* Section-level: download all / selected DO photos */}
+        <div className="flex justify-end">
+          <DeliveryDownloadButtons />
+        </div>
         <ul className="space-y-3">
           {deliveries.map((d) => {
             const variance = deliveryVariance(d);
@@ -91,8 +107,8 @@ export default async function OfficeDeliveriesPage({
                   {variance != null ? ` · ${td("variance")}: ${variance}` : ""}
                 </div>
 
-                {/* Photos + download all/selected */}
-                <DeliveryPhotoDownloader
+                {/* DO photos for this delivery (select to download below) */}
+                <DeliveryThumbs
                   photos={d.photos.map((p) => ({
                     id: p.id,
                     url: p.url ?? null,
@@ -157,6 +173,7 @@ export default async function OfficeDeliveriesPage({
             );
           })}
         </ul>
+        </DeliveryDownloadProvider>
       )}
     </div>
   );
