@@ -5,16 +5,16 @@ import { getProject } from "@/lib/data/projects";
 import { getMaterials } from "@/lib/data/catalog";
 import {
   getProjectPurchaseRequests,
-  prItemsLabel,
+  itemName,
   withSignedRequestPhotos,
+  isVisibleToSite,
 } from "@/lib/data/purchase-requests";
-import { confirmDeliveredPurchaseRequest } from "@/lib/data/actions";
+import {
+  confirmDeliveredPurchaseRequest,
+  updateRequestItemQuantity,
+} from "@/lib/data/actions";
 import { todayISO } from "@/lib/date";
 import { PurchaseRequestForm } from "@/components/purchase-request-form";
-
-// Site sees only live requests: pending, accepted, ordered. Rejected ones drop
-// off, and once the supervisor confirms delivery (delivered) it's gone too.
-const SITE_VISIBLE = ["pending", "approved", "po_issued"];
 
 export default async function ProjectRequestsPage({
   params,
@@ -31,7 +31,7 @@ export default async function ProjectRequestsPage({
     getProjectPurchaseRequests(id),
   ]);
   const requests = await withSignedRequestPhotos(
-    allRequests.filter((r) => SITE_VISIBLE.includes(r.status)),
+    allRequests.filter(isVisibleToSite),
   );
 
   return (
@@ -61,7 +61,37 @@ export default async function ProjectRequestsPage({
             {requests.map((r) => (
               <li key={r.id} className="space-y-1 px-4 py-3 text-sm">
                 <div className="flex items-start justify-between gap-3">
-                  <span className="font-medium">{prItemsLabel(r)}</span>
+                  <ul className="flex-1 space-y-1">
+                    {r.items.map((it) => (
+                      <li key={it.id} className="flex items-center gap-2">
+                        <span className="flex-1 font-medium">{itemName(it)}</span>
+                        <form
+                          action={updateRequestItemQuantity}
+                          className="flex items-center gap-1"
+                        >
+                          <input type="hidden" name="item_id" value={it.id} />
+                          <input type="hidden" name="project_id" value={id} />
+                          <input
+                            name="quantity"
+                            type="number"
+                            step="any"
+                            min="0"
+                            defaultValue={it.quantity ?? ""}
+                            aria-label={t("quantity")}
+                            className="w-20 rounded-lg border border-black/15 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50"
+                          />
+                          {it.unit && (
+                            <span className="text-xs text-black/50 dark:text-white/50">
+                              {it.unit}
+                            </span>
+                          )}
+                          <button className="rounded-lg border border-black/20 px-2 py-1 text-xs font-medium dark:border-white/25">
+                            {t("saveQty")}
+                          </button>
+                        </form>
+                      </li>
+                    ))}
+                  </ul>
                   <span className="shrink-0 rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">
                     {t(`status.${r.status}`)}
                   </span>

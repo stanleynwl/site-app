@@ -705,9 +705,34 @@ export async function confirmDeliveredPurchaseRequest(
   const supabase = await createClient();
   await supabase
     .from("purchase_requests")
-    .update({ status: "delivered" })
+    .update({ status: "delivered", delivered_at: new Date().toISOString() })
     .eq("id", id)
     .eq("status", "po_issued");
+
+  revalidatePath(`/app/projects/${projectId}/requests`);
+  revalidatePath("/office/requests");
+}
+
+// Supervisor (any project member) amends a request line item's quantity on site
+// — e.g. concrete 6m³ → 12m³, or down to 3m³. Allowed anytime the request is
+// still on their list (member UPDATE RLS, migration 0027). Decimals allowed.
+export async function updateRequestItemQuantity(
+  formData: FormData,
+): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+
+  const itemId = String(formData.get("item_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!itemId) return;
+  const quantity = parseQty(formData.get("quantity"));
+
+  const supabase = await createClient();
+  await supabase
+    .from("purchase_request_items")
+    .update({ quantity })
+    .eq("id", itemId);
 
   revalidatePath(`/app/projects/${projectId}/requests`);
   revalidatePath("/office/requests");
@@ -1428,6 +1453,184 @@ export async function deleteBlockStage(formData: FormData): Promise<void> {
 
   revalidatePath(`/office/projects/${projectId}`);
   revalidatePath(`/app/projects/${projectId}/stages`);
+}
+
+// --- Office structure TEMPLATE editing (applies to ALL blocks) ---------------
+// Every block in a project is seeded with an identical template, so the office
+// edits the shared template once and the change fans out to every block,
+// matching progress items by (category, name) and stages by name.
+
+// Office/pm guard + the project's block IDs. Returns null when not allowed or no
+// blocks (caller should no-op). Revalidation is left to each action.
+async function officeProjectBlockIds(
+  projectId: string,
+): Promise<{ supabase: Awaited<ReturnType<typeof createClient>>; ids: string[] } | null> {
+  if (!isSupabaseConfigured) return null;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "pm" && profile.role !== "office") return null;
+  if (!projectId) return null;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("project_blocks")
+    .select("id")
+    .eq("project_id", projectId);
+  const ids = (data ?? []).map((b) => b.id as string);
+  if (ids.length === 0) return null;
+  return { supabase, ids };
+}
+
+function revalidateStructure(projectId: string): void {
+  revalidatePath(`/office/projects/${projectId}`);
+  revalidatePath(`/office/projects/${projectId}/progress`);
+  revalidatePath(`/office/projects/${projectId}/stages`);
+  revalidatePath(`/office/projects/${projectId}/structure`);
+  revalidatePath(`/app/projects/${projectId}/progress`);
+  revalidatePath(`/app/projects/${projectId}/stages`);
+}
+
+// Rename a progress category heading (e.g. "C. RC FRAME" → "C. CONCRETE FRAME")
+// across every block in the project.
+export async function renameProgressCategory(formData: FormData): Promise<void> {
+  const projectId = String(formData.get("project_id") ?? "");
+  const oldCategory = String(formData.get("old_category") ?? "");
+  const newCategory = String(formData.get("category") ?? "").trim();
+  if (!oldCategory || !newCategory) return;
+  const ctx = await officeProjectBlockIds(projectId);
+  if (!ctx) return;
+  await ctx.supabase
+    .from("block_progress_items")
+    .update({ category: newCategory })
+    .in("block_id", ctx.ids)
+    .eq("category", oldCategory);
+  revalidateStructure(projectId);
+}
+
+// Rename a progress item (sub) within a category across every block.
+export async function renameProgressItem(formData: FormData): Promise<void> {
+  const projectId = String(formData.get("project_id") ?? "");
+  const category = String(formData.get("category") ?? "");
+  const oldName = String(formData.get("old_name") ?? "");
+  const newName = String(formData.get("name") ?? "").trim();
+  if (!category || !oldName || !newName) return;
+  const ctx = await officeProjectBlockIds(projectId);
+  if (!ctx) return;
+  await ctx.supabase
+    .from("block_progress_items")
+    .update({ name: newName })
+    .in("block_id", ctx.ids)
+    .eq("category", category)
+    .eq("name", oldName);
+  revalidateStructure(projectId);
+}
+
+// Add a progress item to every block. An empty name creates a category-only
+// leaf (name = null). Appended after the current max sort_order so it joins its
+// category group (group-by-key) on display.
+export async function addProgressItem(formData: FormData): Promise<void> {
+  const projectId = String(formData.get("project_id") ?? "");
+  const category = String(formData.get("category") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim() || null;
+  if (!category) return;
+  const ctx = await officeProjectBlockIds(projectId);
+  if (!ctx) return;
+
+  const { data: maxRow } = await ctx.supabase
+    .from("block_progress_items")
+    .select("sort_order")
+    .in("block_id", ctx.ids)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const sortOrder = (maxRow?.sort_order ?? -1) + 1;
+
+  await ctx.supabase.from("block_progress_items").insert(
+    ctx.ids.map((blockId) => ({
+      block_id: blockId,
+      category,
+      name,
+      sort_order: sortOrder,
+    })),
+  );
+  revalidateStructure(projectId);
+}
+
+// Delete a progress item (by category + name; omit name to match the
+// category-only leaf) from every block.
+export async function deleteProgressItem(formData: FormData): Promise<void> {
+  const projectId = String(formData.get("project_id") ?? "");
+  const category = String(formData.get("category") ?? "");
+  const name = String(formData.get("name") ?? "");
+  if (!category) return;
+  const ctx = await officeProjectBlockIds(projectId);
+  if (!ctx) return;
+  let q = ctx.supabase
+    .from("block_progress_items")
+    .delete()
+    .in("block_id", ctx.ids)
+    .eq("category", category);
+  q = name ? q.eq("name", name) : q.is("name", null);
+  await q;
+  revalidateStructure(projectId);
+}
+
+// Rename a stage across every block (matched by current name).
+export async function renameStageTemplate(formData: FormData): Promise<void> {
+  const projectId = String(formData.get("project_id") ?? "");
+  const oldName = String(formData.get("old_name") ?? "");
+  const newName = String(formData.get("name") ?? "").trim();
+  if (!oldName || !newName) return;
+  const ctx = await officeProjectBlockIds(projectId);
+  if (!ctx) return;
+  await ctx.supabase
+    .from("block_stages")
+    .update({ name: newName })
+    .in("block_id", ctx.ids)
+    .eq("name", oldName);
+  revalidateStructure(projectId);
+}
+
+// Add a stage to every block (appended after the current max sort_order).
+export async function addStageTemplate(formData: FormData): Promise<void> {
+  const projectId = String(formData.get("project_id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+  const ctx = await officeProjectBlockIds(projectId);
+  if (!ctx) return;
+
+  const { data: maxRow } = await ctx.supabase
+    .from("block_stages")
+    .select("sort_order")
+    .in("block_id", ctx.ids)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const sortOrder = (maxRow?.sort_order ?? -1) + 1;
+
+  await ctx.supabase.from("block_stages").insert(
+    ctx.ids.map((blockId) => ({
+      block_id: blockId,
+      name,
+      sort_order: sortOrder,
+      is_custom: false,
+    })),
+  );
+  revalidateStructure(projectId);
+}
+
+// Delete a stage across every block (matched by name).
+export async function deleteStageTemplate(formData: FormData): Promise<void> {
+  const projectId = String(formData.get("project_id") ?? "");
+  const name = String(formData.get("name") ?? "");
+  if (!name) return;
+  const ctx = await officeProjectBlockIds(projectId);
+  if (!ctx) return;
+  await ctx.supabase
+    .from("block_stages")
+    .delete()
+    .in("block_id", ctx.ids)
+    .eq("name", name);
+  revalidateStructure(projectId);
 }
 
 // --- Admin: user management -------------------------------------------------

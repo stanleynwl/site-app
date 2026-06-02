@@ -140,16 +140,24 @@ export async function getProjectRefPhotos(
   );
 }
 
-// Group a block's progress items by category, preserving template order, for
-// display. (Items already arrive sorted by sort_order.)
+// Group a block's progress items by category for display. Groups by category
+// KEY (in first-seen order), not consecutive runs, so an item appended with a
+// high sort_order still lands inside its category group rather than forming a
+// stray duplicate heading at the bottom. (Items already arrive sorted by
+// sort_order, so seeded template data is unaffected.)
 export function groupProgressByCategory(
   items: ProgressItem[],
 ): { category: string; items: ProgressItem[] }[] {
   const out: { category: string; items: ProgressItem[] }[] = [];
+  const byCategory = new Map<string, ProgressItem[]>();
   for (const it of items) {
-    const last = out[out.length - 1];
-    if (last && last.category === it.category) last.items.push(it);
-    else out.push({ category: it.category, items: [it] });
+    let bucket = byCategory.get(it.category);
+    if (!bucket) {
+      bucket = [];
+      byCategory.set(it.category, bucket);
+      out.push({ category: it.category, items: bucket });
+    }
+    bucket.push(it);
   }
   return out;
 }

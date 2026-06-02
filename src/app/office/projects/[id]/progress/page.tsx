@@ -46,7 +46,6 @@ export default async function OfficeProgressPage({
         <ul className="space-y-3">
           {blocks.map((b) => {
             const pct = blockProgressPercent(b);
-            const started = b.progress_items.filter((p) => p.units_done > 0);
             return (
               <li
                 key={b.id}
@@ -65,13 +64,13 @@ export default async function OfficeProgressPage({
                     </span>
                   )}
                 </p>
-                {started.length === 0 ? (
+                {b.progress_items.length === 0 ? (
                   <p className="text-xs text-black/50 dark:text-white/50">
                     {t("noItems")}
                   </p>
                 ) : (
                   <div className="space-y-2">
-                    {groupProgressByCategory(started).map((grp) => (
+                    {groupProgressByCategory(b.progress_items).map((grp) => (
                       <div key={grp.category}>
                         <p className="text-xs font-semibold text-black/60 dark:text-white/60">
                           {grp.category}

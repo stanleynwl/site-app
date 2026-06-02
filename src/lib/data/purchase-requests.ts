@@ -23,6 +23,10 @@ export const PR_OPEN_STATUSES: PurchaseRequestStatus[] = [
   "po_issued",
 ];
 
+// A delivered request lingers on the supervisor's list for this many days after
+// delivery (so they can still see what recently arrived), then drops off.
+export const DELIVERED_HOLD_DAYS = 5;
+
 export type PurchaseRequestItem = {
   id: string;
   material_text: string | null;
@@ -49,13 +53,25 @@ export type PurchaseRequest = {
   po_number: string | null;
   rejected_reason: string | null;
   created_at: string;
+  delivered_at: string | null;
   items: PurchaseRequestItem[];
   photos: RequestPhoto[];
   project?: { name: string } | null; // set only in the cross-project queue
 };
 
 const PR_COLUMNS =
-  "id, project_id, needed_by, urgency_reason, note, status, po_number, rejected_reason, created_at, supplier:suppliers(name), items:purchase_request_items(id, material_text, quantity, unit, material:materials(name, unit)), photos(id, storage_path, archived_at)";
+  "id, project_id, needed_by, urgency_reason, note, status, po_number, rejected_reason, created_at, delivered_at, supplier:suppliers(name), items:purchase_request_items(id, material_text, quantity, unit, material:materials(name, unit)), photos(id, storage_path, archived_at)";
+
+// Requests the supervisor should see on the site list: all open ones, plus
+// delivered ones for a short hold window (DELIVERED_HOLD_DAYS) after delivery.
+export function isVisibleToSite(r: PurchaseRequest): boolean {
+  if (PR_OPEN_STATUSES.includes(r.status)) return true;
+  if (r.status === "delivered" && r.delivered_at) {
+    const ageMs = Date.now() - new Date(r.delivered_at).getTime();
+    return ageMs <= DELIVERED_HOLD_DAYS * 86_400_000;
+  }
+  return false;
+}
 
 export async function getProjectPurchaseRequests(
   projectId: string,
