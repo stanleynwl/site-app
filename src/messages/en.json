@@ -20,10 +20,32 @@
     "catalog": "Catalog",
     "requests": "Requests",
     "doQueue": "DO queue",
+    "activity": "Activity",
     "pdfExport": "PDF export",
     "users": "Users",
     "office": "Office",
     "signOut": "Sign out"
+  },
+  "Activity": {
+    "title": "Activity log",
+    "intro": "Who submitted or changed what, newest first.",
+    "empty": "No activity yet.",
+    "action": {
+      "report": { "submit": "submitted a daily report", "unlock": "unlocked a report" },
+      "delivery": { "create": "logged a delivery", "update": "updated a delivery" },
+      "request": {
+        "create": "raised a request",
+        "approve": "accepted a request",
+        "reject": "rejected a request",
+        "order": "ordered a request",
+        "close": "closed a request",
+        "delivered": "confirmed a request delivered",
+        "amend": "amended a request"
+      },
+      "progress": { "submit": "updated progress" },
+      "stage": { "complete": "completed a stage", "reopen": "reopened a stage" },
+      "stock": { "count": "recorded a stock count" }
+    }
   },
   "Catalog": {
     "title": "Suppliers & materials",
@@ -323,6 +345,7 @@
     "view": "View",
     "viewAll": "View all",
     "newBadge": "New",
+    "activity": "Activity log",
     "backToProjects": "All projects",
     "reportOn": "Report — {date}",
     "noManpower": "No manpower recorded.",

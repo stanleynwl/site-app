@@ -96,6 +96,12 @@ export default async function OfficeProjectDetail({
           />
           <button className={btnCls}>{tp2("rename")}</button>
         </form>
+        <Link
+          href={`/office/projects/${id}/activity`}
+          className="mt-2 inline-block text-xs underline"
+        >
+          {t("activity")}
+        </Link>
       </div>
 
       {/* Report timeline — recent working days (excludes Sunday) + View all */}

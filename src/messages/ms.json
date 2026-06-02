@@ -20,10 +20,32 @@
     "catalog": "Katalog",
     "requests": "Permintaan",
     "doQueue": "Baris DO",
+    "activity": "Aktiviti",
     "pdfExport": "Eksport PDF",
     "users": "Pengguna",
     "office": "Pejabat",
     "signOut": "Log keluar"
+  },
+  "Activity": {
+    "title": "Log aktiviti",
+    "intro": "Siapa hantar atau ubah apa, terbaharu dahulu.",
+    "empty": "Tiada aktiviti lagi.",
+    "action": {
+      "report": { "submit": "menghantar laporan harian", "unlock": "membuka kunci laporan" },
+      "delivery": { "create": "merekod penghantaran", "update": "mengemas kini penghantaran" },
+      "request": {
+        "create": "membuat permintaan",
+        "approve": "menerima permintaan",
+        "reject": "menolak permintaan",
+        "order": "memesan permintaan",
+        "close": "menutup permintaan",
+        "delivered": "mengesahkan permintaan diterima",
+        "amend": "meminda permintaan"
+      },
+      "progress": { "submit": "mengemas kini kemajuan" },
+      "stage": { "complete": "menyiapkan peringkat", "reopen": "membuka semula peringkat" },
+      "stock": { "count": "merekod kiraan stok" }
+    }
   },
   "Catalog": {
     "title": "Pembekal & bahan",
@@ -323,6 +345,7 @@
     "newBadge": "Baharu",
     "noReports": "Tiada laporan lagi.",
     "view": "Lihat",
+    "activity": "Log aktiviti",
     "backToProjects": "Semua projek",
     "reportOn": "Laporan — {date}",
     "noManpower": "Tiada tenaga kerja direkodkan.",

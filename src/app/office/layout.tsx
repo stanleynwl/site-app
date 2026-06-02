@@ -18,6 +18,7 @@ export default async function OfficeLayout({
     { href: "/office/catalog", label: t("catalog") },
     { href: "/office/requests", label: t("requests") },
     { href: "/office/do-queue", label: t("doQueue") },
+    { href: "/office/activity", label: t("activity") },
     { href: "/office/export", label: t("pdfExport") },
     ...(profile.is_admin ? [{ href: "/office/users", label: t("users") }] : []),
   ];

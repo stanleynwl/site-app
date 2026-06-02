@@ -13,7 +13,8 @@ import { getSessionUser, getProfile } from "@/lib/auth/dal";
 import { usernameToEmail } from "@/lib/auth/username";
 import { todayISO, isInSoftEditWindow, normalizeReportDate } from "@/lib/date";
 import { DEFAULT_STAGES } from "@/lib/stages";
-import { progressSeedRows } from "@/lib/progress-template";
+import { progressSeedRows, progressItemLabel } from "@/lib/progress-template";
+import { logActivity, type ActivityAction } from "./activity";
 import type { IssueCategory, NoWorkReason, ReportType, Weather } from "./reports";
 
 const WEATHERS: Weather[] = ["sunny", "cloudy", "light_rain", "heavy_rain"];
@@ -459,6 +460,15 @@ export async function createDelivery(
     }
   }
 
+  await logActivity(supabase, {
+    projectId,
+    actorId: user.id,
+    action: "delivery.create",
+    entityType: "delivery",
+    entityId: delivery.id,
+    detail: doNumber ? `DO ${doNumber}` : materialText || null,
+  });
+
   revalidatePath(`/app/projects/${projectId}/deliveries`);
   revalidatePath(`/office/projects/${projectId}`);
   return { ok: true };
@@ -504,6 +514,14 @@ export async function setDeliveryOfficeFields(formData: FormData): Promise<void>
   }
 
   await supabase.from("deliveries").update(update).eq("id", id);
+
+  await logActivity(supabase, {
+    projectId,
+    actorId: profile.id,
+    action: "delivery.update",
+    entityType: "delivery",
+    entityId: id,
+  });
 
   if (itemId) revalidatePath("/office/requests");
   revalidatePath(`/office/projects/${projectId}`);
@@ -627,6 +645,15 @@ export async function createPurchaseRequest(
     );
   }
 
+  await logActivity(supabase, {
+    projectId,
+    actorId: user.id,
+    action: "request.create",
+    entityType: "request",
+    entityId: request.id,
+    detail: items.map((it) => it.material_text).filter(Boolean).join(", ") || null,
+  });
+
   revalidatePath(`/app/projects/${projectId}/requests`);
   revalidatePath("/office/requests");
   return { ok: true };
@@ -636,6 +663,7 @@ export async function createPurchaseRequest(
 async function updatePurchaseRequest(
   formData: FormData,
   patch: Record<string, unknown>,
+  log?: { action: ActivityAction; detail?: string | null },
 ): Promise<void> {
   const profile = await getProfile();
   if (!profile) redirect("/login");
@@ -648,6 +676,17 @@ async function updatePurchaseRequest(
   const supabase = await createClient();
   await supabase.from("purchase_requests").update(patch).eq("id", id);
 
+  if (log && projectId) {
+    await logActivity(supabase, {
+      projectId,
+      actorId: profile.id,
+      action: log.action,
+      entityType: "request",
+      entityId: id,
+      detail: log.detail ?? null,
+    });
+  }
+
   revalidatePath("/office/requests");
   if (projectId) {
     revalidatePath(`/app/projects/${projectId}/requests`);
@@ -658,20 +697,25 @@ async function updatePurchaseRequest(
 export async function approvePurchaseRequest(formData: FormData): Promise<void> {
   if (!isSupabaseConfigured) return;
   const profile = await getProfile();
-  await updatePurchaseRequest(formData, {
-    status: "approved",
-    approved_by: profile?.id ?? null,
-    approved_at: new Date().toISOString(),
-  });
+  await updatePurchaseRequest(
+    formData,
+    {
+      status: "approved",
+      approved_by: profile?.id ?? null,
+      approved_at: new Date().toISOString(),
+    },
+    { action: "request.approve" },
+  );
 }
 
 export async function rejectPurchaseRequest(formData: FormData): Promise<void> {
   if (!isSupabaseConfigured) return;
   const reason = String(formData.get("rejected_reason") ?? "").trim();
-  await updatePurchaseRequest(formData, {
-    status: "rejected",
-    rejected_reason: reason || null,
-  });
+  await updatePurchaseRequest(
+    formData,
+    { status: "rejected", rejected_reason: reason || null },
+    { action: "request.reject", detail: reason || null },
+  );
 }
 
 export async function issuePurchaseRequestPO(formData: FormData): Promise<void> {
@@ -681,12 +725,15 @@ export async function issuePurchaseRequestPO(formData: FormData): Promise<void> 
   const supplierId = String(formData.get("supplier_id") ?? "");
   const patch: Record<string, unknown> = { status: "po_issued", po_number: po };
   if (supplierId) patch.supplier_id = supplierId;
-  await updatePurchaseRequest(formData, patch);
+  await updatePurchaseRequest(formData, patch, {
+    action: "request.order",
+    detail: `PO ${po}`,
+  });
 }
 
 export async function closePurchaseRequest(formData: FormData): Promise<void> {
   if (!isSupabaseConfigured) return;
-  await updatePurchaseRequest(formData, { status: "closed" });
+  await updatePurchaseRequest(formData, { status: "closed" }, { action: "request.close" });
 }
 
 // Supervisor (any project member) confirms an ordered request has arrived. Only
@@ -709,6 +756,14 @@ export async function confirmDeliveredPurchaseRequest(
     .eq("id", id)
     .eq("status", "po_issued");
 
+  await logActivity(supabase, {
+    projectId,
+    actorId: user.id,
+    action: "request.delivered",
+    entityType: "request",
+    entityId: id,
+  });
+
   revalidatePath(`/app/projects/${projectId}/requests`);
   revalidatePath("/office/requests");
 }
@@ -729,10 +784,38 @@ export async function updateRequestItemQuantity(
   const quantity = parseQty(formData.get("quantity"));
 
   const supabase = await createClient();
+
+  // Read the current item (name + old qty) before updating, for the audit detail.
+  const { data: before } = await supabase
+    .from("purchase_request_items")
+    .select("quantity, unit, material_text, request_id, material:materials(name)")
+    .eq("id", itemId)
+    .maybeSingle();
+
   await supabase
     .from("purchase_request_items")
     .update({ quantity })
     .eq("id", itemId);
+
+  if (before) {
+    const b = before as unknown as {
+      quantity: number | null;
+      unit: string | null;
+      material_text: string | null;
+      request_id: string;
+      material: { name: string } | null;
+    };
+    const name = b.material?.name ?? b.material_text ?? "item";
+    const unit = b.unit ? ` ${b.unit}` : "";
+    await logActivity(supabase, {
+      projectId,
+      actorId: user.id,
+      action: "request.amend",
+      entityType: "request",
+      entityId: b.request_id,
+      detail: `${name}: ${b.quantity ?? "—"} → ${quantity ?? "—"}${unit}`,
+    });
+  }
 
   revalidatePath(`/app/projects/${projectId}/requests`);
   revalidatePath("/office/requests");
@@ -778,6 +861,14 @@ export async function recordStockCount(
     { onConflict: "project_id,material_id,count_date" },
   );
   if (error) return { error: "save" };
+
+  await logActivity(supabase, {
+    projectId,
+    actorId: user.id,
+    action: "stock.count",
+    entityType: "stock",
+    detail: `${qty}${String(formData.get("unit") ?? "").trim() ? ` ${String(formData.get("unit")).trim()}` : ""}`,
+  });
 
   revalidatePath(`/app/projects/${projectId}/stock`);
   revalidatePath(`/office/projects/${projectId}`);
@@ -991,6 +1082,14 @@ export async function saveReport(
       .update({ status: "submitted", submitted_at: new Date().toISOString() })
       .eq("id", report.id);
     if (submitError) return { error: "save" };
+    await logActivity(supabase, {
+      projectId,
+      actorId: user.id,
+      action: "report.submit",
+      entityType: "report",
+      entityId: report.id,
+      detail: date,
+    });
   }
 
   revalidatePath(`/app/projects/${projectId}`);
@@ -1050,6 +1149,15 @@ export async function unlockReport(
     report_id: reportId,
     editor_id: user.id,
     kind: "pm_unlock",
+  });
+
+  await logActivity(supabase, {
+    projectId: report.project_id,
+    actorId: user.id,
+    action: "report.unlock",
+    entityType: "report",
+    entityId: reportId,
+    detail: reason,
   });
 
   revalidatePath(`/office/projects/${report.project_id}`);
@@ -1319,6 +1427,11 @@ export async function setStageComplete(formData: FormData): Promise<void> {
   const done = String(formData.get("done") ?? "") === "1";
 
   const supabase = await createClient();
+  const { data: stageRow } = await supabase
+    .from("block_stages")
+    .select("name")
+    .eq("id", stageId)
+    .maybeSingle();
   await supabase
     .from("block_stages")
     .update({
@@ -1334,6 +1447,15 @@ export async function setStageComplete(formData: FormData): Promise<void> {
       id: stageId,
     });
   }
+
+  await logActivity(supabase, {
+    projectId,
+    actorId: user.id,
+    action: done ? "stage.complete" : "stage.reopen",
+    entityType: "stage",
+    entityId: stageId,
+    detail: (stageRow as { name: string } | null)?.name ?? null,
+  });
 
   revalidatePath(`/app/projects/${projectId}/stages`);
   revalidatePath(`/office/projects/${projectId}`);
@@ -1361,11 +1483,15 @@ export async function submitProgress(formData: FormData): Promise<void> {
   // Clamp to the block's unit_count (can't complete more units than exist).
   const { data: item } = await supabase
     .from("block_progress_items")
-    .select("block_id, project_blocks(unit_count)")
+    .select("block_id, category, name, project_blocks(unit_count)")
     .eq("id", itemId)
     .maybeSingle();
-  const cap = (item as unknown as { project_blocks?: { unit_count: number | null } } | null)
-    ?.project_blocks?.unit_count;
+  const itemRow = item as unknown as {
+    category: string;
+    name: string | null;
+    project_blocks?: { unit_count: number | null };
+  } | null;
+  const cap = itemRow?.project_blocks?.unit_count;
   if (cap != null && unitsDone > cap) unitsDone = cap;
 
   await supabase
@@ -1376,6 +1502,17 @@ export async function submitProgress(formData: FormData): Promise<void> {
   await attachSubmissionPhotos(supabase, formData, projectId, user.id, {
     column: "progress_item_id",
     id: itemId,
+  });
+
+  await logActivity(supabase, {
+    projectId,
+    actorId: user.id,
+    action: "progress.submit",
+    entityType: "progress",
+    entityId: itemId,
+    detail: itemRow
+      ? `${progressItemLabel(itemRow.category, itemRow.name)} ${unitsDone}/${cap ?? "—"}`
+      : null,
   });
 
   revalidatePath(`/app/projects/${projectId}/progress`);

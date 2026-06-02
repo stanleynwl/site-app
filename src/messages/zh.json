@@ -20,10 +20,32 @@
     "catalog": "目录",
     "requests": "申请",
     "doQueue": "送货单队列",
+    "activity": "动态",
     "pdfExport": "导出 PDF",
     "users": "用户",
     "office": "办公室",
     "signOut": "退出登录"
+  },
+  "Activity": {
+    "title": "操作记录",
+    "intro": "谁提交或更改了什么，最新在前。",
+    "empty": "暂无记录。",
+    "action": {
+      "report": { "submit": "提交了日报", "unlock": "解锁了日报" },
+      "delivery": { "create": "记录了送货", "update": "更新了送货" },
+      "request": {
+        "create": "提出了申请",
+        "approve": "接受了申请",
+        "reject": "拒绝了申请",
+        "order": "下单了申请",
+        "close": "结束了申请",
+        "delivered": "确认申请已送达",
+        "amend": "修改了申请"
+      },
+      "progress": { "submit": "更新了进度" },
+      "stage": { "complete": "完成了阶段", "reopen": "重新打开了阶段" },
+      "stock": { "count": "记录了库存盘点" }
+    }
   },
   "Catalog": {
     "title": "供应商与材料",
@@ -323,6 +345,7 @@
     "newBadge": "新",
     "noReports": "暂无报告。",
     "view": "查看",
+    "activity": "操作记录",
     "backToProjects": "所有项目",
     "reportOn": "报告 — {date}",
     "noManpower": "未记录人力。",
