@@ -4,6 +4,7 @@
     "tagline": "每日工地报告，按项目和日期自动整理。"
   },
   "Login": {
+    "title": "欢迎回来",
     "tagline": "登录查看您的每日工地报告。",
     "username": "用户名",
     "password": "密码",

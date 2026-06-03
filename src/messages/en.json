@@ -4,6 +4,7 @@
     "tagline": "Daily site reports, organized by project and by day."
   },
   "Login": {
+    "title": "Welcome back",
     "tagline": "Sign in to your daily site reports.",
     "username": "Username",
     "password": "Password",

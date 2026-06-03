@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { LocaleToggle } from "@/components/locale-toggle";
 import { LoginForm } from "@/components/login-form";
+import { Logo } from "@/components/logo";
 
 export default async function LoginPage({
   searchParams,
@@ -11,17 +13,27 @@ export default async function LoginPage({
   const t = await getTranslations("Login");
 
   return (
-    <main className="flex min-h-full flex-1 items-center justify-center p-6">
-      <div className="w-full max-w-sm rounded-2xl border border-black/10 p-8 shadow-sm dark:border-white/15">
-        <div className="flex items-start justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight">SiteApp</h1>
+    <main className="relative flex min-h-full flex-1 items-center justify-center overflow-hidden p-6">
+      <div className="blueprint absolute inset-0 opacity-50" />
+      <div className="glow left-1/2 top-0 h-64 w-[36rem] -translate-x-1/2 bg-accent/20" />
+
+      <div className="relative w-full max-w-sm">
+        <div className="mb-5 flex items-center justify-between">
+          <Link href="/" aria-label="SiteApp home">
+            <Logo size={28} />
+          </Link>
           <LocaleToggle />
         </div>
-        <p className="mt-1 text-sm text-black/60 dark:text-white/60">
-          {t("tagline")}
-        </p>
 
-        <LoginForm next={next ?? "/app"} />
+        <div className="card animate-rise p-8">
+          <h1 className="text-xl font-semibold tracking-tight">{t("title")}</h1>
+          <p className="mt-1 text-sm text-muted">{t("tagline")}</p>
+          <LoginForm next={next ?? "/app"} />
+        </div>
+
+        <p className="mt-5 text-center text-xs text-muted">
+          <Link href="/" className="hover:text-foreground">← Back to siteapp.com</Link>
+        </p>
       </div>
     </main>
   );
