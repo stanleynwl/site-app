@@ -275,6 +275,7 @@
     "quantity": "Quantity",
     "unit": "Unit",
     "neededBy": "Needed by",
+    "requested": "Requested",
     "urgencyReason": "Why is this needed / urgent?",
     "urgencyHint": "e.g. casting on Friday, blocking work",
     "note": "Note",

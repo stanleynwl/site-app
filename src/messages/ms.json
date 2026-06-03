@@ -275,6 +275,7 @@
     "quantity": "Kuantiti",
     "unit": "Unit",
     "neededBy": "Diperlukan sebelum",
+    "requested": "Diminta",
     "urgencyReason": "Mengapa ia diperlukan / mendesak?",
     "urgencyHint": "cth. tuang konkrit Jumaat, menghalang kerja",
     "note": "Catatan",

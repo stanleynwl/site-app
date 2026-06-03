@@ -275,6 +275,7 @@
     "quantity": "数量",
     "unit": "单位",
     "neededBy": "需求日期",
+    "requested": "申请于",
     "urgencyReason": "为何需要 / 紧急？",
     "urgencyHint": "例如：周五浇筑、影响施工",
     "note": "备注",

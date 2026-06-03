@@ -16,6 +16,10 @@ import {
 import { todayISO } from "@/lib/date";
 import { PurchaseRequestForm } from "@/components/purchase-request-form";
 
+// Request date (when it was raised), in Malaysia time → YYYY-MM-DD.
+const reqDate = (iso: string) =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" }).format(new Date(iso));
+
 export default async function ProjectRequestsPage({
   params,
 }: {
@@ -113,7 +117,8 @@ export default async function ProjectRequestsPage({
                   </div>
                 )}
                 <div className="text-black/60 dark:text-white/60">
-                  {r.needed_by ? `${t("neededBy")}: ${r.needed_by}` : ""}
+                  {t("requested")}: {reqDate(r.created_at)}
+                  {r.needed_by ? ` · ${t("neededBy")}: ${r.needed_by}` : ""}
                   {r.po_number ? ` · PO ${r.po_number}` : ""}
                 </div>
                 {r.urgency_reason && (

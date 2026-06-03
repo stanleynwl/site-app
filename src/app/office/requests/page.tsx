@@ -19,6 +19,10 @@ const inputCls =
 const btnCls =
   "rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25";
 
+// Request date (when it was raised), in Malaysia time → YYYY-MM-DD.
+const reqDate = (iso: string) =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" }).format(new Date(iso));
+
 // Aging colour: 48h+ red, 24h+ amber, else neutral. Applied to waiting requests.
 function ageClass(hours: number): string {
   if (hours >= 48) return "text-red-600 dark:text-red-400 font-semibold";
@@ -80,6 +84,7 @@ export default async function OfficeRequestsPage() {
                           {r.project.name}
                         </Link>
                       ) : null}
+                      {` · ${t("requested")}: ${reqDate(r.created_at)}`}
                       {r.needed_by ? ` · ${t("neededBy")}: ${r.needed_by}` : ""}
                     </div>
                   </div>
