@@ -269,10 +269,6 @@ export default async function CatalogPage() {
               ))}
             </select>
           </label>
-          <label className="text-sm">
-            <span className="mb-1 block">{t("dailyRate")}</span>
-            <input name="daily_rate" type="number" step="0.01" min="0" className={inputClass} />
-          </label>
           <div className="sm:col-span-3">
             <button className="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background">
               {t("addWorker")}
@@ -305,15 +301,6 @@ export default async function CatalogPage() {
                       </option>
                     ))}
                   </select>
-                  <input
-                    name="daily_rate"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    defaultValue={w.daily_rate ?? ""}
-                    placeholder={t("dailyRate")}
-                    className={`${editInput} w-24`}
-                  />
                   <button className={smallBtn}>{t("save")}</button>
                 </form>
                 <form action={setWorkerActive}>

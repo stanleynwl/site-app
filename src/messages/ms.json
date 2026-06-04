@@ -93,9 +93,9 @@
   },
   "Workers": {
     "title": "Pekerja & kehadiran",
-    "intro": "Rekod bilangan hari setiap pekerja untuk tarikh ini. Kosong = tidak hadir.",
+    "intro": "Rekod bilangan jam setiap pekerja untuk tarikh ini. Kosong = tidak hadir.",
     "own": "Sendiri / dalaman",
-    "units": "Hari",
+    "units": "Jam",
     "noWorkers": "Tiada pekerja lagi — tambah di bawah.",
     "adhocName": "Pekerja lain (tiada dalam senarai)",
     "adhocHint": "Nama",

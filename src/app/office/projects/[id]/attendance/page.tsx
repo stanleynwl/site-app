@@ -28,7 +28,6 @@ type Row = {
   cells: (number | "")[];
   total: number;
   advance: number;
-  pay: number | null;
 };
 
 export default async function OfficeAttendancePage({
@@ -92,16 +91,18 @@ export default async function OfficeAttendancePage({
   for (const w of workers) {
     if (workerTotal(w.id) === 0) continue; // only workers who worked this month
     const cells = dayNums.map((d) => unitMap.get(`${w.id}|${d}`) ?? ("" as const));
-    const total = workerTotal(w.id);
-    const advance = workerAdvance.get(w.id) ?? 0;
-    const pay =
-      !w.subcontractor_id && w.daily_rate != null ? total * w.daily_rate - advance : null;
-    rows.push({ name: w.name, group: w.subcontractor_id ?? "own", cells, total, advance, pay });
+    rows.push({
+      name: w.name,
+      group: w.subcontractor_id ?? "own",
+      cells,
+      total: workerTotal(w.id),
+      advance: workerAdvance.get(w.id) ?? 0,
+    });
   }
   for (const [name, m] of adhoc) {
     const cells = dayNums.map((d) => m.get(d) ?? ("" as const));
     const total = dayNums.reduce((s, d) => s + (m.get(d) ?? 0), 0);
-    rows.push({ name, group: "__others__", cells, total, advance: 0, pay: null });
+    rows.push({ name, group: "__others__", cells, total, advance: 0 });
   }
 
   // CSV (server-prepared) -----------------------------------------------------
@@ -110,7 +111,7 @@ export default async function OfficeAttendancePage({
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   const csvRows: (string | number)[][] = [
-    [tw("worker"), tw("group"), ...dayNums.map(String), tw("total"), tw("advance"), tw("pay")],
+    [tw("worker"), tw("group"), ...dayNums.map(String), tw("total"), tw("advance")],
   ];
   for (const g of order) {
     for (const r of rows.filter((x) => x.group === g.key)) {
@@ -120,7 +121,6 @@ export default async function OfficeAttendancePage({
         ...r.cells.map((c) => (c === "" ? "" : c)),
         r.total,
         r.advance || "",
-        r.pay == null ? "" : r.pay,
       ]);
     }
   }
@@ -172,7 +172,6 @@ export default async function OfficeAttendancePage({
                 ))}
                 <th className={th}>{tw("total")}</th>
                 <th className={th}>{tw("advance")}</th>
-                <th className={th}>{tw("pay")}</th>
               </tr>
             </thead>
             <tbody>
@@ -184,7 +183,7 @@ export default async function OfficeAttendancePage({
                   <Fragment key={g.key}>
                     <tr>
                       <td
-                        colSpan={dayNums.length + 4}
+                        colSpan={dayNums.length + 3}
                         className="border border-border bg-surface-2 px-2 py-1 text-left text-[11px] font-semibold"
                       >
                         {g.label}
@@ -203,19 +202,17 @@ export default async function OfficeAttendancePage({
                         ))}
                         <td className={`${td} font-semibold`}>{r.total || ""}</td>
                         <td className={td}>{r.advance ? money(r.advance) : ""}</td>
-                        <td className={`${td} font-semibold`}>{r.pay == null ? "" : money(r.pay)}</td>
                       </tr>
                     ))}
                     {g.sub && sa > 0 && (
                       <tr>
                         <td
-                          colSpan={dayNums.length + 1}
+                          colSpan={dayNums.length + 2}
                           className="border border-border px-2 py-1 text-right text-[11px] text-muted"
                         >
                           {tw("subAdvance")}
                         </td>
                         <td className={`${td} text-muted`}>{money(sa)}</td>
-                        <td className={td}></td>
                       </tr>
                     )}
                   </Fragment>

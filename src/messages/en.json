@@ -93,9 +93,9 @@
   },
   "Workers": {
     "title": "Workers & attendance",
-    "intro": "Record each worker's days for the date. Blank = absent.",
+    "intro": "Record each worker's hours for the date. Blank = absent.",
     "own": "Own / in-house",
-    "units": "Days",
+    "units": "Hours",
     "noWorkers": "No workers yet — add one below.",
     "adhocName": "Other worker (not in list)",
     "adhocHint": "Name",
