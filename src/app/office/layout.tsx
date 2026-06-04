@@ -58,6 +58,7 @@ export default async function OfficeLayout({
             pollUrl="/api/office/activity"
             viewAllHref="/office/activity"
             seenKey="siteapp.office.activitySeen"
+            align="left"
             strings={{
               title: tn("title"),
               viewAll: tn("viewAll"),

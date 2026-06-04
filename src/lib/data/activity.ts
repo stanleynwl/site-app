@@ -106,15 +106,33 @@ export async function getProjectActivity(
   return attachActorNames(supabase, (data ?? []) as Omit<ActivityEntry, "actor_name">[]);
 }
 
-// Global feed across all the user's projects (project name included).
-export async function getRecentActivity(limit = 100): Promise<ActivityEntry[]> {
+// Office actions on a purchase request — what the site cares to be notified
+// about ("the office accepted / ordered your request").
+export const REQUEST_OFFICE_ACTIONS = [
+  "request.approve",
+  "request.reject",
+  "request.order",
+  "request.close",
+] as const;
+
+// Global feed across all the user's projects (project name included). RLS scopes
+// rows to the caller's projects, so the site supervisor only sees their own.
+// Pass `actions` to filter to specific action codes (e.g. office request actions).
+export async function getRecentActivity(
+  limit = 100,
+  actions?: readonly string[],
+): Promise<ActivityEntry[]> {
   if (!isSupabaseConfigured) return [];
   const supabase = await createClient();
-  const { data } = await supabase
+  let query = supabase
     .from("activity_log")
     .select(`${COLUMNS}, project:projects(name)`)
     .order("created_at", { ascending: false })
     .limit(limit);
+  if (actions && actions.length > 0) {
+    query = query.in("action", actions as string[]);
+  }
+  const { data } = await query;
 
   const rows = (data ?? []).map((r) => {
     const { project, ...rest } = r as unknown as Omit<ActivityEntry, "actor_name"> & {

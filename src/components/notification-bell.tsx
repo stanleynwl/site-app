@@ -33,6 +33,7 @@ export function NotificationBell({
   viewAllHref,
   seenKey,
   pollMs = 45000,
+  align = "right",
   strings,
 }: {
   initial: NotifItem[];
@@ -41,6 +42,9 @@ export function NotificationBell({
   viewAllHref: string;
   seenKey: string;
   pollMs?: number;
+  // Which edge the dropdown anchors to. Use "left" when the bell is on the left
+  // (e.g. a left sidebar) so the panel opens rightward and stays on screen.
+  align?: "left" | "right";
   strings: {
     title: string;
     viewAll: string;
@@ -165,7 +169,11 @@ export function NotificationBell({
         <>
           {/* click-away */}
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-40 mt-2 w-80 overflow-hidden rounded-xl border border-border bg-surface shadow-[var(--shadow-lg)]">
+          <div
+            className={`absolute z-40 mt-2 w-80 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-border bg-surface shadow-[var(--shadow-lg)] ${
+              align === "left" ? "left-0" : "right-0"
+            }`}
+          >
             <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
               <span className="text-sm font-semibold">{strings.title}</span>
               {perm === "granted" ? (

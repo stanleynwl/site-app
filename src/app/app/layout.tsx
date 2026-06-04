@@ -4,6 +4,8 @@ import { signOut } from "@/lib/auth/actions";
 import { LocaleToggle } from "@/components/locale-toggle";
 import { AppNavLink } from "@/components/app-nav-link";
 import { LogoMark } from "@/components/logo";
+import { NotificationBell } from "@/components/notification-bell";
+import { getRecentActivity, REQUEST_OFFICE_ACTIONS } from "@/lib/data/activity";
 
 export default async function AppLayout({
   children,
@@ -12,6 +14,14 @@ export default async function AppLayout({
 }) {
   const profile = await requireSiteProfile();
   const t = await getTranslations("Nav");
+  const ta = await getTranslations("Activity");
+  const tn = await getTranslations("Notifications");
+
+  // Notify the supervisor when the office acts on their requests.
+  const requestUpdates = await getRecentActivity(30, REQUEST_OFFICE_ACTIONS);
+  const activityLabels = Object.fromEntries(
+    REQUEST_OFFICE_ACTIONS.map((a) => [a, ta(`action.${a}`)]),
+  );
 
   return (
     <div className="mx-auto flex min-h-full w-full max-w-md flex-col">
@@ -25,7 +35,21 @@ export default async function AppLayout({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <NotificationBell
+            initial={requestUpdates}
+            labels={activityLabels}
+            pollUrl="/api/site/activity"
+            viewAllHref="/app/activity"
+            seenKey="siteapp.site.activitySeen"
+            strings={{
+              title: tn("title"),
+              viewAll: tn("viewAll"),
+              empty: tn("empty"),
+              enableAlerts: tn("enableAlerts"),
+              alertsOn: tn("alertsOn"),
+            }}
+          />
           <LocaleToggle />
           <form action={signOut}>
             <button className="text-sm text-muted underline-offset-2 hover:text-foreground hover:underline">
