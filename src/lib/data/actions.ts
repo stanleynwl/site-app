@@ -731,6 +731,39 @@ export async function issuePurchaseRequestPO(formData: FormData): Promise<void> 
   });
 }
 
+// Mark an approved request as ordered WITHOUT raising a formal PO number — for
+// quick orders (phoned/WhatsApp'd to the supplier) where there's no PO to key
+// in. Same "Ordered" (po_issued) state, just with no po_number. An optional
+// supplier can still be recorded.
+export async function orderPurchaseRequestNoPO(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const supplierId = String(formData.get("supplier_id") ?? "");
+  const patch: Record<string, unknown> = { status: "po_issued" };
+  if (supplierId) patch.supplier_id = supplierId;
+  await updatePurchaseRequest(formData, patch, {
+    action: "request.order",
+    detail: "Ordered (no PO)",
+  });
+}
+
+// One-tap shortcut for quick orders: approve a pending request AND mark it
+// ordered (no PO) in a single step, so the office doesn't click twice.
+export async function approveAndOrderPurchaseRequestNoPO(
+  formData: FormData,
+): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  await updatePurchaseRequest(
+    formData,
+    {
+      status: "po_issued",
+      approved_by: profile?.id ?? null,
+      approved_at: new Date().toISOString(),
+    },
+    { action: "request.order", detail: "Approved & ordered (no PO)" },
+  );
+}
+
 export async function closePurchaseRequest(formData: FormData): Promise<void> {
   if (!isSupabaseConfigured) return;
   await updatePurchaseRequest(formData, { status: "closed" }, { action: "request.close" });

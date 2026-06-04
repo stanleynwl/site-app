@@ -48,6 +48,13 @@
       "stock": { "count": "记录了库存盘点" }
     }
   },
+  "Notifications": {
+    "title": "通知",
+    "viewAll": "查看所有活动",
+    "empty": "暂无活动。",
+    "enableAlerts": "开启提醒",
+    "alertsOn": "提醒已开启"
+  },
   "Catalog": {
     "title": "供应商与材料",
     "suppliers": "供应商",
@@ -113,6 +120,7 @@
     "hours": "时数",
     "machineType": "机械",
     "otherMachine": "其他机械",
+    "selectMachine": "选择机械…",
     "machineTypes": {
       "excavator": "挖掘机",
       "backhoe": "挖土机",
@@ -295,7 +303,9 @@
     "rejectReason": "原因（可选）",
     "poNumber": "采购单号",
     "supplier": "供应商",
-    "issuePO": "下单",
+    "issuePO": "下单（附 PO）",
+    "orderNoPO": "下单（无 PO）",
+    "approveOrderNoPO": "批准并下单（无 PO）",
     "awaitingDelivery": "已下单 — 等待工地确认收货。",
     "confirmDelivered": "确认收货",
     "saveQty": "保存",

@@ -320,8 +320,11 @@ export function DailyReportForm({
               type="button"
               onClick={() =>
                 setMachinery((rows) => [
+                  // Start blank, not on a real machine: a forgotten/empty row then
+                  // reads as "—" and is dropped on save, instead of silently
+                  // looking (and saving) as an Excavator.
                   ...rows,
-                  { type: DEFAULT_MACHINES[0].canonical, custom: "", hours: "" },
+                  { type: "", custom: "", hours: "" },
                 ])
               }
               className="text-xs underline"
@@ -347,6 +350,9 @@ export function DailyReportForm({
                   }
                   className={`${baseInput} flex-1`}
                 >
+                  {/* Resting/placeholder state — an unselected row reads as "—"
+                      (and is dropped on save) rather than defaulting to Excavator. */}
+                  <option value="">{t("selectMachine")}</option>
                   {DEFAULT_MACHINES.map((d) => (
                     <option key={d.key} value={d.canonical}>
                       {t(`machineTypes.${d.key}`)}

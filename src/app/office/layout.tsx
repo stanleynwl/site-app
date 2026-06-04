@@ -3,6 +3,17 @@ import { requireOfficeProfile } from "@/lib/auth/dal";
 import { signOut } from "@/lib/auth/actions";
 import { LocaleToggle } from "@/components/locale-toggle";
 import { OfficeNavLink } from "@/components/office-nav-link";
+import { LogoMark } from "@/components/logo";
+import { NotificationBell } from "@/components/notification-bell";
+import { getRecentActivity, type ActivityAction } from "@/lib/data/activity";
+
+const ACTIVITY_ACTIONS: ActivityAction[] = [
+  "report.submit", "report.unlock",
+  "delivery.create", "delivery.update",
+  "request.create", "request.approve", "request.reject", "request.order",
+  "request.close", "request.delivered", "request.amend",
+  "progress.submit", "stage.complete", "stage.reopen", "stock.count",
+];
 
 export default async function OfficeLayout({
   children,
@@ -11,6 +22,13 @@ export default async function OfficeLayout({
 }) {
   const profile = await requireOfficeProfile();
   const t = await getTranslations("Nav");
+  const ta = await getTranslations("Activity");
+  const tn = await getTranslations("Notifications");
+
+  const recentActivity = await getRecentActivity(30);
+  const activityLabels = Object.fromEntries(
+    ACTIVITY_ACTIONS.map((a) => [a, ta(`action.${a}`)]),
+  );
 
   const nav = [
     { href: "/office", label: t("dashboard") },
@@ -26,14 +44,28 @@ export default async function OfficeLayout({
   return (
     <div className="flex min-h-full">
       <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-surface p-4 md:flex">
-        <div className="flex items-center gap-2.5 px-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-sm font-bold text-white">
-            S
-          </span>
-          <div className="leading-tight">
-            <p className="text-sm font-semibold">SiteApp</p>
-            <p className="text-[11px] text-muted">{t("office")}</p>
+        <div className="flex items-center justify-between gap-2 px-2">
+          <div className="flex items-center gap-2.5">
+            <LogoMark size={30} />
+            <div className="leading-tight">
+              <p className="text-sm font-semibold">SiteApp</p>
+              <p className="text-[11px] text-muted">{t("office")}</p>
+            </div>
           </div>
+          <NotificationBell
+            initial={recentActivity}
+            labels={activityLabels}
+            pollUrl="/api/office/activity"
+            viewAllHref="/office/activity"
+            seenKey="siteapp.office.activitySeen"
+            strings={{
+              title: tn("title"),
+              viewAll: tn("viewAll"),
+              empty: tn("empty"),
+              enableAlerts: tn("enableAlerts"),
+              alertsOn: tn("alertsOn"),
+            }}
+          />
         </div>
         <nav className="mt-7 flex flex-col gap-0.5">
           {nav.map((item) => (

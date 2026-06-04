@@ -48,6 +48,13 @@
       "stock": { "count": "merekod kiraan stok" }
     }
   },
+  "Notifications": {
+    "title": "Pemberitahuan",
+    "viewAll": "Lihat semua aktiviti",
+    "empty": "Tiada aktiviti lagi.",
+    "enableAlerts": "Aktifkan pemberitahuan",
+    "alertsOn": "Pemberitahuan aktif"
+  },
   "Catalog": {
     "title": "Pembekal & bahan",
     "suppliers": "Pembekal",
@@ -113,6 +120,7 @@
     "hours": "Jam",
     "machineType": "Jentera",
     "otherMachine": "Jentera lain",
+    "selectMachine": "Pilih jentera…",
     "machineTypes": {
       "excavator": "Jengkaut",
       "backhoe": "Backhoe",
@@ -295,7 +303,9 @@
     "rejectReason": "Sebab (pilihan)",
     "poNumber": "Nombor PO",
     "supplier": "Pembekal",
-    "issuePO": "Pesan",
+    "issuePO": "Pesan dengan PO",
+    "orderNoPO": "Pesan tanpa PO",
+    "approveOrderNoPO": "Lulus & pesan (tanpa PO)",
     "awaitingDelivery": "Dipesan — menunggu tapak mengesahkan penghantaran.",
     "confirmDelivered": "Sahkan diterima",
     "saveQty": "Simpan",

@@ -48,6 +48,13 @@
       "stock": { "count": "recorded a stock count" }
     }
   },
+  "Notifications": {
+    "title": "Notifications",
+    "viewAll": "View all activity",
+    "empty": "No activity yet.",
+    "enableAlerts": "Enable alerts",
+    "alertsOn": "Alerts on"
+  },
   "Catalog": {
     "title": "Suppliers & materials",
     "suppliers": "Suppliers",
@@ -113,6 +120,7 @@
     "hours": "Hours",
     "machineType": "Machine",
     "otherMachine": "Other machine",
+    "selectMachine": "Select machine…",
     "machineTypes": {
       "excavator": "Excavator",
       "backhoe": "Backhoe",
@@ -295,7 +303,9 @@
     "rejectReason": "Reason (optional)",
     "poNumber": "PO number",
     "supplier": "Supplier",
-    "issuePO": "Order",
+    "issuePO": "Order with PO",
+    "orderNoPO": "Order without PO",
+    "approveOrderNoPO": "Approve & order (no PO)",
     "awaitingDelivery": "Ordered — waiting for site to confirm delivery.",
     "confirmDelivered": "Confirm delivered",
     "saveQty": "Save",
