@@ -13,6 +13,7 @@ const ACTIVITY_ACTIONS: ActivityAction[] = [
   "request.create", "request.approve", "request.reject", "request.order",
   "request.close", "request.delivered", "request.amend",
   "progress.submit", "stage.complete", "stage.reopen", "stock.count",
+  "attendance.record", "advance.create", "claim.update",
 ];
 
 export default async function OfficeLayout({

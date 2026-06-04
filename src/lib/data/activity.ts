@@ -20,7 +20,10 @@ export type ActivityAction =
   | "progress.submit"
   | "stage.complete"
   | "stage.reopen"
-  | "stock.count";
+  | "stock.count"
+  | "attendance.record"
+  | "advance.create"
+  | "claim.update";
 
 export type ActivityEntry = {
   id: string;

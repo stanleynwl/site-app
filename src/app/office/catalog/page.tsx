@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { getSuppliers, getMaterials } from "@/lib/data/catalog";
+import { getWorkers, getSubcontractors } from "@/lib/data/workers";
 import {
   createSupplier,
   createMaterial,
@@ -7,6 +8,12 @@ import {
   setSupplierActive,
   updateMaterial,
   setMaterialActive,
+  createSubcontractor,
+  updateSubcontractor,
+  setSubcontractorActive,
+  createWorker,
+  updateWorker,
+  setWorkerActive,
 } from "@/lib/data/actions";
 
 const inputClass =
@@ -18,10 +25,13 @@ const smallBtn =
 
 export default async function CatalogPage() {
   const t = await getTranslations("Catalog");
-  const [suppliers, materials] = await Promise.all([
+  const [suppliers, materials, subcontractors, workers] = await Promise.all([
     getSuppliers(),
     getMaterials(),
+    getSubcontractors(),
+    getWorkers(),
   ]);
+  const activeSubs = subcontractors.filter((s) => s.active);
 
   return (
     <div className="max-w-3xl space-y-10">
@@ -173,6 +183,143 @@ export default async function CatalogPage() {
                   <button className={smallBtn}>
                     {m.active ? t("deactivate") : t("activate")}
                   </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* Subcontractors ----------------------------------------------------- */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold">{t("subcontractors")}</h2>
+
+        <form
+          action={createSubcontractor}
+          className="grid gap-3 rounded-xl border border-black/10 p-4 sm:grid-cols-3 dark:border-white/15"
+        >
+          <p className="text-sm font-semibold sm:col-span-3">{t("newSubcontractor")}</p>
+          <label className="text-sm">
+            <span className="mb-1 block">{t("name")}</span>
+            <input name="name" required className={inputClass} />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block">{t("phone")}</span>
+            <input name="phone" className={inputClass} />
+          </label>
+          <div className="sm:col-span-3">
+            <button className="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background">
+              {t("addSubcontractor")}
+            </button>
+          </div>
+        </form>
+
+        {subcontractors.length === 0 ? (
+          <p className="text-sm text-black/50 dark:text-white/50">{t("noSubcontractors")}</p>
+        ) : (
+          <ul className="divide-y divide-black/10 rounded-xl border border-black/10 dark:divide-white/10 dark:border-white/15">
+            {subcontractors.map((s) => (
+              <li
+                key={s.id}
+                className={`flex flex-wrap items-end gap-2 px-4 py-3 text-sm ${s.active ? "" : "opacity-50"}`}
+              >
+                <form action={updateSubcontractor} className="flex flex-wrap items-end gap-2">
+                  <input type="hidden" name="subcontractor_id" value={s.id} />
+                  <input name="name" defaultValue={s.name} required aria-label={t("name")} className={editInput} />
+                  <input
+                    name="phone"
+                    defaultValue={s.phone ?? ""}
+                    placeholder={t("phone")}
+                    className={`${editInput} w-32`}
+                  />
+                  <button className={smallBtn}>{t("save")}</button>
+                </form>
+                <form action={setSubcontractorActive}>
+                  <input type="hidden" name="subcontractor_id" value={s.id} />
+                  <input type="hidden" name="active" value={s.active ? "false" : "true"} />
+                  <button className={smallBtn}>{s.active ? t("deactivate") : t("activate")}</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* Workers ------------------------------------------------------------ */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold">{t("workers")}</h2>
+
+        <form
+          action={createWorker}
+          className="grid gap-3 rounded-xl border border-black/10 p-4 sm:grid-cols-3 dark:border-white/15"
+        >
+          <p className="text-sm font-semibold sm:col-span-3">{t("newWorker")}</p>
+          <label className="text-sm">
+            <span className="mb-1 block">{t("name")}</span>
+            <input name="name" required className={inputClass} />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block">{t("belongsTo")}</span>
+            <select name="subcontractor_id" defaultValue="" className={inputClass}>
+              <option value="">{t("own")}</option>
+              {activeSubs.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block">{t("dailyRate")}</span>
+            <input name="daily_rate" type="number" step="0.01" min="0" className={inputClass} />
+          </label>
+          <div className="sm:col-span-3">
+            <button className="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background">
+              {t("addWorker")}
+            </button>
+          </div>
+        </form>
+
+        {workers.length === 0 ? (
+          <p className="text-sm text-black/50 dark:text-white/50">{t("noWorkers")}</p>
+        ) : (
+          <ul className="divide-y divide-black/10 rounded-xl border border-black/10 dark:divide-white/10 dark:border-white/15">
+            {workers.map((w) => (
+              <li
+                key={w.id}
+                className={`flex flex-wrap items-end gap-2 px-4 py-3 text-sm ${w.active ? "" : "opacity-50"}`}
+              >
+                <form action={updateWorker} className="flex flex-wrap items-end gap-2">
+                  <input type="hidden" name="worker_id" value={w.id} />
+                  <input name="name" defaultValue={w.name} required aria-label={t("name")} className={editInput} />
+                  <select
+                    name="subcontractor_id"
+                    defaultValue={w.subcontractor_id ?? ""}
+                    aria-label={t("belongsTo")}
+                    className={editInput}
+                  >
+                    <option value="">{t("own")}</option>
+                    {activeSubs.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    name="daily_rate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    defaultValue={w.daily_rate ?? ""}
+                    placeholder={t("dailyRate")}
+                    className={`${editInput} w-24`}
+                  />
+                  <button className={smallBtn}>{t("save")}</button>
+                </form>
+                <form action={setWorkerActive}>
+                  <input type="hidden" name="worker_id" value={w.id} />
+                  <input type="hidden" name="active" value={w.active ? "false" : "true"} />
+                  <button className={smallBtn}>{w.active ? t("deactivate") : t("activate")}</button>
                 </form>
               </li>
             ))}

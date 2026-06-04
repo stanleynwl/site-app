@@ -47,6 +47,8 @@ export default async function OfficeProjectDetail({
   const tsg = await getTranslations("Stages");
   const tpr = await getTranslations("Progress");
   const tp2 = await getTranslations("Projects");
+  const tw = await getTranslations("Attendance");
+  const tc = await getTranslations("Claims");
 
   const [reports, deliveries, stockSummary, blocks, refPhotos] =
     await Promise.all([
@@ -96,12 +98,17 @@ export default async function OfficeProjectDetail({
           />
           <button className={btnCls}>{tp2("rename")}</button>
         </form>
-        <Link
-          href={`/office/projects/${id}/activity`}
-          className="mt-2 inline-block text-xs underline"
-        >
-          {t("activity")}
-        </Link>
+        <div className="mt-2 flex flex-wrap gap-3 text-xs">
+          <Link href={`/office/projects/${id}/activity`} className="underline">
+            {t("activity")}
+          </Link>
+          <Link href={`/office/projects/${id}/attendance`} className="underline">
+            {tw("title")}
+          </Link>
+          <Link href={`/office/projects/${id}/claims`} className="underline">
+            {tc("title")}
+          </Link>
+        </div>
       </div>
 
       {/* Report timeline — recent working days (excludes Sunday) + View all */}

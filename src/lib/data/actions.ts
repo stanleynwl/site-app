@@ -157,6 +157,289 @@ export async function setMaterialActive(formData: FormData): Promise<void> {
   revalidatePath("/office/catalog");
 }
 
+// --- Phase 10: workers, attendance, advances, monthly claims -----------------
+
+// Office-capable gate: role pm/office OR the can_office flag (an admin can grant
+// office access independent of role — see migration 0022 / RLS can_office()).
+async function requireCanOffice() {
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (!profile.can_office) return null;
+  return profile;
+}
+
+// Subcontractors (managed list, office) --------------------------------------
+export async function createSubcontractor(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await requireCanOffice();
+  if (!profile) return;
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+  const supabase = await createClient();
+  await supabase.from("subcontractors").insert({
+    name,
+    phone: String(formData.get("phone") ?? "").trim() || null,
+    company_id: profile.company_id,
+    created_by: profile.id,
+  });
+  revalidatePath("/office/catalog");
+}
+
+export async function updateSubcontractor(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  if (!(await requireCanOffice())) return;
+  const id = String(formData.get("subcontractor_id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!id || !name) return;
+  const supabase = await createClient();
+  await supabase
+    .from("subcontractors")
+    .update({ name, phone: String(formData.get("phone") ?? "").trim() || null })
+    .eq("id", id);
+  revalidatePath("/office/catalog");
+}
+
+export async function setSubcontractorActive(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  if (!(await requireCanOffice())) return;
+  const id = String(formData.get("subcontractor_id") ?? "");
+  if (!id) return;
+  const active = String(formData.get("active") ?? "") === "true";
+  const supabase = await createClient();
+  await supabase.from("subcontractors").update({ active }).eq("id", id);
+  revalidatePath("/office/catalog");
+}
+
+// Workers — ANY member may create (supervisor adds on site); office edits ------
+export async function createWorker(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+  const subId = String(formData.get("subcontractor_id") ?? "").trim();
+  const rateRaw = String(formData.get("daily_rate") ?? "").trim();
+  const supabase = await createClient();
+  await supabase.from("workers").insert({
+    name,
+    subcontractor_id: subId || null,
+    daily_rate: rateRaw ? Number(rateRaw) : null,
+    company_id: profile.company_id,
+    created_by: profile.id,
+  });
+  revalidatePath("/office/catalog");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (projectId) revalidatePath(`/app/projects/${projectId}/workers`);
+}
+
+export async function updateWorker(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  if (!(await requireCanOffice())) return;
+  const id = String(formData.get("worker_id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!id || !name) return;
+  const subId = String(formData.get("subcontractor_id") ?? "").trim();
+  const rateRaw = String(formData.get("daily_rate") ?? "").trim();
+  const supabase = await createClient();
+  await supabase
+    .from("workers")
+    .update({
+      name,
+      subcontractor_id: subId || null,
+      daily_rate: rateRaw ? Number(rateRaw) : null,
+    })
+    .eq("id", id);
+  revalidatePath("/office/catalog");
+}
+
+export async function setWorkerActive(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  if (!(await requireCanOffice())) return;
+  const id = String(formData.get("worker_id") ?? "");
+  if (!id) return;
+  const active = String(formData.get("active") ?? "") === "true";
+  const supabase = await createClient();
+  await supabase.from("workers").update({ active }).eq("id", id);
+  revalidatePath("/office/catalog");
+}
+
+// Attendance — member saves one day's units per worker. Form posts parallel
+// arrays att_worker_id[] + att_units[]; blank/0 clears that worker's row.
+export async function saveAttendance(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+  const projectId = String(formData.get("project_id") ?? "");
+  const date = String(formData.get("work_date") ?? "");
+  if (!projectId || !date) return;
+
+  const workerIds = formData.getAll("att_worker_id").map(String);
+  const unitsArr = formData.getAll("att_units").map(String);
+
+  const postedIds = workerIds.filter(Boolean);
+  const toInsert: Array<Record<string, unknown>> = [];
+  workerIds.forEach((wid, i) => {
+    if (!wid) return;
+    const raw = (unitsArr[i] ?? "").trim();
+    const n = raw === "" ? 0 : Number(raw);
+    if (Number.isFinite(n) && n > 0) {
+      toInsert.push({
+        project_id: projectId,
+        worker_id: wid,
+        work_date: date,
+        units: n,
+        recorded_by: user.id,
+      });
+    }
+  });
+
+  const supabase = await createClient();
+  // Replace this day's rows for the posted roster workers (clean edit).
+  if (postedIds.length) {
+    await supabase
+      .from("attendance_entries")
+      .delete()
+      .eq("project_id", projectId)
+      .eq("work_date", date)
+      .in("worker_id", postedIds);
+  }
+  if (toInsert.length) {
+    await supabase.from("attendance_entries").insert(toInsert);
+  }
+
+  // Optional ad-hoc free-text worker not yet in the roster.
+  const adhocName = String(formData.get("adhoc_name") ?? "").trim();
+  const adhocUnits = Number(String(formData.get("adhoc_units") ?? "").trim());
+  if (adhocName && Number.isFinite(adhocUnits) && adhocUnits > 0) {
+    await supabase.from("attendance_entries").insert({
+      project_id: projectId,
+      worker_name: adhocName,
+      work_date: date,
+      units: adhocUnits,
+      recorded_by: user.id,
+    });
+  }
+
+  await logActivity(supabase, {
+    projectId,
+    actorId: user.id,
+    action: "attendance.record",
+    entityType: "attendance",
+    detail: date,
+  });
+  revalidatePath(`/app/projects/${projectId}/workers`);
+  revalidatePath(`/office/projects/${projectId}/attendance`);
+}
+
+// Advances — member logs an advance to a worker or a subcontractor. The form
+// posts target = "worker:<id>" or "sub:<id>".
+export async function createAdvance(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+  const projectId = String(formData.get("project_id") ?? "");
+  const amount = Number(String(formData.get("amount") ?? "").trim());
+  if (!projectId || !Number.isFinite(amount) || amount <= 0) return;
+
+  const target = String(formData.get("target") ?? "");
+  let worker_id: string | null = null;
+  let subcontractor_id: string | null = null;
+  if (target.startsWith("worker:")) worker_id = target.slice(7) || null;
+  else if (target.startsWith("sub:")) subcontractor_id = target.slice(4) || null;
+  if (!worker_id && !subcontractor_id) return;
+
+  const date = String(formData.get("advance_date") ?? "") || todayISO();
+  const supabase = await createClient();
+  await supabase.from("advances").insert({
+    project_id: projectId,
+    worker_id,
+    subcontractor_id,
+    advance_date: date,
+    amount,
+    note: String(formData.get("note") ?? "").trim() || null,
+    recorded_by: user.id,
+  });
+  await logActivity(supabase, {
+    projectId,
+    actorId: user.id,
+    action: "advance.create",
+    entityType: "advance",
+    detail: String(amount),
+  });
+  revalidatePath(`/app/projects/${projectId}/workers`);
+  revalidatePath(`/office/projects/${projectId}/attendance`);
+}
+
+export async function deleteAdvance(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+  const id = String(formData.get("advance_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!id) return;
+  const supabase = await createClient();
+  await supabase.from("advances").delete().eq("id", id);
+  revalidatePath(`/app/projects/${projectId}/workers`);
+  revalidatePath(`/office/projects/${projectId}/attendance`);
+}
+
+// Monthly claim — office upserts the header and replaces its line items. Posts
+// month=YYYY-MM and parallel item_* arrays.
+export async function saveClaim(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await requireCanOffice();
+  if (!profile) return;
+  const projectId = String(formData.get("project_id") ?? "");
+  const subId = String(formData.get("subcontractor_id") ?? "");
+  const month = String(formData.get("month") ?? "");
+  if (!projectId || !subId || !/^\d{4}-\d{2}$/.test(month)) return;
+
+  const supabase = await createClient();
+  const { data: claimRow } = await supabase
+    .from("claims")
+    .upsert(
+      {
+        project_id: projectId,
+        subcontractor_id: subId,
+        period_month: `${month}-01`,
+        note: String(formData.get("note") ?? "").trim() || null,
+        created_by: profile.id,
+      },
+      { onConflict: "project_id,subcontractor_id,period_month" },
+    )
+    .select("id")
+    .single();
+  if (!claimRow) return;
+  const claimId = (claimRow as { id: string }).id;
+
+  const descs = formData.getAll("item_description").map(String);
+  const qtys = formData.getAll("item_quantity").map(String);
+  const units = formData.getAll("item_unit").map(String);
+  const prices = formData.getAll("item_unit_price").map(String);
+  const items = descs
+    .map((d, i) => ({
+      claim_id: claimId,
+      description: d.trim(),
+      quantity: Number(qtys[i] ?? 0) || 0,
+      unit: (units[i] ?? "").trim() || null,
+      unit_price: Number(prices[i] ?? 0) || 0,
+      sort_order: i,
+    }))
+    .filter((it) => it.description !== "");
+
+  await supabase.from("claim_items").delete().eq("claim_id", claimId);
+  if (items.length) await supabase.from("claim_items").insert(items);
+
+  await logActivity(supabase, {
+    projectId,
+    actorId: profile.id,
+    action: "claim.update",
+    entityType: "claim",
+    entityId: claimId,
+  });
+  revalidatePath(`/office/projects/${projectId}/claims`);
+}
+
 // --- Phase 2 photo taxonomy: project tags + progress photos ------------------
 
 const TAG_KINDS = ["block", "level", "area", "activity"] as const;
