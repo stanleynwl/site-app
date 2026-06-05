@@ -68,7 +68,7 @@ export default async function ProjectReportsPage({
           </Link>
         </div>
 
-        <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+        <dl className="mt-3 space-y-2 text-sm">
           {isNoWork ? (
             <Field label={tr("noWorkReason")}>
               {r.no_work_reason ? tr(`noWorkReasonOpt.${r.no_work_reason}`) : "—"}
@@ -168,16 +168,17 @@ export default async function ProjectReportsPage({
 function Field({
   label,
   children,
-  full,
 }: {
   label: string;
   children: React.ReactNode;
   full?: boolean;
 }) {
   return (
-    <div className={full ? "sm:col-span-2" : ""}>
-      <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted">{label}</dt>
-      <dd className="text-foreground">{children}</dd>
+    <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
+      <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted sm:w-36 sm:shrink-0 sm:pt-0.5">
+        {label}
+      </dt>
+      <dd className="flex-1 text-foreground">{children}</dd>
     </div>
   );
 }
