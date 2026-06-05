@@ -645,8 +645,19 @@ async function attachSubmissionPhotos(
   const takenAt = formData.getAll("photo_taken_at").map(String);
   const lat = formData.getAll("photo_lat").map(String);
   const lng = formData.getAll("photo_lng").map(String);
-  await supabase.from("photos").insert(
-    paths.map((path, i) => ({
+
+  // Idempotent insert: skip any path already linked here (re-submit / double-tap)
+  // and de-dupe within this submission — never create duplicate photo rows.
+  const { data: existingRows } = await supabase
+    .from("photos")
+    .select("storage_path")
+    .eq(link.column, link.id);
+  const seen = new Set((existingRows ?? []).map((r) => r.storage_path as string));
+  const rows: Record<string, unknown>[] = [];
+  paths.forEach((path, i) => {
+    if (seen.has(path)) return;
+    seen.add(path);
+    rows.push({
       project_id: projectId,
       [link.column]: link.id,
       storage_path: path,
@@ -654,8 +665,9 @@ async function attachSubmissionPhotos(
       gps_lat: parseCoord(lat[i] ?? null),
       gps_lng: parseCoord(lng[i] ?? null),
       uploaded_by: userId,
-    })),
-  );
+    });
+  });
+  if (rows.length > 0) await supabase.from("photos").insert(rows);
 }
 
 // Supervisor logs a delivery — photo-first. The fast path is a photo (+ optional

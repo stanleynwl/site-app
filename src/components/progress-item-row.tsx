@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { submitProgress } from "@/lib/data/actions";
 import { PhotoCapture } from "@/components/photo-capture";
+import { SubmitButton } from "@/components/submit-button";
 
 const baseInput =
   "rounded-lg border border-black/15 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
@@ -62,9 +63,9 @@ export function ProgressItemRow({
           >
             {t("addPhoto")}
           </button>
-          <button className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25">
+          <SubmitButton className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium disabled:opacity-50 dark:border-white/25">
             {t("save")}
-          </button>
+          </SubmitButton>
         </div>
       </div>
 
