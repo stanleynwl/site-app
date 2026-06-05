@@ -164,6 +164,21 @@ export type ReportPhoto = {
   url?: string | null;
 };
 
+async function signPhotos(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rows: ReportPhoto[],
+): Promise<ReportPhoto[]> {
+  return Promise.all(
+    rows.map(async (p) => {
+      if (p.archived_at != null) return { ...p, url: null };
+      const { data: signed } = await supabase.storage
+        .from("site-photos")
+        .createSignedUrl(p.storage_path, 3600);
+      return { ...p, url: signed?.signedUrl ?? null };
+    }),
+  );
+}
+
 export async function getReportPhotos(reportId: string): Promise<ReportPhoto[]> {
   if (!isSupabaseConfigured) return [];
   const supabase = await createClient();
@@ -172,15 +187,40 @@ export async function getReportPhotos(reportId: string): Promise<ReportPhoto[]> 
     .select("id, storage_path, archived_at")
     .eq("daily_report_id", reportId)
     .order("created_at", { ascending: true });
+  return signPhotos(supabase, (data ?? []) as ReportPhoto[]);
+}
 
-  const photos = (data ?? []) as ReportPhoto[];
-  return Promise.all(
-    photos.map(async (p) => {
-      if (p.archived_at != null) return { ...p, url: null };
-      const { data: signed } = await supabase.storage
-        .from("site-photos")
-        .createSignedUrl(p.storage_path, 3600);
-      return { ...p, url: signed?.signedUrl ?? null };
-    }),
+// Every photo the site captured on this report's day for the project — the
+// report's own photos PLUS anything shot that day under Progress / Stages /
+// Deliveries (which link elsewhere). Lets the office see the day's photos when
+// reviewing the daily report. Matched by upload date in Malaysia time.
+export async function getReportDayPhotos(
+  projectId: string,
+  reportDate: string,
+  reportId: string,
+): Promise<ReportPhoto[]> {
+  if (!isSupabaseConfigured) return [];
+  const supabase = await createClient();
+  const start = `${reportDate}T00:00:00+08:00`;
+  const end = `${reportDate}T23:59:59.999+08:00`;
+  const [byReport, byDay] = await Promise.all([
+    supabase
+      .from("photos")
+      .select("id, storage_path, archived_at, created_at")
+      .eq("daily_report_id", reportId),
+    supabase
+      .from("photos")
+      .select("id, storage_path, archived_at, created_at")
+      .eq("project_id", projectId)
+      .gte("created_at", start)
+      .lte("created_at", end),
+  ]);
+  const byId = new Map<string, ReportPhoto & { created_at?: string }>();
+  for (const p of [...(byReport.data ?? []), ...(byDay.data ?? [])]) {
+    byId.set(p.id as string, p as ReportPhoto & { created_at?: string });
+  }
+  const rows = [...byId.values()].sort((a, b) =>
+    (a.created_at ?? "").localeCompare(b.created_at ?? ""),
   );
+  return signPhotos(supabase, rows);
 }

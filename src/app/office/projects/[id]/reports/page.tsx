@@ -205,7 +205,7 @@ function Section({
 function KeyVals({ rows }: { rows: { label: string; value: string }[] }) {
   if (rows.length === 0) return <span className="text-muted">—</span>;
   return (
-    <dl className="grid grid-cols-[max-content_auto_1fr] items-baseline gap-x-1.5 gap-y-0.5">
+    <dl className="inline-grid grid-cols-[max-content_auto_auto] items-baseline gap-x-2 gap-y-0.5">
       {rows.map((r, i) => (
         <Fragment key={i}>
           <dt>{r.label}</dt>

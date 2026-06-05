@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { getReportById, getReportPhotos } from "@/lib/data/reports";
+import { getReportById, getReportDayPhotos } from "@/lib/data/reports";
 import {
   unlockReport,
   deleteReportPhoto,
@@ -19,12 +19,13 @@ export default async function OfficeReportView({
   params: Promise<{ id: string; reportId: string }>;
 }) {
   const { id, reportId } = await params;
-  const [report, profile, photos] = await Promise.all([
+  const [report, profile] = await Promise.all([
     getReportById(reportId),
     getProfile(),
-    getReportPhotos(reportId),
   ]);
   if (!report) notFound();
+  // All photos shot on this report's day (report + progress/stages/deliveries).
+  const photos = await getReportDayPhotos(id, report.report_date, reportId);
 
   const t = await getTranslations("Office");
   const tr = await getTranslations("Report");
