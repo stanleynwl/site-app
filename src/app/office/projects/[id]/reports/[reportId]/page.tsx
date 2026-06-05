@@ -2,7 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getReportById, getReportPhotos } from "@/lib/data/reports";
-import { unlockReport, type UnlockReportState } from "@/lib/data/actions";
+import {
+  unlockReport,
+  deleteReportPhoto,
+  type UnlockReportState,
+} from "@/lib/data/actions";
 import { getProfile } from "@/lib/auth/dal";
 import { isInSoftEditWindow } from "@/lib/date";
 import { defaultTradeKey } from "@/lib/trades";
@@ -179,14 +183,32 @@ export default async function OfficeReportView({
           <div className="flex flex-wrap gap-2">
             {photos.map((p) =>
               p.url ? (
-                <a key={p.id} href={p.url} target="_blank" rel="noreferrer">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={p.url}
-                    alt=""
-                    className="h-24 w-24 rounded-lg object-cover"
-                  />
-                </a>
+                <div key={p.id} className="relative">
+                  <a href={p.url} target="_blank" rel="noreferrer">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={p.url}
+                      alt=""
+                      className="h-24 w-24 rounded-lg object-cover"
+                    />
+                  </a>
+                  {profile?.can_office && (
+                    <form
+                      action={deleteReportPhoto}
+                      className="absolute -right-2 -top-2"
+                    >
+                      <input type="hidden" name="photo_id" value={p.id} />
+                      <input type="hidden" name="project_id" value={id} />
+                      <input type="hidden" name="report_id" value={reportId} />
+                      <button
+                        aria-label={tr("remove")}
+                        className="flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs text-white"
+                      >
+                        ✕
+                      </button>
+                    </form>
+                  )}
+                </div>
               ) : null,
             )}
           </div>
