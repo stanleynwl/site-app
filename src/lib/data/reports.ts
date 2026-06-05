@@ -226,13 +226,19 @@ export async function getReportDayPhotos(
       .gte("created_at", start)
       .lte("created_at", end),
   ]);
-  const byId = new Map<string, ReportPhoto & { created_at?: string }>();
-  for (const p of [...(byReport.data ?? []), ...(byDay.data ?? [])]) {
-    byId.set(p.id as string, p as ReportPhoto & { created_at?: string });
+  // De-dupe by storage_path (duplicate rows can point at the same file) and by
+  // newest-first. signPhotos drops any whose storage object is missing.
+  const seen = new Set<string>();
+  const merged = [...(byReport.data ?? []), ...(byDay.data ?? [])] as (ReportPhoto & {
+    created_at?: string;
+  })[];
+  merged.sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
+  const rows: ReportPhoto[] = [];
+  for (const p of merged) {
+    if (seen.has(p.storage_path)) continue;
+    seen.add(p.storage_path);
+    rows.push(p);
   }
-  const rows = [...byId.values()].sort((a, b) =>
-    (a.created_at ?? "").localeCompare(b.created_at ?? ""),
-  );
   return signPhotos(supabase, rows);
 }
 
@@ -293,17 +299,39 @@ export async function getReportDayPhotoCounts(
   const max = dates.reduce((a, b) => (a > b ? a : b));
   const { data } = await supabase
     .from("photos")
-    .select("created_at")
+    .select("storage_path, created_at")
     .eq("project_id", projectId)
     .is("deleted_at", null)
+    .is("archived_at", null)
     .is("delivery_id", null)
     .is("purchase_request_id", null)
     .eq("is_project_ref", false)
     .gte("created_at", `${min}T00:00:00+08:00`)
     .lte("created_at", `${max}T23:59:59.999+08:00`);
+  const rows = (data ?? []) as { storage_path: string; created_at: string }[];
+
+  // Only count photos whose storage object actually exists, de-duped by path —
+  // broken/duplicate rows (e.g. failed uploads) must not inflate the count.
+  // List each month folder once (cheap) instead of signing every photo.
+  const folderOf = (p: string) => p.slice(0, p.lastIndexOf("/"));
+  const nameOf = (p: string) => p.slice(p.lastIndexOf("/") + 1);
+  const existing = new Map<string, Set<string>>();
+  await Promise.all(
+    [...new Set(rows.map((r) => folderOf(r.storage_path)))].map(async (folder) => {
+      const { data: list } = await supabase.storage
+        .from("site-photos")
+        .list(folder, { limit: 1000 });
+      existing.set(folder, new Set((list ?? []).map((o) => o.name)));
+    }),
+  );
+
   const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
   const counts: Record<string, number> = {};
-  for (const p of (data ?? []) as { created_at: string }[]) {
+  const seen = new Set<string>();
+  for (const p of rows) {
+    if (seen.has(p.storage_path)) continue;
+    if (!existing.get(folderOf(p.storage_path))?.has(nameOf(p.storage_path))) continue;
+    seen.add(p.storage_path);
     const d = fmt.format(new Date(p.created_at));
     counts[d] = (counts[d] ?? 0) + 1;
   }
