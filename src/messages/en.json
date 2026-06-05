@@ -422,6 +422,7 @@
   "Office": {
     "timeline": "Report timeline",
     "noReports": "No reports yet.",
+    "olderReports": "Older reports",
     "view": "View",
     "viewAll": "View all",
     "newBadge": "New",

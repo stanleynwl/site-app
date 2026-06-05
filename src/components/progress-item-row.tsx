@@ -17,6 +17,7 @@ export function ProgressItemRow({
   unitsDone,
   unitCount,
   month,
+  photos = [],
 }: {
   itemId: string;
   projectId: string;
@@ -24,10 +25,12 @@ export function ProgressItemRow({
   unitsDone: number;
   unitCount: number | null;
   month: string;
+  photos?: { id: string; url?: string | null }[];
 }) {
   const t = useTranslations("Progress");
   const [showPhoto, setShowPhoto] = useState(false);
   const done = unitCount != null && unitCount > 0 && unitsDone >= unitCount;
+  const saved = photos.filter((p) => p.url);
 
   return (
     <form action={submitProgress} className="space-y-2 py-2">
@@ -64,6 +67,22 @@ export function ProgressItemRow({
           </button>
         </div>
       </div>
+
+      {/* Photos already saved against this item — confirms the save persisted. */}
+      {saved.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {saved.map((p) => (
+            <a key={p.id} href={p.url!} target="_blank" rel="noreferrer">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={p.url!}
+                alt=""
+                className="h-14 w-14 rounded-lg object-cover"
+              />
+            </a>
+          ))}
+        </div>
+      )}
 
       {showPhoto && <PhotoCapture projectId={projectId} month={month} />}
     </form>

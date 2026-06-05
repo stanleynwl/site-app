@@ -124,6 +124,24 @@ export async function getProjectReports(
   return (data ?? []) as DailyReport[];
 }
 
+// The N most recent reports WITH their children (manpower/machinery/issues/
+// visitors) — for the office "view all" page that lays the latest days out in
+// full. Newest first.
+export async function getRecentReportsWithChildren(
+  projectId: string,
+  limit: number,
+): Promise<ReportWithChildren[]> {
+  if (!isSupabaseConfigured) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("daily_reports")
+    .select(`${REPORT_COLUMNS}, ${REPORT_CHILDREN}`)
+    .eq("project_id", projectId)
+    .order("report_date", { ascending: false })
+    .limit(limit);
+  return (data ?? []) as ReportWithChildren[];
+}
+
 // The N most recent reports, optionally skipping Sunday-dated ones (the office
 // timeline shows the recent working week — Sundays don't count as a work day).
 export async function getRecentReports(

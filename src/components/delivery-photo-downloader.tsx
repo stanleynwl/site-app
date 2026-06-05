@@ -2,7 +2,9 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
+  useEffect,
   useState,
   type ReactNode,
 } from "react";
@@ -67,38 +69,119 @@ async function triggerDownloads(list: DownloadablePhoto[]) {
   }
 }
 
-// Per-delivery thumbnail grid with selection checkboxes — no buttons.
+// Per-delivery thumbnail grid: corner checkbox selects; clicking the image
+// opens a full-size lightbox (Esc / arrows to navigate within this DO's photos).
 export function DeliveryThumbs({ photos }: { photos: DownloadablePhoto[] }) {
   const { selected, toggle } = useDownloadCtx();
   const usable = photos.filter((p) => p.downloadUrl);
+  const viewable = usable.filter((p) => p.url);
+  const [lb, setLb] = useState<number | null>(null);
+
+  const close = useCallback(() => setLb(null), []);
+  const step = useCallback(
+    (d: number) =>
+      setLb((i) => (i == null ? i : (i + d + viewable.length) % viewable.length)),
+    [viewable.length],
+  );
+  useEffect(() => {
+    if (lb == null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+      else if (e.key === "ArrowLeft") step(-1);
+      else if (e.key === "ArrowRight") step(1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lb, close, step]);
+
   if (usable.length === 0) return null;
 
   return (
     <div className="flex flex-wrap gap-2">
       {usable.map((p) => (
-        <label key={p.id} className="relative cursor-pointer">
+        <div key={p.id} className="relative">
           <input
             type="checkbox"
             checked={selected.has(p.id)}
             onChange={() => toggle(p.id)}
-            className="absolute left-1 top-1 h-4 w-4"
+            aria-label="Select photo"
+            className="absolute left-1 top-1 z-10 h-4 w-4 cursor-pointer"
           />
           {p.url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={p.url}
-              alt=""
-              className={`h-20 w-20 rounded-lg object-cover ${
-                selected.has(p.id) ? "ring-2 ring-blue-500" : ""
-              }`}
-            />
+            <button
+              type="button"
+              onClick={() => setLb(viewable.findIndex((v) => v.id === p.id))}
+              title="Click to enlarge"
+              className="block"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={p.url}
+                alt=""
+                className={`h-20 w-20 rounded-lg object-cover transition hover:opacity-90 ${
+                  selected.has(p.id) ? "ring-2 ring-blue-500" : ""
+                }`}
+              />
+            </button>
           ) : (
             <span className="flex h-20 w-20 items-center justify-center rounded-lg bg-black/5 text-[10px] dark:bg-white/10">
               ?
             </span>
           )}
-        </label>
+        </div>
       ))}
+
+      {lb != null && viewable[lb] && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
+          onClick={close}
+        >
+          <button
+            type="button"
+            onClick={close}
+            aria-label="Close"
+            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-lg text-white hover:bg-white/25"
+          >
+            ✕
+          </button>
+          {viewable.length > 1 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                step(-1);
+              }}
+              aria-label="Previous"
+              className="absolute left-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-2xl text-white hover:bg-white/25"
+            >
+              ‹
+            </button>
+          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={viewable[lb].url!}
+            alt=""
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[90vh] max-w-[92vw] rounded-lg object-contain"
+          />
+          {viewable.length > 1 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                step(1);
+              }}
+              aria-label="Next"
+              className="absolute right-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-2xl text-white hover:bg-white/25"
+            >
+              ›
+            </button>
+          )}
+          <span className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-3 py-1 text-xs text-white">
+            {lb + 1} / {viewable.length}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

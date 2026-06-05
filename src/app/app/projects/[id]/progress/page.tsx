@@ -5,6 +5,7 @@ import { getProject } from "@/lib/data/projects";
 import {
   getProjectBlocks,
   getProjectRefPhotos,
+  withSignedStructurePhotos,
   groupProgressByCategory,
   blockProgressPercent,
 } from "@/lib/data/structure";
@@ -24,10 +25,13 @@ export default async function ProjectProgressPage({
   if (!project) notFound();
 
   const t = await getTranslations("Progress");
-  const [blocks, refPhotos] = await Promise.all([
+  const [rawBlocks, refPhotos] = await Promise.all([
     getProjectBlocks(id),
     getProjectRefPhotos(id),
   ]);
+  // Sign photo URLs so the supervisor sees the photos already saved per item
+  // (confirms the capture persisted — they were previously invisible on site).
+  const blocks = await withSignedStructurePhotos(rawBlocks);
   const month = todayISO().slice(0, 7);
 
   return (
@@ -102,6 +106,7 @@ export default async function ProjectProgressPage({
                                   unitsDone={it.units_done}
                                   unitCount={b.unit_count}
                                   month={month}
+                                  photos={it.photos}
                                 />
                               </li>
                             ))}
