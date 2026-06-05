@@ -1670,6 +1670,35 @@ export async function addProjectRefPhoto(formData: FormData): Promise<void> {
 }
 
 // Office removes a project reference photo (Storage file + row). Office/pm only.
+// Office deletes a photo attached to a progress item / stage (storage + row).
+// Any office-capable member; RLS (photos_delete_member) also requires membership.
+export async function deleteStructurePhoto(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (!profile.can_office) return;
+
+  const photoId = String(formData.get("photo_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!photoId) return;
+
+  const supabase = await createClient();
+  const { data: photo } = await supabase
+    .from("photos")
+    .select("storage_path")
+    .eq("id", photoId)
+    .maybeSingle();
+  if (photo?.storage_path) {
+    await supabase.storage.from("site-photos").remove([photo.storage_path]);
+  }
+  await supabase.from("photos").delete().eq("id", photoId);
+
+  revalidatePath(`/office/projects/${projectId}/progress`);
+  revalidatePath(`/office/projects/${projectId}/stages`);
+  revalidatePath(`/app/projects/${projectId}/progress`);
+  revalidatePath(`/app/projects/${projectId}/stages`);
+}
+
 export async function deleteProjectRefPhoto(formData: FormData): Promise<void> {
   if (!isSupabaseConfigured) return;
   const profile = await getProfile();

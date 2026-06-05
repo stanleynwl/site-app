@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -47,12 +48,15 @@ export default async function ProjectReportsPage({
       .map((m) => {
         const key = defaultTradeKey(m.trade);
         const label = key ? tr(`trades.${key}`) : m.trade;
-        return `${label}${m.subcontractor ? ` (${m.subcontractor})` : ""}: ${m.worker_count}`;
+        return {
+          label: `${label}${m.subcontractor ? ` (${m.subcontractor})` : ""}`,
+          value: String(m.worker_count),
+        };
       });
     const machinery = r.machinery_entries.map((m) => {
       const key = defaultMachineKey(m.machine_type);
       const label = key ? tr(`machineTypes.${key}`) : m.machine_type;
-      return `${label}: ${m.hours_worked ?? 0}h`;
+      return { label, value: `${m.hours_worked ?? 0}h` };
     });
 
     return (
@@ -68,35 +72,49 @@ export default async function ProjectReportsPage({
           </Link>
         </div>
 
-        <dl className="mt-3 space-y-2 text-sm">
-          {isNoWork ? (
-            <Field label={tr("noWorkReason")}>
+        {isNoWork ? (
+          <div className="mt-3 text-sm">
+            <Section label={tr("noWorkReason")}>
               {r.no_work_reason ? tr(`noWorkReasonOpt.${r.no_work_reason}`) : "—"}
-            </Field>
-          ) : (
-            <>
-              <Field label={tr("weather")}>
+            </Section>
+          </div>
+        ) : (
+          <div className="mt-3 grid gap-x-8 gap-y-4 text-sm md:grid-cols-3">
+            {/* Left: weather + work done */}
+            <div className="space-y-4">
+              <Section label={tr("weather")}>
                 {r.weather ? tr(`weatherOpt.${r.weather}`) : "—"}
                 {r.rain_hours != null ? ` · ${r.rain_hours}h` : ""}
-              </Field>
-              <Field label={tr("manpower")}>{manpower.length ? manpower.join(", ") : "—"}</Field>
-              <Field label={tr("machinery")}>{machinery.length ? machinery.join(", ") : "—"}</Field>
-              <Field label={tr("workDone")} full>
+              </Section>
+              <Section label={tr("workDone")}>
                 <span className="whitespace-pre-wrap">{r.work_done || "—"}</span>
-              </Field>
-            </>
-          )}
-          {r.issues.length > 0 && (
-            <Field label={tr("issues")} full>
-              {r.issues.map((i) => `${i.description} [${tr(`cat.${i.category}`)}]`).join("; ")}
-            </Field>
-          )}
-          {r.visitor_entries.length > 0 && (
-            <Field label={tr("visitors")} full>
-              {r.visitor_entries.map((v) => (v.purpose ? `${v.name} (${v.purpose})` : v.name)).join(", ")}
-            </Field>
-          )}
-        </dl>
+              </Section>
+            </div>
+            {/* Middle: manpower (one per line, numbers aligned) */}
+            <Section label={tr("manpower")}>
+              <KeyVals rows={manpower} />
+            </Section>
+            {/* Right: machinery (one per line, numbers aligned) */}
+            <Section label={tr("machinery")}>
+              <KeyVals rows={machinery} />
+            </Section>
+          </div>
+        )}
+
+        {(r.issues.length > 0 || r.visitor_entries.length > 0) && (
+          <div className="mt-4 space-y-2 border-t border-border pt-3 text-sm">
+            {r.issues.length > 0 && (
+              <Section label={tr("issues")}>
+                {r.issues.map((i) => `${i.description} [${tr(`cat.${i.category}`)}]`).join("; ")}
+              </Section>
+            )}
+            {r.visitor_entries.length > 0 && (
+              <Section label={tr("visitors")}>
+                {r.visitor_entries.map((v) => (v.purpose ? `${v.name} (${v.purpose})` : v.name)).join(", ")}
+              </Section>
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -165,20 +183,36 @@ export default async function ProjectReportsPage({
   );
 }
 
-function Field({
+function Section({
   label,
   children,
 }: {
   label: string;
   children: React.ReactNode;
-  full?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
-      <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted sm:w-36 sm:shrink-0 sm:pt-0.5">
+    <div>
+      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted">
         {label}
-      </dt>
-      <dd className="flex-1 text-foreground">{children}</dd>
+      </p>
+      <div className="text-foreground">{children}</div>
     </div>
+  );
+}
+
+// Vertical key/value list with the label column sized to the widest label so the
+// colons line up, and the values right-aligned so the numbers line up.
+function KeyVals({ rows }: { rows: { label: string; value: string }[] }) {
+  if (rows.length === 0) return <span className="text-muted">—</span>;
+  return (
+    <dl className="grid grid-cols-[max-content_auto_1fr] items-baseline gap-x-1.5 gap-y-0.5">
+      {rows.map((r, i) => (
+        <Fragment key={i}>
+          <dt>{r.label}</dt>
+          <span className="text-muted">:</span>
+          <dd className="text-right font-medium tabular-nums">{r.value}</dd>
+        </Fragment>
+      ))}
+    </dl>
   );
 }

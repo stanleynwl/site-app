@@ -497,6 +497,7 @@
     "units": "{count} units",
     "unitsDone": "Units done",
     "addPhoto": "Photo",
+    "deletePhoto": "Delete photo",
     "save": "Save"
   },
   "Stages": {

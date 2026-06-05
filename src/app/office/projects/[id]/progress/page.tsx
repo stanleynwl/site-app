@@ -10,6 +10,7 @@ import {
 } from "@/lib/data/structure";
 import { MarkSeen } from "@/components/mark-seen";
 import { BlockBrowser, type BrowserBlock } from "@/components/block-browser";
+import { deleteStructurePhoto } from "@/lib/data/actions";
 
 // Office read-only view of ALL progress (A–L items, units done/total, photos).
 // A block picker (chips + search) avoids scrolling through every block. Opening
@@ -113,17 +114,32 @@ export default async function OfficeProgressPage({
                                   </span>
                                 </div>
                                 {p.photos.some((ph) => ph.url) && (
-                                  <div className="mt-1 flex flex-wrap gap-1">
+                                  <div className="mt-1 flex flex-wrap gap-1.5">
                                     {p.photos.map((ph) =>
                                       ph.url ? (
-                                        <a key={ph.id} href={ph.url} target="_blank" rel="noreferrer">
-                                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                                          <img
-                                            src={ph.url}
-                                            alt=""
-                                            className="h-16 w-16 rounded object-cover"
-                                          />
-                                        </a>
+                                        <div key={ph.id} className="relative">
+                                          <a href={ph.url} target="_blank" rel="noreferrer">
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img
+                                              src={ph.url}
+                                              alt=""
+                                              className="h-16 w-16 rounded object-cover"
+                                            />
+                                          </a>
+                                          <form
+                                            action={deleteStructurePhoto}
+                                            className="absolute -right-1.5 -top-1.5"
+                                          >
+                                            <input type="hidden" name="photo_id" value={ph.id} />
+                                            <input type="hidden" name="project_id" value={id} />
+                                            <button
+                                              aria-label={t("deletePhoto")}
+                                              className="flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] text-white"
+                                            >
+                                              ✕
+                                            </button>
+                                          </form>
+                                        </div>
                                       ) : null,
                                     )}
                                   </div>

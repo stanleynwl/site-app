@@ -497,6 +497,7 @@
     "units": "{count} 个单位",
     "unitsDone": "已完成单位",
     "addPhoto": "照片",
+    "deletePhoto": "删除照片",
     "save": "保存"
   },
   "Stages": {
