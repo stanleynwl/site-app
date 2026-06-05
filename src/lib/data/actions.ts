@@ -15,6 +15,7 @@ import { todayISO, isInSoftEditWindow, normalizeReportDate } from "@/lib/date";
 import { DEFAULT_STAGES } from "@/lib/stages";
 import { progressSeedRows, progressItemLabel } from "@/lib/progress-template";
 import { logActivity, type ActivityAction } from "./activity";
+import { purgeExpiredDeletedPhotos } from "./reports";
 import type { IssueCategory, NoWorkReason, ReportType, Weather } from "./reports";
 
 const WEATHERS: Weather[] = ["sunny", "cloudy", "light_rain", "heavy_rain"];
@@ -1683,21 +1684,19 @@ export async function deleteReportPhoto(formData: FormData): Promise<void> {
   const reportId = String(formData.get("report_id") ?? "");
   if (!photoId) return;
 
+  // Soft delete — recoverable for 3 days (the recycle bin), then purged.
   const supabase = await createClient();
-  const { data: photo } = await supabase
+  await supabase
     .from("photos")
-    .select("storage_path")
-    .eq("id", photoId)
-    .maybeSingle();
-  if (photo?.storage_path) {
-    await supabase.storage.from("site-photos").remove([photo.storage_path]);
-  }
-  await supabase.from("photos").delete().eq("id", photoId);
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", photoId);
+  await purgeExpiredDeletedPhotos(projectId);
 
   if (reportId) {
     revalidatePath(`/office/projects/${projectId}/reports/${reportId}`);
   }
   revalidatePath(`/office/projects/${projectId}/reports`);
+  revalidatePath(`/office/projects/${projectId}/photos/trash`);
 }
 
 // Office deletes a photo attached to a progress item / stage (storage + row).
@@ -1712,21 +1711,44 @@ export async function deleteStructurePhoto(formData: FormData): Promise<void> {
   const projectId = String(formData.get("project_id") ?? "");
   if (!photoId) return;
 
+  // Soft delete — recoverable for 3 days (the recycle bin), then purged.
   const supabase = await createClient();
-  const { data: photo } = await supabase
+  await supabase
     .from("photos")
-    .select("storage_path")
-    .eq("id", photoId)
-    .maybeSingle();
-  if (photo?.storage_path) {
-    await supabase.storage.from("site-photos").remove([photo.storage_path]);
-  }
-  await supabase.from("photos").delete().eq("id", photoId);
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", photoId);
+  await purgeExpiredDeletedPhotos(projectId);
 
   revalidatePath(`/office/projects/${projectId}/progress`);
   revalidatePath(`/office/projects/${projectId}/stages`);
+  revalidatePath(`/office/projects/${projectId}/photos/trash`);
   revalidatePath(`/app/projects/${projectId}/progress`);
   revalidatePath(`/app/projects/${projectId}/stages`);
+}
+
+// Office restores a soft-deleted photo (within the 3-day window).
+export async function recoverPhoto(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (!profile.can_office) return;
+
+  const photoId = String(formData.get("photo_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!photoId) return;
+  const cutoff = new Date(Date.now() - 3 * 86_400_000).toISOString();
+
+  const supabase = await createClient();
+  await supabase
+    .from("photos")
+    .update({ deleted_at: null })
+    .eq("id", photoId)
+    .gte("deleted_at", cutoff);
+
+  revalidatePath(`/office/projects/${projectId}/photos/trash`);
+  revalidatePath(`/office/projects/${projectId}/progress`);
+  revalidatePath(`/office/projects/${projectId}/reports`);
+  revalidatePath(`/office/projects/${projectId}`);
 }
 
 export async function deleteProjectRefPhoto(formData: FormData): Promise<void> {
@@ -1739,18 +1761,16 @@ export async function deleteProjectRefPhoto(formData: FormData): Promise<void> {
   const projectId = String(formData.get("project_id") ?? "");
   if (!photoId) return;
 
+  // Soft delete — recoverable for 3 days (the recycle bin), then purged.
   const supabase = await createClient();
-  const { data: photo } = await supabase
+  await supabase
     .from("photos")
-    .select("storage_path")
-    .eq("id", photoId)
-    .maybeSingle();
-  if (photo?.storage_path) {
-    await supabase.storage.from("site-photos").remove([photo.storage_path]);
-  }
-  await supabase.from("photos").delete().eq("id", photoId);
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", photoId);
+  await purgeExpiredDeletedPhotos(projectId);
 
   revalidatePath(`/office/projects/${projectId}`);
+  revalidatePath(`/office/projects/${projectId}/photos/trash`);
   revalidatePath(`/app/projects/${projectId}/progress`);
   revalidatePath(`/app/projects/${projectId}/stages`);
 }

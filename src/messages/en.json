@@ -145,6 +145,13 @@
     "netPayable": "Net payable",
     "save": "Save claim"
   },
+  "Trash": {
+    "title": "Recycle bin",
+    "intro": "Deleted photos are kept for 3 days, then permanently removed.",
+    "empty": "No deleted photos.",
+    "recover": "Recover",
+    "autoDeletes": "Deletes in {days}d"
+  },
   "Today": {
     "title": "Today's reports",
     "empty": "You're not a member of any project yet.",

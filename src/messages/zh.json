@@ -145,6 +145,13 @@
     "netPayable": "应付净额",
     "save": "保存请款"
   },
+  "Trash": {
+    "title": "回收站",
+    "intro": "已删除的照片保留 3 天，之后永久删除。",
+    "empty": "没有已删除的照片。",
+    "recover": "恢复",
+    "autoDeletes": "{days} 天后删除"
+  },
   "Today": {
     "title": "今日报告",
     "empty": "您还不是任何项目的成员。",

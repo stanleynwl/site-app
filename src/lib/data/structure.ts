@@ -12,6 +12,7 @@ export type StructurePhoto = {
   id: string;
   storage_path: string;
   archived_at: string | null;
+  deleted_at?: string | null;
   url?: string | null;
 };
 
@@ -49,7 +50,7 @@ export type ProjectBlock = {
 };
 
 const BLOCK_COLUMNS =
-  "id, project_id, name, unit_from, unit_to, unit_count, sort_order, stages:block_stages(id, block_id, name, sort_order, is_custom, completed_at, photos!block_stage_id(id, storage_path, archived_at)), progress_items:block_progress_items(id, block_id, category, name, sort_order, units_done, updated_at, photos!progress_item_id(id, storage_path, archived_at))";
+  "id, project_id, name, unit_from, unit_to, unit_count, sort_order, stages:block_stages(id, block_id, name, sort_order, is_custom, completed_at, photos!block_stage_id(id, storage_path, archived_at, deleted_at)), progress_items:block_progress_items(id, block_id, category, name, sort_order, units_done, updated_at, photos!progress_item_id(id, storage_path, archived_at, deleted_at))";
 
 export async function getProjectBlocks(
   projectId: string,
@@ -66,12 +67,15 @@ export async function getProjectBlocks(
     .order("created_at", { referencedTable: "block_stages", ascending: true })
     .order("sort_order", { referencedTable: "block_progress_items", ascending: true });
 
+  // Drop soft-deleted photos (recoverable for 3 days via the recycle bin).
+  const live = (ps: StructurePhoto[] | undefined) =>
+    (ps ?? []).filter((p) => !p.deleted_at);
   return ((data ?? []) as unknown as ProjectBlock[]).map((b) => ({
     ...b,
-    stages: (b.stages ?? []).map((s) => ({ ...s, photos: s.photos ?? [] })),
+    stages: (b.stages ?? []).map((s) => ({ ...s, photos: live(s.photos) })),
     progress_items: (b.progress_items ?? []).map((p) => ({
       ...p,
-      photos: p.photos ?? [],
+      photos: live(p.photos),
     })),
   }));
 }
@@ -126,6 +130,7 @@ export async function getProjectRefPhotos(
     .select("id, storage_path, archived_at")
     .eq("project_id", projectId)
     .eq("is_project_ref", true)
+    .is("deleted_at", null)
     .order("created_at", { ascending: true });
 
   const photos = (data ?? []) as RefPhoto[];

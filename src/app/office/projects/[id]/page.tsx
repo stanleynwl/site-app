@@ -49,6 +49,7 @@ export default async function OfficeProjectDetail({
   const tp2 = await getTranslations("Projects");
   const tw = await getTranslations("Attendance");
   const tc = await getTranslations("Claims");
+  const ttr = await getTranslations("Trash");
 
   const [reports, deliveries, stockSummary, blocks, refPhotos] =
     await Promise.all([
@@ -107,6 +108,9 @@ export default async function OfficeProjectDetail({
           </Link>
           <Link href={`/office/projects/${id}/claims`} className="underline">
             {tc("title")}
+          </Link>
+          <Link href={`/office/projects/${id}/photos/trash`} className="underline">
+            {ttr("title")}
           </Link>
         </div>
       </div>

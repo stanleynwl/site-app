@@ -186,9 +186,12 @@ export async function getReportPhotos(reportId: string): Promise<ReportPhoto[]> 
     .from("photos")
     .select("id, storage_path, archived_at")
     .eq("daily_report_id", reportId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: true });
   return signPhotos(supabase, (data ?? []) as ReportPhoto[]);
 }
+
+const RECYCLE_DAYS = 3;
 
 // Every photo the site captured on this report's day for the project — the
 // report's own photos PLUS anything shot that day under Progress / Stages /
@@ -207,11 +210,19 @@ export async function getReportDayPhotos(
     supabase
       .from("photos")
       .select("id, storage_path, archived_at, created_at")
-      .eq("daily_report_id", reportId),
+      .eq("daily_report_id", reportId)
+      .is("deleted_at", null),
+    // Progress / stage photos shot that day. Excludes deliveries (DO photos),
+    // purchase-request photos and project reference photos — they have their own
+    // places and shouldn't clutter the daily report.
     supabase
       .from("photos")
       .select("id, storage_path, archived_at, created_at")
       .eq("project_id", projectId)
+      .is("deleted_at", null)
+      .is("delivery_id", null)
+      .is("purchase_request_id", null)
+      .eq("is_project_ref", false)
       .gte("created_at", start)
       .lte("created_at", end),
   ]);
@@ -223,4 +234,78 @@ export async function getReportDayPhotos(
     (a.created_at ?? "").localeCompare(b.created_at ?? ""),
   );
   return signPhotos(supabase, rows);
+}
+
+export type DeletedPhoto = ReportPhoto & { deleted_at: string };
+
+// Photos soft-deleted in the last 3 days for a project — the recycle bin.
+export async function getDeletedPhotos(projectId: string): Promise<DeletedPhoto[]> {
+  if (!isSupabaseConfigured) return [];
+  const supabase = await createClient();
+  const cutoff = new Date(Date.now() - RECYCLE_DAYS * 86_400_000).toISOString();
+  const { data } = await supabase
+    .from("photos")
+    .select("id, storage_path, archived_at, deleted_at")
+    .eq("project_id", projectId)
+    .not("deleted_at", "is", null)
+    .gte("deleted_at", cutoff)
+    .order("deleted_at", { ascending: false });
+  // Sign regardless of archived flag so the bin can preview them.
+  const rows = (data ?? []) as DeletedPhoto[];
+  const signed = await Promise.all(
+    rows.map(async (p) => {
+      const { data: s } = await supabase.storage
+        .from("site-photos")
+        .createSignedUrl(p.storage_path, 3600);
+      return { ...p, url: s?.signedUrl ?? null };
+    }),
+  );
+  return signed;
+}
+
+// Hard-delete photos whose 3-day recovery window has passed (storage + row).
+export async function purgeExpiredDeletedPhotos(projectId: string): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const supabase = await createClient();
+  const cutoff = new Date(Date.now() - RECYCLE_DAYS * 86_400_000).toISOString();
+  const { data } = await supabase
+    .from("photos")
+    .select("id, storage_path")
+    .eq("project_id", projectId)
+    .not("deleted_at", "is", null)
+    .lt("deleted_at", cutoff);
+  const rows = (data ?? []) as { id: string; storage_path: string }[];
+  if (rows.length === 0) return;
+  const paths = rows.map((r) => r.storage_path).filter(Boolean);
+  if (paths.length) await supabase.storage.from("site-photos").remove(paths);
+  await supabase.from("photos").delete().in("id", rows.map((r) => r.id));
+}
+
+// Count of day-photos (report + progress/stage, no DO) per report date — for the
+// "view all" list. One query over the span of the given dates, bucketed in MYT.
+export async function getReportDayPhotoCounts(
+  projectId: string,
+  dates: string[],
+): Promise<Record<string, number>> {
+  if (!isSupabaseConfigured || dates.length === 0) return {};
+  const supabase = await createClient();
+  const min = dates.reduce((a, b) => (a < b ? a : b));
+  const max = dates.reduce((a, b) => (a > b ? a : b));
+  const { data } = await supabase
+    .from("photos")
+    .select("created_at")
+    .eq("project_id", projectId)
+    .is("deleted_at", null)
+    .is("delivery_id", null)
+    .is("purchase_request_id", null)
+    .eq("is_project_ref", false)
+    .gte("created_at", `${min}T00:00:00+08:00`)
+    .lte("created_at", `${max}T23:59:59.999+08:00`);
+  const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
+  const counts: Record<string, number> = {};
+  for (const p of (data ?? []) as { created_at: string }[]) {
+    const d = fmt.format(new Date(p.created_at));
+    counts[d] = (counts[d] ?? 0) + 1;
+  }
+  return counts;
 }

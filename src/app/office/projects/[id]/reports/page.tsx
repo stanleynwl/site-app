@@ -6,6 +6,7 @@ import { getProject } from "@/lib/data/projects";
 import {
   getProjectReports,
   getRecentReportsWithChildren,
+  getReportDayPhotoCounts,
   type ReportWithChildren,
 } from "@/lib/data/reports";
 import { defaultTradeKey } from "@/lib/trades";
@@ -35,6 +36,11 @@ export default async function ProjectReportsPage({
   const tpdf = await getTranslations("Pdf");
 
   const older = allReports.slice(LATEST_COUNT);
+  // Photo count per report day (shown on screen only — never in the PDF export).
+  const photoCounts = await getReportDayPhotoCounts(
+    id,
+    latest.map((r) => r.report_date),
+  );
 
   const weeklyFrom = daysAgoISO(6);
   const weeklyTo = todayISO();
@@ -66,6 +72,24 @@ export default async function ProjectReportsPage({
             <span className="text-base font-semibold">{r.report_date}</span>
             <span className="badge badge-muted">{ts(r.status)}</span>
             {r.is_backdated && <span className="badge badge-warn">{tr("backdatedBadge")}</span>}
+            {photoCounts[r.report_date] ? (
+              <span className="badge badge-accent inline-flex items-center gap-1">
+                <svg
+                  className="h-3 w-3"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L19 6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z" />
+                  <circle cx="12" cy="13" r="3.5" />
+                </svg>
+                {photoCounts[r.report_date]}
+              </span>
+            ) : null}
           </div>
           <Link href={`/office/projects/${id}/reports/${r.id}`} className="text-xs text-accent hover:underline">
             {t("view")} →

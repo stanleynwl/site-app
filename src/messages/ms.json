@@ -145,6 +145,13 @@
     "netPayable": "Bersih perlu dibayar",
     "save": "Simpan tuntutan"
   },
+  "Trash": {
+    "title": "Tong kitar semula",
+    "intro": "Foto yang dipadam disimpan selama 3 hari, kemudian dibuang kekal.",
+    "empty": "Tiada foto dipadam.",
+    "recover": "Pulih",
+    "autoDeletes": "Dibuang dalam {days}h"
+  },
   "Today": {
     "title": "Laporan hari ini",
     "empty": "Anda belum menjadi ahli mana-mana projek.",
