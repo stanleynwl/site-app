@@ -383,6 +383,7 @@
     "approveOrderNoPO": "Lulus & pesan (tanpa PO)",
     "awaitingDelivery": "Dipesan — menunggu tapak mengesahkan penghantaran.",
     "confirmDelivered": "Sahkan diterima",
+    "confirmDeliveredHint": "Laraskan kuantiti di atas jika berubah, kemudian sahkan — tak perlu simpan dahulu.",
     "saveQty": "Simpan",
     "close": "Tutup",
     "status": {

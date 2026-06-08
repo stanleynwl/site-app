@@ -1079,6 +1079,21 @@ export async function confirmDeliveredPurchaseRequest(
   if (!id) return;
 
   const supabase = await createClient();
+
+  // Persist any last-minute quantity edits made on the same form, so the
+  // supervisor confirms delivery in one tap instead of saving each line first.
+  // Inputs are named `qty_<itemId>`; only changed values are written.
+  for (const [key, value] of formData.entries()) {
+    if (!key.startsWith("qty_")) continue;
+    const itemId = key.slice(4);
+    if (!itemId) continue;
+    await supabase
+      .from("purchase_request_items")
+      .update({ quantity: parseQty(value) })
+      .eq("id", itemId)
+      .eq("request_id", id);
+  }
+
   await supabase
     .from("purchase_requests")
     .update({ status: "delivered", delivered_at: new Date().toISOString() })

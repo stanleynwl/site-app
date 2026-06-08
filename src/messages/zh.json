@@ -383,6 +383,7 @@
     "approveOrderNoPO": "批准并下单（无 PO）",
     "awaitingDelivery": "已下单 — 等待工地确认收货。",
     "confirmDelivered": "确认收货",
+    "confirmDeliveredHint": "如数量有变，先在上方修改，然后确认即可，无需先保存。",
     "saveQty": "保存",
     "close": "结案",
     "status": {

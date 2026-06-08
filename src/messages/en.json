@@ -383,6 +383,7 @@
     "approveOrderNoPO": "Approve & order (no PO)",
     "awaitingDelivery": "Ordered — waiting for site to confirm delivery.",
     "confirmDelivered": "Confirm delivered",
+    "confirmDeliveredHint": "Adjust the quantity above if it changed, then confirm — no need to save first.",
     "saveQty": "Save",
     "close": "Close",
     "status": {

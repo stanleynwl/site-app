@@ -62,44 +62,101 @@ export default async function ProjectRequestsPage({
           <p className="text-sm text-black/50 dark:text-white/50">{t("none")}</p>
         ) : (
           <ul className="divide-y divide-black/10 rounded-xl border border-black/10 dark:divide-white/10 dark:border-white/15">
-            {requests.map((r) => (
+            {requests.map((r) => {
+              // Three states for the quantity column:
+              //  • delivered      → read-only (no edits needed once it has arrived)
+              //  • po_issued       → editable INSIDE the confirm-delivered form, so one
+              //                      tap saves the amended quantity + marks it delivered
+              //  • pending/approved → standalone per-line Save (no delivery step yet)
+              const awaitingDelivery = r.status === "po_issued";
+              const isDelivered = r.status === "delivered";
+              return (
               <li key={r.id} className="space-y-1 px-4 py-3 text-sm">
-                <div className="flex items-start justify-between gap-3">
-                  <ul className="flex-1 space-y-1">
-                    {r.items.map((it) => (
-                      <li key={it.id} className="flex items-center gap-2">
-                        <span className="flex-1 font-medium">{itemName(it)}</span>
-                        <form
-                          action={updateRequestItemQuantity}
-                          className="flex items-center gap-1"
-                        >
-                          <input type="hidden" name="item_id" value={it.id} />
-                          <input type="hidden" name="project_id" value={id} />
-                          <input
-                            name="quantity"
-                            type="number"
-                            step="any"
-                            min="0"
-                            defaultValue={it.quantity ?? ""}
-                            aria-label={t("quantity")}
-                            className="w-20 rounded-lg border border-black/15 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50"
-                          />
-                          {it.unit && (
-                            <span className="text-xs text-black/50 dark:text-white/50">
-                              {it.unit}
+                {awaitingDelivery ? (
+                  // One form wraps the lines AND the confirm button: editing a
+                  // quantity here is saved by pressing "Confirm delivered".
+                  <form action={confirmDeliveredPurchaseRequest} className="space-y-2">
+                    <input type="hidden" name="request_id" value={r.id} />
+                    <input type="hidden" name="project_id" value={id} />
+                    <div className="flex items-start justify-between gap-3">
+                      <ul className="flex-1 space-y-1">
+                        {r.items.map((it) => (
+                          <li key={it.id} className="flex items-center gap-2">
+                            <span className="flex-1 font-medium">{itemName(it)}</span>
+                            <input
+                              name={`qty_${it.id}`}
+                              type="number"
+                              step="any"
+                              min="0"
+                              defaultValue={it.quantity ?? ""}
+                              aria-label={t("quantity")}
+                              className="w-20 rounded-lg border border-black/15 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50"
+                            />
+                            {it.unit && (
+                              <span className="text-xs text-black/50 dark:text-white/50">
+                                {it.unit}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                      <span className="shrink-0 rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">
+                        {t(`status.${r.status}`)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-black/45 dark:text-white/45">
+                      {t("confirmDeliveredHint")}
+                    </p>
+                    <button className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25">
+                      {t("confirmDelivered")}
+                    </button>
+                  </form>
+                ) : (
+                  <div className="flex items-start justify-between gap-3">
+                    <ul className="flex-1 space-y-1">
+                      {r.items.map((it) => (
+                        <li key={it.id} className="flex items-center gap-2">
+                          <span className="flex-1 font-medium">{itemName(it)}</span>
+                          {isDelivered ? (
+                            // Delivered → quantity is fixed; just show it.
+                            <span className="text-black/70 dark:text-white/70">
+                              {it.quantity ?? "—"}
+                              {it.unit ? ` ${it.unit}` : ""}
                             </span>
+                          ) : (
+                            <form
+                              action={updateRequestItemQuantity}
+                              className="flex items-center gap-1"
+                            >
+                              <input type="hidden" name="item_id" value={it.id} />
+                              <input type="hidden" name="project_id" value={id} />
+                              <input
+                                name="quantity"
+                                type="number"
+                                step="any"
+                                min="0"
+                                defaultValue={it.quantity ?? ""}
+                                aria-label={t("quantity")}
+                                className="w-20 rounded-lg border border-black/15 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50"
+                              />
+                              {it.unit && (
+                                <span className="text-xs text-black/50 dark:text-white/50">
+                                  {it.unit}
+                                </span>
+                              )}
+                              <button className="rounded-lg border border-black/20 px-2 py-1 text-xs font-medium dark:border-white/25">
+                                {t("saveQty")}
+                              </button>
+                            </form>
                           )}
-                          <button className="rounded-lg border border-black/20 px-2 py-1 text-xs font-medium dark:border-white/25">
-                            {t("saveQty")}
-                          </button>
-                        </form>
-                      </li>
-                    ))}
-                  </ul>
-                  <span className="shrink-0 rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">
-                    {t(`status.${r.status}`)}
-                  </span>
-                </div>
+                        </li>
+                      ))}
+                    </ul>
+                    <span className="shrink-0 rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">
+                      {t(`status.${r.status}`)}
+                    </span>
+                  </div>
+                )}
                 {r.photos.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {r.photos.map((p) =>
@@ -126,17 +183,9 @@ export default async function ProjectRequestsPage({
                     {r.urgency_reason}
                   </p>
                 )}
-                {r.status === "po_issued" && (
-                  <form action={confirmDeliveredPurchaseRequest}>
-                    <input type="hidden" name="request_id" value={r.id} />
-                    <input type="hidden" name="project_id" value={id} />
-                    <button className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25">
-                      {t("confirmDelivered")}
-                    </button>
-                  </form>
-                )}
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </section>
