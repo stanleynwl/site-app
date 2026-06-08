@@ -36,9 +36,15 @@ export async function getProjectPhotos(
     .is("purchase_request_id", null) // …and exclude purchase-request photos
     .eq("is_project_ref", false) // …and exclude project reference photos
     .is("daily_report_id", null) // …and exclude daily-report photos
+    .is("deleted_at", null) // …and exclude soft-deleted (recycle-bin) photos
     .order("created_at", { ascending: false });
 
-  return (data ?? []).map((row) => {
+  // De-dupe by storage_path: a double-submit can create several rows pointing at
+  // the same file, which would otherwise repeat the identical image in exports.
+  // Prefer a viewable (non-archived) row over an archived duplicate so a photo
+  // never disappears just because an archived dup happened to sort first.
+  const byPath = new Map<string, ProjectPhoto>();
+  for (const row of data ?? []) {
     const r = row as unknown as {
       id: string;
       storage_path: string;
@@ -48,7 +54,9 @@ export async function getProjectPhotos(
       archived_at: string | null;
       photo_tags: { project_tags: ProjectTag | null }[] | null;
     };
-    return {
+    const existing = byPath.get(r.storage_path);
+    if (existing && existing.archived_at == null) continue; // keep viewable one
+    byPath.set(r.storage_path, {
       id: r.id,
       storage_path: r.storage_path,
       caption: r.caption,
@@ -58,8 +66,9 @@ export async function getProjectPhotos(
       tags: (r.photo_tags ?? [])
         .map((pt) => pt.project_tags)
         .filter((x): x is ProjectTag => x != null),
-    };
-  });
+    });
+  }
+  return [...byPath.values()];
 }
 
 // Resolve a short-lived signed URL per photo. Archived photos no longer exist in
