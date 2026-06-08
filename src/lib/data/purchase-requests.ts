@@ -33,6 +33,7 @@ export type PurchaseRequestItem = {
   material: { name: string; unit: string | null } | null;
   quantity: number | null;
   unit: string | null;
+  spec: string | null; // free-text size/spec, e.g. timber "12 ft · 4 tonne"
 };
 
 export type RequestPhoto = {
@@ -60,7 +61,7 @@ export type PurchaseRequest = {
 };
 
 const PR_COLUMNS =
-  "id, project_id, needed_by, urgency_reason, note, status, po_number, rejected_reason, created_at, delivered_at, supplier:suppliers(name), items:purchase_request_items(id, material_text, quantity, unit, material:materials(name, unit)), photos(id, storage_path, archived_at)";
+  "id, project_id, needed_by, urgency_reason, note, status, po_number, rejected_reason, created_at, delivered_at, supplier:suppliers(name), items:purchase_request_items(id, material_text, quantity, unit, spec, material:materials(name, unit)), photos(id, storage_path, archived_at)";
 
 // Requests still worth showing: all open ones, plus delivered ones for a short
 // hold window (DELIVERED_HOLD_DAYS) after delivery. Used by BOTH the supervisor's
@@ -112,7 +113,8 @@ export function prItemsLabel(r: PurchaseRequest): string {
   return r.items
     .map((i) => {
       const q = i.quantity != null ? ` (${i.quantity}${i.unit ? ` ${i.unit}` : ""})` : "";
-      return `${itemName(i)}${q}`;
+      const s = i.spec ? ` — ${i.spec}` : "";
+      return `${itemName(i)}${q}${s}`;
     })
     .join(", ");
 }

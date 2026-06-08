@@ -882,6 +882,7 @@ export async function createPurchaseRequest(
   const materialTexts = formData.getAll("request_material_text").map(String);
   const quantities = formData.getAll("request_quantity").map(String);
   const units = formData.getAll("request_unit").map(String);
+  const specs = formData.getAll("request_spec").map(String);
 
   const items = materialIds
     .map((mid, i) => {
@@ -892,6 +893,7 @@ export async function createPurchaseRequest(
         material_text: idVal ? null : text || null,
         quantity: parseQty(quantities[i] ?? null),
         unit: (units[i] ?? "").trim() || null,
+        spec: (specs[i] ?? "").trim() || null,
       };
     })
     .filter((it) => it.material_id || it.material_text);

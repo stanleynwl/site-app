@@ -358,6 +358,7 @@
     "materialText": "Material name",
     "quantity": "Quantity",
     "unit": "Unit",
+    "specHint": "Size / spec (optional) — e.g. 12 ft, 4 tonne",
     "neededBy": "Needed by",
     "requested": "Requested",
     "urgencyReason": "Why is this needed / urgent?",

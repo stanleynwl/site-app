@@ -9,9 +9,21 @@ import type { Material } from "@/lib/data/catalog";
 const baseInput =
   "rounded-lg border border-black/15 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
 
-type Row = { query: string; materialId: string; unit: string; quantity: string };
+type Row = {
+  query: string;
+  materialId: string;
+  unit: string;
+  quantity: string;
+  spec: string;
+};
 
-const blankRow = (): Row => ({ query: "", materialId: "", unit: "", quantity: "" });
+const blankRow = (): Row => ({
+  query: "",
+  materialId: "",
+  unit: "",
+  quantity: "",
+  spec: "",
+});
 
 // Repeatable request line items with a type-to-search material picker. Each row
 // submits hidden request_material_id (catalog) / request_material_text (free
@@ -128,6 +140,15 @@ export function RequestItemsField({ materials }: { materials: Material[] }) {
                 ✕
               </button>
             </div>
+
+            {/* Optional free-text size/spec, e.g. timber "12 ft" or "12 ft · 4 tonne". */}
+            <input
+              name="request_spec"
+              value={row.spec}
+              onChange={(e) => patch(i, { spec: e.target.value })}
+              placeholder={t("specHint")}
+              className={`${baseInput} w-full`}
+            />
 
             {isFreeText && (
               <p className="text-xs text-black/40 dark:text-white/40">

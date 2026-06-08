@@ -82,7 +82,14 @@ export default async function ProjectRequestsPage({
                       <ul className="flex-1 space-y-1">
                         {r.items.map((it) => (
                           <li key={it.id} className="flex items-center gap-2">
-                            <span className="flex-1 font-medium">{itemName(it)}</span>
+                            <div className="flex-1">
+                              <div className="font-medium">{itemName(it)}</div>
+                              {it.spec && (
+                                <div className="text-xs text-black/50 dark:text-white/50">
+                                  {it.spec}
+                                </div>
+                              )}
+                            </div>
                             <input
                               name={`qty_${it.id}`}
                               type="number"
@@ -116,7 +123,14 @@ export default async function ProjectRequestsPage({
                     <ul className="flex-1 space-y-1">
                       {r.items.map((it) => (
                         <li key={it.id} className="flex items-center gap-2">
-                          <span className="flex-1 font-medium">{itemName(it)}</span>
+                          <div className="flex-1">
+                            <div className="font-medium">{itemName(it)}</div>
+                            {it.spec && (
+                              <div className="text-xs text-black/50 dark:text-white/50">
+                                {it.spec}
+                              </div>
+                            )}
+                          </div>
                           {isDelivered ? (
                             // Delivered → quantity is fixed; just show it.
                             <span className="text-black/70 dark:text-white/70">

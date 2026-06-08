@@ -358,6 +358,7 @@
     "materialText": "Nama bahan",
     "quantity": "Kuantiti",
     "unit": "Unit",
+    "specHint": "Saiz / spesifikasi (pilihan) — cth. 12 ft, 4 tan",
     "neededBy": "Diperlukan sebelum",
     "requested": "Diminta",
     "urgencyReason": "Mengapa ia diperlukan / mendesak?",

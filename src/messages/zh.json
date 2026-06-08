@@ -358,6 +358,7 @@
     "materialText": "材料名称",
     "quantity": "数量",
     "unit": "单位",
+    "specHint": "尺寸 / 规格（可选）— 例如 12 ft、4 吨",
     "neededBy": "需求日期",
     "requested": "申请于",
     "urgencyReason": "为何需要 / 紧急？",

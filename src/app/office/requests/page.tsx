@@ -74,6 +74,12 @@ export default async function OfficeRequestsPage() {
                               {it.unit ? ` ${it.unit}` : ""}
                             </span>
                           )}
+                          {it.spec && (
+                            <span className="font-normal text-black/50 dark:text-white/50">
+                              {" "}
+                              — {it.spec}
+                            </span>
+                          )}
                         </li>
                       ))}
                     </ul>
