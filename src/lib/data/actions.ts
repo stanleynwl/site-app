@@ -1021,7 +1021,11 @@ export async function issuePurchaseRequestPO(formData: FormData): Promise<void> 
   const po = String(formData.get("po_number") ?? "").trim();
   if (!po) return; // PO number is the whole point of this step
   const supplierId = String(formData.get("supplier_id") ?? "");
-  const patch: Record<string, unknown> = { status: "po_issued", po_number: po };
+  const patch: Record<string, unknown> = {
+    status: "po_issued",
+    po_number: po,
+    ordered_at: new Date().toISOString(),
+  };
   if (supplierId) patch.supplier_id = supplierId;
   await updatePurchaseRequest(formData, patch, {
     action: "request.order",
@@ -1036,7 +1040,10 @@ export async function issuePurchaseRequestPO(formData: FormData): Promise<void> 
 export async function orderPurchaseRequestNoPO(formData: FormData): Promise<void> {
   if (!isSupabaseConfigured) return;
   const supplierId = String(formData.get("supplier_id") ?? "");
-  const patch: Record<string, unknown> = { status: "po_issued" };
+  const patch: Record<string, unknown> = {
+    status: "po_issued",
+    ordered_at: new Date().toISOString(),
+  };
   if (supplierId) patch.supplier_id = supplierId;
   await updatePurchaseRequest(formData, patch, {
     action: "request.order",
@@ -1057,6 +1064,7 @@ export async function approveAndOrderPurchaseRequestNoPO(
       status: "po_issued",
       approved_by: profile?.id ?? null,
       approved_at: new Date().toISOString(),
+      ordered_at: new Date().toISOString(),
     },
     { action: "request.order", detail: "Approved & ordered (no PO)" },
   );

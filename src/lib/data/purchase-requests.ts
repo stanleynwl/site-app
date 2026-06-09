@@ -54,6 +54,7 @@ export type PurchaseRequest = {
   po_number: string | null;
   rejected_reason: string | null;
   created_at: string;
+  ordered_at: string | null;
   delivered_at: string | null;
   items: PurchaseRequestItem[];
   photos: RequestPhoto[];
@@ -61,7 +62,7 @@ export type PurchaseRequest = {
 };
 
 const PR_COLUMNS =
-  "id, project_id, needed_by, urgency_reason, note, status, po_number, rejected_reason, created_at, delivered_at, supplier:suppliers(name), items:purchase_request_items(id, material_text, quantity, unit, spec, material:materials(name, unit)), photos(id, storage_path, archived_at)";
+  "id, project_id, needed_by, urgency_reason, note, status, po_number, rejected_reason, created_at, ordered_at, delivered_at, supplier:suppliers(name), items:purchase_request_items(id, material_text, quantity, unit, spec, material:materials(name, unit)), photos(id, storage_path, archived_at)";
 
 // Requests still worth showing: all open ones, plus delivered ones for a short
 // hold window (DELIVERED_HOLD_DAYS) after delivery. Used by BOTH the supervisor's
@@ -119,12 +120,14 @@ export function prItemsLabel(r: PurchaseRequest): string {
     .join(", ");
 }
 
-// Whole hours a request has been waiting since it was raised — for aging colour.
+// Whole hours a request waited for office action — for aging colour. The clock
+// stops once the office orders it (ordered_at); it does not keep ticking while
+// the request sits with the supplier/site. Falls back to delivered_at for any
+// older row missing ordered_at, otherwise counts up to now.
 export function prAgeHours(r: PurchaseRequest): number {
-  return Math.max(
-    0,
-    Math.floor((Date.now() - new Date(r.created_at).getTime()) / 3_600_000),
-  );
+  const stop = r.ordered_at ?? r.delivered_at;
+  const end = stop ? new Date(stop).getTime() : Date.now();
+  return Math.max(0, Math.floor((end - new Date(r.created_at).getTime()) / 3_600_000));
 }
 
 // Resolve short-lived signed URLs for each request's photos (skip archived ones,
