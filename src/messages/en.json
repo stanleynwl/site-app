@@ -1,4 +1,9 @@
 {
+  "Offline": {
+    "title": "You're offline",
+    "body": "Your draft has been saved to this device. Submit when you're back in coverage.",
+    "hint": "Tip: drafts are saved automatically as you type — your work is safe."
+  },
   "App": {
     "name": "SiteApp",
     "tagline": "Daily site reports, organized by project and by day."

@@ -1,4 +1,9 @@
 {
+  "Offline": {
+    "title": "Anda luar talian",
+    "body": "Draf anda telah disimpan pada peranti ini. Hantar apabila anda kembali dalam liputan.",
+    "hint": "Petua: draf disimpan secara automatik semasa anda menaip — kerja anda selamat."
+  },
   "App": {
     "name": "SiteApp",
     "tagline": "Laporan tapak harian, disusun mengikut projek dan hari."

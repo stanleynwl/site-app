@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useOptimistic, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { submitProgress } from "@/lib/data/actions";
 import { PhotoCapture } from "@/components/photo-capture";
@@ -9,8 +9,6 @@ import { SubmitButton } from "@/components/submit-button";
 const baseInput =
   "rounded-lg border border-black/25 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/60 dark:border-white/30 dark:focus:border-white/60";
 
-// One progress item: shows units done / total, lets the supervisor update the
-// cumulative units-done, and (optionally) snap a photo with the submission.
 export function ProgressItemRow({
   itemId,
   projectId,
@@ -30,11 +28,22 @@ export function ProgressItemRow({
 }) {
   const t = useTranslations("Progress");
   const [showPhoto, setShowPhoto] = useState(false);
-  const done = unitCount != null && unitCount > 0 && unitsDone >= unitCount;
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Optimistic: show the new value immediately while the server action is in flight.
+  const [optimisticDone, setOptimisticDone] = useOptimistic(unitsDone);
+
+  const done = unitCount != null && unitCount > 0 && optimisticDone >= unitCount;
   const saved = photos.filter((p) => p.url);
 
+  async function handleSubmit(formData: FormData) {
+    const val = Number(formData.get("units_done")) || 0;
+    setOptimisticDone(val);
+    await submitProgress(formData);
+  }
+
   return (
-    <form action={submitProgress} className="space-y-2 py-2">
+    <form action={handleSubmit} className="space-y-2 py-2">
       <input type="hidden" name="item_id" value={itemId} />
       <input type="hidden" name="project_id" value={projectId} />
 
@@ -45,15 +54,17 @@ export function ProgressItemRow({
         </span>
         <div className="flex items-center gap-2">
           <input
+            ref={inputRef}
             type="number"
             name="units_done"
             min="0"
             max={unitCount ?? undefined}
-            defaultValue={unitsDone}
+            defaultValue={optimisticDone}
+            key={optimisticDone}
             className={`${baseInput} w-16 text-right`}
             aria-label={t("unitsDone")}
           />
-          <span className="text-xs text-black/50 dark:text-white/50">
+          <span className="text-xs text-black/60 dark:text-white/60">
             / {unitCount ?? "—"}
           </span>
           <button
@@ -63,13 +74,12 @@ export function ProgressItemRow({
           >
             {t("addPhoto")}
           </button>
-          <SubmitButton className="flex min-h-11 items-center rounded-lg border border-black/20 px-3 text-xs font-medium disabled:opacity-50 dark:border-white/25">
+          <SubmitButton className="flex min-h-11 items-center rounded-lg border border-black/25 px-3 text-xs font-medium disabled:opacity-50 dark:border-white/30">
             {t("save")}
           </SubmitButton>
         </div>
       </div>
 
-      {/* Photos already saved against this item — confirms the save persisted. */}
       {saved.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {saved.map((p) => (
