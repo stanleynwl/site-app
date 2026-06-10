@@ -152,3 +152,26 @@ export async function withSignedRequestPhotos(
     })),
   );
 }
+
+// Open request counts per project, also flagging how many are aged (48h+).
+// Used for the office dashboard without signing photo URLs.
+export async function getOpenRequestCountsByProject(): Promise<
+  Record<string, { total: number; aged: number }>
+> {
+  if (!isSupabaseConfigured) return {};
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("purchase_requests")
+    .select("project_id, status, created_at, ordered_at, delivered_at")
+    .in("status", [...PR_OPEN_STATUSES, "delivered"]);
+  const rows = (data ?? []) as unknown as PurchaseRequest[];
+  const visible = rows.filter(isRequestVisible);
+  const counts: Record<string, { total: number; aged: number }> = {};
+  for (const r of visible) {
+    const key = r.project_id;
+    if (!counts[key]) counts[key] = { total: 0, aged: 0 };
+    counts[key].total += 1;
+    if (prAgeHours(r) >= 48) counts[key].aged += 1;
+  }
+  return counts;
+}

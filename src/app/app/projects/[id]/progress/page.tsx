@@ -14,6 +14,7 @@ import { progressItemLabel } from "@/lib/progress-template";
 import { todayISO } from "@/lib/date";
 import { ProgressItemRow } from "@/components/progress-item-row";
 import { BlockBrowser, type BrowserBlock } from "@/components/block-browser";
+import { HintCard } from "@/components/hint-card";
 
 export default async function ProjectProgressPage({
   params,
@@ -25,6 +26,7 @@ export default async function ProjectProgressPage({
   if (!project) notFound();
 
   const t = await getTranslations("Progress");
+  const th = await getTranslations("Hints");
   const [rawBlocks, refPhotos] = await Promise.all([
     getProjectBlocks(id),
     getProjectRefPhotos(id),
@@ -46,6 +48,8 @@ export default async function ProjectProgressPage({
         <h1 className="mt-1 text-lg font-semibold">{t("title")}</h1>
         <p className="text-sm text-black/70 dark:text-white/70">{t("intro")}</p>
       </div>
+
+      <HintCard id="progress" dismissLabel={th("dismiss")}>{th("progress")}</HintCard>
 
       <RefPhotoStrip photos={refPhotos} />
 

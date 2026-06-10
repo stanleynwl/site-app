@@ -212,6 +212,51 @@ export function hasNewProgress(
   );
 }
 
+// Lightweight bulk check for the office dashboard: returns which project IDs
+// have new progress or stages since the office's last-seen marker. Two queries
+// total regardless of project count (RLS already scopes to visible data).
+export async function getProjectIdsWithNewStructure(
+  projects: { id: string; progress_seen_at: string | null; stages_seen_at: string | null }[],
+): Promise<{ newProgress: Set<string>; newStages: Set<string> }> {
+  const empty = { newProgress: new Set<string>(), newStages: new Set<string>() };
+  if (!isSupabaseConfigured || projects.length === 0) return empty;
+
+  const seenMap = new Map(
+    projects.map((p) => [p.id, { progress: p.progress_seen_at, stages: p.stages_seen_at }]),
+  );
+  const supabase = await createClient();
+
+  const [{ data: progressRows }, { data: stageRows }] = await Promise.all([
+    supabase
+      .from("block_progress_items")
+      .select("updated_at, project_blocks!inner(project_id)")
+      .gt("units_done", 0),
+    supabase
+      .from("block_stages")
+      .select("completed_at, project_blocks!inner(project_id)")
+      .not("completed_at", "is", null),
+  ]);
+
+  const newProgress = new Set<string>();
+  const newStages = new Set<string>();
+
+  for (const row of progressRows ?? []) {
+    const projectId = (row.project_blocks as unknown as { project_id: string }).project_id;
+    const seen = seenMap.get(projectId);
+    if (!seen) continue;
+    if (seen.progress == null || row.updated_at > seen.progress) newProgress.add(projectId);
+  }
+  for (const row of stageRows ?? []) {
+    const projectId = (row.project_blocks as unknown as { project_id: string }).project_id;
+    const seen = seenMap.get(projectId);
+    if (!seen) continue;
+    const ca = row.completed_at ?? "";
+    if (seen.stages == null || ca > seen.stages) newStages.add(projectId);
+  }
+
+  return { newProgress, newStages };
+}
+
 // Block-level progress %: average of each item's units_done / unit_count.
 // Returns null when there's no unit_count or no items (nothing to measure).
 export function blockProgressPercent(block: ProjectBlock): number | null {

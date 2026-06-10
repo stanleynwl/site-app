@@ -154,3 +154,19 @@ export function deliveryVariance(d: Delivery): number | null {
   if (d.received_quantity == null || d.do_quantity == null) return null;
   return Number((d.received_quantity - d.do_quantity).toFixed(3));
 }
+
+// Count of pending DOs per project (do_quantity IS NULL). Used for the office
+// dashboard without pulling full delivery rows.
+export async function getPendingDoCountByProject(): Promise<Record<string, number>> {
+  if (!isSupabaseConfigured) return {};
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("deliveries")
+    .select("project_id")
+    .is("do_quantity", null);
+  const counts: Record<string, number> = {};
+  for (const row of (data ?? []) as { project_id: string }[]) {
+    counts[row.project_id] = (counts[row.project_id] ?? 0) + 1;
+  }
+  return counts;
+}

@@ -37,8 +37,14 @@
     "intro": "Who submitted or changed what, newest first.",
     "empty": "No activity yet.",
     "action": {
-      "report": { "submit": "submitted a daily report", "unlock": "unlocked a report" },
-      "delivery": { "create": "logged a delivery", "update": "updated a delivery" },
+      "report": {
+        "submit": "submitted a daily report",
+        "unlock": "unlocked a report"
+      },
+      "delivery": {
+        "create": "logged a delivery",
+        "update": "updated a delivery"
+      },
       "request": {
         "create": "raised a request",
         "approve": "accepted a request",
@@ -48,12 +54,25 @@
         "delivered": "confirmed a request delivered",
         "amend": "amended a request"
       },
-      "progress": { "submit": "updated progress" },
-      "stage": { "complete": "completed a stage", "reopen": "reopened a stage" },
-      "stock": { "count": "recorded a stock count" },
-      "attendance": { "record": "recorded attendance" },
-      "advance": { "create": "logged an advance" },
-      "claim": { "update": "updated a claim" }
+      "progress": {
+        "submit": "updated progress"
+      },
+      "stage": {
+        "complete": "completed a stage",
+        "reopen": "reopened a stage"
+      },
+      "stock": {
+        "count": "recorded a stock count"
+      },
+      "attendance": {
+        "record": "recorded attendance"
+      },
+      "advance": {
+        "create": "logged an advance"
+      },
+      "claim": {
+        "update": "updated a claim"
+      }
     }
   },
   "Notifications": {
@@ -275,7 +294,16 @@
     "title": "Dashboard",
     "empty": "No projects yet.",
     "latestReport": "Latest report",
-    "noReports": "No reports yet"
+    "noReports": "No reports yet",
+    "openRequests": "Requests",
+    "pendingDOs": "DOs",
+    "reportSubmitted": "Submitted",
+    "reportDraft": "Draft",
+    "reportNone": "Not started",
+    "requestsAged": "{n} aged",
+    "newStructure": "New activity",
+    "newProgress": "New progress",
+    "newStages": "New stages"
   },
   "Deliveries": {
     "title": "Deliveries",
@@ -334,7 +362,12 @@
     "summary": "{deliveries} deliveries · {photos} photos",
     "viewDeliveries": "View deliveries",
     "downloadAll": "Download all",
-    "downloadSelected": "Download selected"
+    "downloadSelected": "Download selected",
+    "filterSearch": "Search project or material…",
+    "filterProject": "Project",
+    "filterSupplier": "Supplier",
+    "filterMaterial": "Material",
+    "filterAll": "All"
   },
   "Stock": {
     "title": "Stock on site",
@@ -410,8 +443,13 @@
       "closed": "Closed",
       "rejected": "Rejected"
     },
+    "filterAll": "All",
+    "filterSearch": "Search project or material…",
     "draftRestored": "Draft restored — unsaved changes from your last session.",
-    "draftDiscard": "Discard"
+    "draftDiscard": "Discard",
+    "filterProject": "Project",
+    "filterStatus": "Status",
+    "filterSupplier": "Supplier"
   },
   "Photos": {
     "title": "Progress",
@@ -615,5 +653,13 @@
     "en": "English",
     "ms": "Bahasa Malaysia",
     "zh": "中文"
+  },
+  "Hints": {
+    "dismiss": "Got it",
+    "report": "Tap Save draft anytime — your progress is never lost.",
+    "progress": "Enter total units done to date, not just this session.",
+    "stages": "Mark each stage complete as the work is done.",
+    "requests": "The office will be notified as soon as you submit.",
+    "deliveries": "Snap the delivery note — the office will key in the details."
   }
 }

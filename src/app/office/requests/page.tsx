@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import {
@@ -15,6 +16,8 @@ import {
   orderPurchaseRequestNoPO,
   closePurchaseRequest,
 } from "@/lib/data/actions";
+import { FilterChips, SearchBox } from "@/components/filter-chips";
+import type { FilterOption } from "@/components/filter-chips";
 
 const inputCls =
   "rounded-lg border border-black/15 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
@@ -32,7 +35,12 @@ function ageClass(hours: number): string {
   return "text-black/50 dark:text-white/50";
 }
 
-export default async function OfficeRequestsPage() {
+export default async function OfficeRequestsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string>>;
+}) {
+  const params = await searchParams;
   const t = await getTranslations("Requests");
   const [rawRequests, suppliers] = await Promise.all([
     getOpenPurchaseRequests(),
@@ -40,6 +48,55 @@ export default async function OfficeRequestsPage() {
   ]);
   const requests = await withSignedRequestPhotos(rawRequests);
   const activeSuppliers = suppliers.filter((s) => s.active);
+
+  // Derive project list for filter chips from the fetched requests.
+  const projectOptions: FilterOption[] = Array.from(
+    new Map(
+      requests
+        .filter((r) => r.project?.name)
+        .map((r) => [r.project_id, { label: r.project!.name!, value: r.project_id }]),
+    ).values(),
+  );
+
+  const statusOptions: FilterOption[] = [
+    { label: t("status.pending"), value: "pending" },
+    { label: t("status.approved"), value: "approved" },
+    { label: t("status.po_issued"), value: "po_issued" },
+    { label: t("status.delivered"), value: "delivered" },
+  ];
+
+  // Supplier names that actually appear in the current queue (avoids showing
+  // suppliers with no open requests as filter options).
+  const activeSupplierNamesInQueue = new Set(
+    requests.map((r) => r.supplier?.name).filter(Boolean),
+  );
+  const supplierOptions: FilterOption[] = activeSuppliers
+    .filter((s) => activeSupplierNamesInQueue.has(s.name))
+    .map((s) => ({ label: s.name, value: s.name }));
+
+  // Server-side filter from URL params.
+  const qProject = params.project ?? "";
+  const qStatus = params.status ?? "";
+  const qSupplier = params.supplier ?? "";
+  const qSearch = (params.q ?? "").toLowerCase();
+
+  const filtered = requests.filter((r) => {
+    if (qProject && r.project_id !== qProject) return false;
+    if (qStatus && r.status !== qStatus) return false;
+    if (qSupplier && r.supplier?.name !== qSupplier) return false;
+    if (qSearch) {
+      const haystack = [
+        r.project?.name ?? "",
+        r.supplier?.name ?? "",
+        ...r.items.map((i) => itemName(i)),
+        r.note ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      if (!haystack.includes(qSearch)) return false;
+    }
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -50,11 +107,25 @@ export default async function OfficeRequestsPage() {
         </p>
       </div>
 
-      {requests.length === 0 ? (
+      {/* Filters — client components wrapped in Suspense for useSearchParams */}
+      <Suspense>
+        <div className="space-y-3 rounded-xl border border-black/10 p-3 dark:border-white/15">
+          <SearchBox paramKey="q" placeholder={t("filterSearch")} />
+          {projectOptions.length > 1 && (
+            <FilterChips paramKey="project" options={projectOptions} label={t("filterProject")} allLabel={t("filterAll")} />
+          )}
+          <FilterChips paramKey="status" options={statusOptions} label={t("filterStatus")} allLabel={t("filterAll")} />
+          {supplierOptions.length > 0 && (
+            <FilterChips paramKey="supplier" options={supplierOptions} label={t("filterSupplier")} allLabel={t("filterAll")} />
+          )}
+        </div>
+      </Suspense>
+
+      {filtered.length === 0 ? (
         <p className="text-sm text-black/50 dark:text-white/50">{t("empty")}</p>
       ) : (
         <ul className="space-y-3">
-          {requests.map((r) => {
+          {filtered.map((r) => {
             const age = prAgeHours(r);
             return (
               <li

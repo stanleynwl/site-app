@@ -337,3 +337,23 @@ export async function getReportDayPhotoCounts(
   }
   return counts;
 }
+
+// Today's submitted/draft report status per project — for the office dashboard.
+export async function getTodayReportsByProject(): Promise<
+  Record<string, ReportStatus>
+> {
+  if (!isSupabaseConfigured) return {};
+  const supabase = await createClient();
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kuala_Lumpur",
+  }).format(new Date());
+  const { data } = await supabase
+    .from("daily_reports")
+    .select("project_id, status")
+    .eq("report_date", today);
+  const map: Record<string, ReportStatus> = {};
+  for (const row of (data ?? []) as { project_id: string; status: ReportStatus }[]) {
+    map[row.project_id] = row.status;
+  }
+  return map;
+}

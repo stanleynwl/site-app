@@ -37,8 +37,14 @@
     "intro": "Siapa hantar atau ubah apa, terbaharu dahulu.",
     "empty": "Tiada aktiviti lagi.",
     "action": {
-      "report": { "submit": "menghantar laporan harian", "unlock": "membuka kunci laporan" },
-      "delivery": { "create": "merekod penghantaran", "update": "mengemas kini penghantaran" },
+      "report": {
+        "submit": "menghantar laporan harian",
+        "unlock": "membuka kunci laporan"
+      },
+      "delivery": {
+        "create": "merekod penghantaran",
+        "update": "mengemas kini penghantaran"
+      },
       "request": {
         "create": "membuat permintaan",
         "approve": "menerima permintaan",
@@ -48,12 +54,25 @@
         "delivered": "mengesahkan permintaan diterima",
         "amend": "meminda permintaan"
       },
-      "progress": { "submit": "mengemas kini kemajuan" },
-      "stage": { "complete": "menyiapkan peringkat", "reopen": "membuka semula peringkat" },
-      "stock": { "count": "merekod kiraan stok" },
-      "attendance": { "record": "merekod kehadiran" },
-      "advance": { "create": "merekod pendahuluan" },
-      "claim": { "update": "mengemas kini tuntutan" }
+      "progress": {
+        "submit": "mengemas kini kemajuan"
+      },
+      "stage": {
+        "complete": "menyiapkan peringkat",
+        "reopen": "membuka semula peringkat"
+      },
+      "stock": {
+        "count": "merekod kiraan stok"
+      },
+      "attendance": {
+        "record": "merekod kehadiran"
+      },
+      "advance": {
+        "create": "merekod pendahuluan"
+      },
+      "claim": {
+        "update": "mengemas kini tuntutan"
+      }
     }
   },
   "Notifications": {
@@ -275,7 +294,16 @@
     "title": "Papan Pemuka",
     "empty": "Tiada projek lagi.",
     "latestReport": "Laporan terkini",
-    "noReports": "Tiada laporan lagi"
+    "noReports": "Tiada laporan lagi",
+    "openRequests": "Permintaan",
+    "pendingDOs": "DO",
+    "reportSubmitted": "Dihantar",
+    "reportDraft": "Draf",
+    "reportNone": "Belum mula",
+    "requestsAged": "{n} tertangguh",
+    "newStructure": "Aktiviti baru",
+    "newProgress": "Kemajuan baru",
+    "newStages": "Peringkat baru"
   },
   "Deliveries": {
     "title": "Penghantaran",
@@ -334,7 +362,12 @@
     "summary": "{deliveries} penghantaran · {photos} foto",
     "viewDeliveries": "Lihat penghantaran",
     "downloadAll": "Muat turun semua",
-    "downloadSelected": "Muat turun pilihan"
+    "downloadSelected": "Muat turun pilihan",
+    "filterSearch": "Cari projek atau bahan…",
+    "filterProject": "Projek",
+    "filterSupplier": "Pembekal",
+    "filterMaterial": "Bahan",
+    "filterAll": "Semua"
   },
   "Stock": {
     "title": "Stok di tapak",
@@ -410,8 +443,13 @@
       "closed": "Ditutup",
       "rejected": "Ditolak"
     },
+    "filterAll": "Semua",
+    "filterSearch": "Cari projek atau bahan…",
     "draftRestored": "Draf dipulihkan — perubahan yang belum disimpan daripada sesi lepas.",
-    "draftDiscard": "Buang"
+    "draftDiscard": "Buang",
+    "filterProject": "Projek",
+    "filterStatus": "Status",
+    "filterSupplier": "Pembekal"
   },
   "Photos": {
     "title": "Kemajuan",
@@ -615,5 +653,13 @@
     "en": "English",
     "ms": "Bahasa Malaysia",
     "zh": "中文"
+  },
+  "Hints": {
+    "dismiss": "Faham",
+    "report": "Ketik Simpan draf — kemajuan anda tidak akan hilang.",
+    "progress": "Masukkan jumlah unit siap sehingga kini, bukan sesi ini sahaja.",
+    "stages": "Tandakan setiap peringkat selesai apabila kerja dibuat.",
+    "requests": "Pejabat akan dimaklumkan sebaik anda menghantar.",
+    "deliveries": "Ambil gambar nota penghantaran — pejabat akan masukkan butiran."
   }
 }

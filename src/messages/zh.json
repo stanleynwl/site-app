@@ -37,8 +37,14 @@
     "intro": "谁提交或更改了什么，最新在前。",
     "empty": "暂无记录。",
     "action": {
-      "report": { "submit": "提交了日报", "unlock": "解锁了日报" },
-      "delivery": { "create": "记录了送货", "update": "更新了送货" },
+      "report": {
+        "submit": "提交了日报",
+        "unlock": "解锁了日报"
+      },
+      "delivery": {
+        "create": "记录了送货",
+        "update": "更新了送货"
+      },
       "request": {
         "create": "提出了申请",
         "approve": "接受了申请",
@@ -48,12 +54,25 @@
         "delivered": "确认申请已送达",
         "amend": "修改了申请"
       },
-      "progress": { "submit": "更新了进度" },
-      "stage": { "complete": "完成了阶段", "reopen": "重新打开了阶段" },
-      "stock": { "count": "记录了库存盘点" },
-      "attendance": { "record": "记录了考勤" },
-      "advance": { "create": "记录了预支" },
-      "claim": { "update": "更新了请款" }
+      "progress": {
+        "submit": "更新了进度"
+      },
+      "stage": {
+        "complete": "完成了阶段",
+        "reopen": "重新打开了阶段"
+      },
+      "stock": {
+        "count": "记录了库存盘点"
+      },
+      "attendance": {
+        "record": "记录了考勤"
+      },
+      "advance": {
+        "create": "记录了预支"
+      },
+      "claim": {
+        "update": "更新了请款"
+      }
     }
   },
   "Notifications": {
@@ -275,7 +294,16 @@
     "title": "仪表板",
     "empty": "暂无项目。",
     "latestReport": "最新报告",
-    "noReports": "暂无报告"
+    "noReports": "暂无报告",
+    "openRequests": "申请",
+    "pendingDOs": "DO单",
+    "reportSubmitted": "已提交",
+    "reportDraft": "草稿",
+    "reportNone": "未开始",
+    "requestsAged": "{n}个逾期",
+    "newStructure": "新动态",
+    "newProgress": "新进度",
+    "newStages": "新阶段"
   },
   "Deliveries": {
     "title": "送货",
@@ -334,7 +362,12 @@
     "summary": "{deliveries} 个送货 · {photos} 张照片",
     "viewDeliveries": "查看送货",
     "downloadAll": "全部下载",
-    "downloadSelected": "下载所选"
+    "downloadSelected": "下载所选",
+    "filterSearch": "搜索项目或材料…",
+    "filterProject": "项目",
+    "filterSupplier": "供应商",
+    "filterMaterial": "材料",
+    "filterAll": "全部"
   },
   "Stock": {
     "title": "现场库存",
@@ -410,8 +443,13 @@
       "closed": "已结案",
       "rejected": "已拒绝"
     },
+    "filterAll": "全部",
+    "filterSearch": "搜索项目或材料…",
     "draftRestored": "草稿已恢复——上次会话中未保存的更改。",
-    "draftDiscard": "丢弃"
+    "draftDiscard": "丢弃",
+    "filterProject": "项目",
+    "filterStatus": "状态",
+    "filterSupplier": "供应商"
   },
   "Photos": {
     "title": "进度",
@@ -615,5 +653,13 @@
     "en": "English",
     "ms": "Bahasa Malaysia",
     "zh": "中文"
+  },
+  "Hints": {
+    "dismiss": "知道了",
+    "report": "随时点击保存草稿——进度不会丢失。",
+    "progress": "输入到目前为止的累计完成单位数，而非本次。",
+    "stages": "工程完成时标记每个阶段。",
+    "requests": "提交后办公室将立即收到通知。",
+    "deliveries": "拍下送货单——办公室会录入详情。"
   }
 }

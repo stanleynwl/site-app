@@ -13,6 +13,7 @@ import {
 } from "@/lib/date";
 import { DailyReportForm } from "@/components/daily-report-form";
 import { ReportDateNav } from "@/components/report-date-nav";
+import { HintCard } from "@/components/hint-card";
 
 export default async function ReportPage({
   params,
@@ -27,6 +28,7 @@ export default async function ReportPage({
   if (!project) notFound();
 
   const t = await getTranslations("Report");
+  const th = await getTranslations("Hints");
   const today = todayISO();
 
   // Selected date: today by default, or a valid past date for backfilling a
@@ -125,6 +127,10 @@ export default async function ReportPage({
           {t("backdatedNotice", { date: selectedDate })}
         </p>
       )}
+
+      <HintCard id="report" dismissLabel={th("dismiss")}>
+        {th("report")}
+      </HintCard>
 
       <DailyReportForm
         projectId={id}

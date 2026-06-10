@@ -8,6 +8,7 @@ import { addBlockStage } from "@/lib/data/actions";
 import { todayISO } from "@/lib/date";
 import { StageRow } from "@/components/stage-row";
 import { BlockBrowser, type BrowserBlock } from "@/components/block-browser";
+import { HintCard } from "@/components/hint-card";
 
 const inputCls =
   "rounded-lg border border-black/25 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/30 dark:focus:border-white/50";
@@ -24,6 +25,7 @@ export default async function ProjectStagesPage({
   if (!project) notFound();
 
   const t = await getTranslations("Stages");
+  const th = await getTranslations("Hints");
   const [blocks, refPhotos] = await Promise.all([
     getProjectBlocks(id),
     getProjectRefPhotos(id),
@@ -42,6 +44,8 @@ export default async function ProjectStagesPage({
         <h1 className="mt-1 text-lg font-semibold">{t("title")}</h1>
         <p className="text-sm text-black/70 dark:text-white/70">{t("intro")}</p>
       </div>
+
+      <HintCard id="stages" dismissLabel={th("dismiss")}>{th("stages")}</HintCard>
 
       <RefPhotoStrip photos={refPhotos} />
 

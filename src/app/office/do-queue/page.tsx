@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import {
@@ -12,11 +13,18 @@ import {
   itemName,
 } from "@/lib/data/purchase-requests";
 import { setDeliveryOfficeFields } from "@/lib/data/actions";
+import { FilterChips, SearchBox } from "@/components/filter-chips";
+import type { FilterOption } from "@/components/filter-chips";
 
 const inputCls =
   "rounded-lg border border-black/15 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
 
-export default async function DoQueuePage() {
+export default async function DoQueuePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string>>;
+}) {
+  const params = await searchParams;
   const td = await getTranslations("Deliveries");
 
   const [rawPending, suppliers, materials, openRequests] = await Promise.all([
@@ -44,6 +52,53 @@ export default async function DoQueuePage() {
     openItemsByProject.set(r.project_id, list);
   }
 
+  // Build filter options from the current queue.
+  const projectOptions: FilterOption[] = Array.from(
+    new Map(
+      pending
+        .filter((d) => d.project?.name)
+        .map((d) => [d.project_id, { label: d.project!.name, value: d.project_id }]),
+    ).values(),
+  );
+
+  const supplierNamesInQueue = new Set(
+    pending.map((d) => d.supplier?.name).filter(Boolean),
+  );
+  const supplierOptions: FilterOption[] = suppliers
+    .filter((s) => supplierNamesInQueue.has(s.name))
+    .map((s) => ({ label: s.name, value: s.name }));
+
+  const materialNamesInQueue = new Set(
+    pending.map((d) => deliveryMaterialName(d)).filter((n) => n !== "—"),
+  );
+  const materialOptions: FilterOption[] = materials
+    .filter((m) => materialNamesInQueue.has(m.name))
+    .map((m) => ({ label: m.name, value: m.name }));
+
+  // Server-side filter from URL params.
+  const qProject = params.project ?? "";
+  const qSupplier = params.supplier ?? "";
+  const qMaterial = params.material ?? "";
+  const qSearch = (params.q ?? "").toLowerCase();
+
+  const filtered = pending.filter((d) => {
+    if (qProject && d.project_id !== qProject) return false;
+    if (qSupplier && d.supplier?.name !== qSupplier) return false;
+    if (qMaterial && deliveryMaterialName(d) !== qMaterial) return false;
+    if (qSearch) {
+      const haystack = [
+        d.project?.name ?? "",
+        d.supplier?.name ?? "",
+        deliveryMaterialName(d),
+        d.note ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      if (!haystack.includes(qSearch)) return false;
+    }
+    return true;
+  });
+
   return (
     <div className="space-y-6">
       <div>
@@ -53,13 +108,44 @@ export default async function DoQueuePage() {
         </p>
       </div>
 
-      {pending.length === 0 ? (
+      {/* Filters */}
+      <Suspense>
+        <div className="space-y-3 rounded-xl border border-black/10 p-3 dark:border-white/15">
+          <SearchBox paramKey="q" placeholder={td("filterSearch")} />
+          {projectOptions.length > 1 && (
+            <FilterChips
+              paramKey="project"
+              options={projectOptions}
+              label={td("filterProject")}
+              allLabel={td("filterAll")}
+            />
+          )}
+          {supplierOptions.length > 0 && (
+            <FilterChips
+              paramKey="supplier"
+              options={supplierOptions}
+              label={td("filterSupplier")}
+              allLabel={td("filterAll")}
+            />
+          )}
+          {materialOptions.length > 0 && (
+            <FilterChips
+              paramKey="material"
+              options={materialOptions}
+              label={td("filterMaterial")}
+              allLabel={td("filterAll")}
+            />
+          )}
+        </div>
+      </Suspense>
+
+      {filtered.length === 0 ? (
         <p className="text-sm text-black/50 dark:text-white/50">
           {td("queueEmpty")}
         </p>
       ) : (
         <ul className="space-y-3">
-          {pending.map((d) => {
+          {filtered.map((d) => {
             const openItems = openItemsByProject.get(d.project_id) ?? [];
             return (
               <li
