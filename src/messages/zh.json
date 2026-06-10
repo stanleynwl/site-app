@@ -260,7 +260,9 @@
       "weather": "天气",
       "consultant": "等待顾问",
       "other": "其他"
-    }
+    },
+    "draftRestored": "草稿已恢复——上次会话中未保存的更改。",
+    "draftDiscard": "丢弃"
   },
   "Dashboard": {
     "title": "仪表板",
@@ -276,6 +278,12 @@
     "uploading": "上传中…",
     "removePhoto": "删除照片",
     "photoError": "部分照片上传失败。",
+    "photoQueued": "排队中",
+    "photoUploading": "上传中…",
+    "photoDone": "已上传",
+    "photoFailed": "失败",
+    "photoRetry": "重试",
+    "photoStillUploading": "{count} 张照片仍在上传——请等待或删除。",
     "issue": "有问题？（可选）",
     "issueType": {
       "broken": "破损",
@@ -394,7 +402,9 @@
       "delivered": "已送达",
       "closed": "已结案",
       "rejected": "已拒绝"
-    }
+    },
+    "draftRestored": "草稿已恢复——上次会话中未保存的更改。",
+    "draftDiscard": "丢弃"
   },
   "Photos": {
     "title": "进度",

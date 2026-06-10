@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { saveReport, type SaveReportState } from "@/lib/data/actions";
 import { DEFAULT_TRADES, defaultTradeKey } from "@/lib/trades";
 import { DEFAULT_MACHINES, defaultMachineKey } from "@/lib/machines";
 import { PhotoCapture } from "@/components/photo-capture";
+import { useFormDraft } from "@/lib/use-form-draft";
 import type {
   IssueCategory,
   NoWorkReason,
@@ -25,6 +26,20 @@ type ManpowerRow = { trade: string; subcontractor: string; worker_count: number 
 type IssueRow = { description: string; category: IssueCategory };
 type VisitorRow = { name: string; purpose: string };
 
+type DraftData = {
+  reportType: ReportType;
+  weather: string;
+  rainHours: string;
+  noWorkReason: string;
+  workDone: string;
+  notes: string;
+  defaultWorkerCounts: number[];
+  customRows: ManpowerRow[];
+  machinery: MachineryRow[];
+  issues: IssueRow[];
+  visitors: VisitorRow[];
+};
+
 const baseInput =
   "rounded-lg border border-black/15 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
 const inputClass = `w-full ${baseInput}`;
@@ -38,28 +53,21 @@ export function DailyReportForm({
   canSoftEdit,
 }: {
   projectId: string;
-  // Calendar date this report is for (today, or a past date being backfilled).
   reportDate: string;
   report: ReportWithChildren | null;
-  // Pre-fill policy: manpower + machinery from yesterday when no report exists today.
-  // null means no pre-fill available (no yesterday report, or today draft already exists).
   preFillManpower: ManpowerRow[] | null;
   preFillMachinery: MachinerySource[] | null;
-  // True while the author may still amend a submitted report (same MYT day).
   canSoftEdit: boolean;
 }) {
   const t = useTranslations("Report");
 
-  // A submitted report is still author-editable until end of the day it was sent.
   const isSoftEditable = report?.status === "submitted" && canSoftEdit;
-
-  // Hard-locked: status=locked, OR status=submitted with expired window.
   const isHardLocked =
     report != null &&
     (report.status === "locked" ||
       (report.status === "submitted" && !isSoftEditable));
 
-  // Source manpower rows: existing report > yesterday pre-fill > none.
+  // Derive initial values from server data or pre-fill.
   const sourceManpower: ManpowerRow[] =
     report?.manpower_entries.map((m) => ({
       trade: m.trade,
@@ -69,29 +77,15 @@ export function DailyReportForm({
     preFillManpower ??
     [];
 
-  // Fixed default-trade rows (always shown, translated label, canonical stored).
-  // Pre-filled from any matching source row by canonical trade name.
-  const defaultRows = DEFAULT_TRADES.map(({ key, canonical }) => {
+  const initialDefaultCounts = DEFAULT_TRADES.map(({ canonical }) => {
     const match = sourceManpower.find((r) => r.trade === canonical);
-    return {
-      key,
-      canonical,
-      subcontractor: match?.subcontractor ?? "",
-      worker_count: match?.worker_count ?? 0,
-    };
+    return match?.worker_count ?? 0;
   });
 
-  // Anything in the source that isn't a known default → editable custom rows.
   const initialCustom = sourceManpower.filter(
     (r) => defaultTradeKey(r.trade) == null,
   );
 
-  // Machinery rows: existing report > yesterday pre-fill > none. Each row is one
-  // machine + hours (repeat a type for multiple units). We do NOT pre-seed the
-  // default machine types as blank rows: that previously reappeared after saving
-  // a draft (a row picked but left hours-blank is dropped on save, so the form
-  // re-seeded defaults starting with Excavator — looking like Backhoe "reverted"
-  // to Excavator). The supervisor adds the machines actually on site.
   const sourceMachinery: MachinerySource[] | null =
     report?.machinery_entries.map((m) => ({
       machine_type: m.machine_type,
@@ -107,9 +101,21 @@ export function DailyReportForm({
       : { type: "__other__", custom: m.machine_type, hours };
   });
 
+  // --- Controlled state (all form fields) ---
   const [reportType, setReportType] = useState<ReportType>(
     report?.report_type ?? "normal",
   );
+  const [weather, setWeather] = useState<string>(report?.weather ?? "");
+  const [rainHours, setRainHours] = useState<string>(
+    report?.rain_hours != null ? String(report.rain_hours) : "",
+  );
+  const [noWorkReason, setNoWorkReason] = useState<string>(
+    report?.no_work_reason ?? "",
+  );
+  const [workDone, setWorkDone] = useState<string>(report?.work_done ?? "");
+  const [notes, setNotes] = useState<string>(report?.notes ?? "");
+  const [defaultWorkerCounts, setDefaultWorkerCounts] =
+    useState<number[]>(initialDefaultCounts);
   const [customRows, setCustomRows] = useState<ManpowerRow[]>(initialCustom);
   const [machinery, setMachinery] = useState<MachineryRow[]>(initialMachinery);
   const [issues, setIssues] = useState<IssueRow[]>(
@@ -118,7 +124,6 @@ export function DailyReportForm({
       category: i.category,
     })) ?? [],
   );
-  // Visitors: policy is NO pre-fill — initialise from the existing report only.
   const [visitors, setVisitors] = useState<VisitorRow[]>(
     report?.visitor_entries.map((v) => ({
       name: v.name,
@@ -126,10 +131,67 @@ export function DailyReportForm({
     })) ?? [],
   );
 
+  // --- Draft persistence (IndexedDB) ---
+  const draftKey = `draft:report:${projectId}:${reportDate}`;
+
+  const onRestore = useCallback((data: DraftData) => {
+    setReportType(data.reportType);
+    setWeather(data.weather);
+    setRainHours(data.rainHours);
+    setNoWorkReason(data.noWorkReason);
+    setWorkDone(data.workDone);
+    setNotes(data.notes);
+    setDefaultWorkerCounts(data.defaultWorkerCounts);
+    setCustomRows(data.customRows);
+    setMachinery(data.machinery);
+    setIssues(data.issues);
+    setVisitors(data.visitors);
+  }, []);
+
+  const { isReady, isDraftRestored, saveDraft, clearDraft } =
+    useFormDraft<DraftData>(draftKey, onRestore);
+
+  useEffect(() => {
+    if (!isReady || isHardLocked) return;
+    saveDraft({
+      reportType,
+      weather,
+      rainHours,
+      noWorkReason,
+      workDone,
+      notes,
+      defaultWorkerCounts,
+      customRows,
+      machinery,
+      issues,
+      visitors,
+    });
+  }, [
+    isReady,
+    isHardLocked,
+    reportType,
+    weather,
+    rainHours,
+    noWorkReason,
+    workDone,
+    notes,
+    defaultWorkerCounts,
+    customRows,
+    machinery,
+    issues,
+    visitors,
+    saveDraft,
+  ]);
+
   const [state, action, pending] = useActionState<SaveReportState, FormData>(
     saveReport,
     undefined,
   );
+
+  // Clear draft after a successful save or submit.
+  useEffect(() => {
+    if (state && "ok" in state) clearDraft();
+  }, [state, clearDraft]);
 
   if (isHardLocked) {
     return (
@@ -156,11 +218,25 @@ export function DailyReportForm({
   const isNoWork = reportType === "no_work";
 
   return (
-    <form action={action} className="space-y-6">
+    <form action={action} className="space-y-6 pb-24">
       <input type="hidden" name="project_id" value={projectId} />
       <input type="hidden" name="report_date" value={reportDate} />
 
-      {/* Amend window banner (author can edit until end of the submission day) */}
+      {/* Draft restored banner */}
+      {isDraftRestored && (
+        <div className="flex items-center justify-between gap-3 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:bg-blue-950/40 dark:text-blue-300">
+          <span>{t("draftRestored")}</span>
+          <button
+            type="button"
+            onClick={clearDraft}
+            className="shrink-0 underline"
+          >
+            {t("draftDiscard")}
+          </button>
+        </div>
+      )}
+
+      {/* Amend window banner */}
       {isSoftEditable && (
         <p className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:bg-blue-950/40 dark:text-blue-300">
           {t("softEditNotice")}
@@ -172,7 +248,7 @@ export function DailyReportForm({
         {(["normal", "no_work"] as ReportType[]).map((type) => (
           <label
             key={type}
-            className={`flex cursor-pointer items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+            className={`flex cursor-pointer items-center justify-center rounded-lg border px-3 py-3 text-sm font-medium transition-colors ${
               reportType === type
                 ? "border-foreground bg-foreground text-background"
                 : "border-black/15 dark:border-white/20"
@@ -197,7 +273,8 @@ export function DailyReportForm({
           <span className="mb-1 block font-medium">{t("noWorkReason")}</span>
           <select
             name="no_work_reason"
-            defaultValue={report?.no_work_reason ?? ""}
+            value={noWorkReason}
+            onChange={(e) => setNoWorkReason(e.target.value)}
             className={inputClass}
           >
             <option value="">—</option>
@@ -210,13 +287,14 @@ export function DailyReportForm({
         </label>
       )}
 
-      {/* Weather — policy: NOT pre-filled; always blank on a new report */}
+      {/* Weather */}
       <section className="grid grid-cols-2 gap-3">
         <label className="text-sm">
           <span className="mb-1 block font-medium">{t("weather")}</span>
           <select
             name="weather"
-            defaultValue={report?.weather ?? ""}
+            value={weather}
+            onChange={(e) => setWeather(e.target.value)}
             className={inputClass}
           >
             <option value="">—</option>
@@ -234,14 +312,14 @@ export function DailyReportForm({
             name="rain_hours"
             min="0"
             step="0.5"
-            defaultValue={report?.rain_hours ?? ""}
+            value={rainHours}
+            onChange={(e) => setRainHours(e.target.value)}
             className={inputClass}
           />
         </label>
       </section>
 
-      {/* Manpower — fixed default trades (translated label, canonical value
-          stored via hidden field) followed by editable custom rows. */}
+      {/* Manpower */}
       {!isNoWork && (
         <section className="space-y-2">
           <div className="flex items-center justify-between">
@@ -254,27 +332,28 @@ export function DailyReportForm({
                   { trade: "", subcontractor: "", worker_count: 0 },
                 ])
               }
-              className="text-xs underline"
+              className="min-h-11 rounded px-2 text-xs underline"
             >
               {t("addRow")}
             </button>
           </div>
 
           {/* Fixed default trades — label localized, value stored canonically */}
-          {defaultRows.map((row) => (
+          {DEFAULT_TRADES.map((row, i) => (
             <div key={row.key} className="flex items-center gap-3">
               <input type="hidden" name="manpower_trade" value={row.canonical} />
               <span className="flex-1 text-sm">{t(`trades.${row.key}`)}</span>
-              <input
+              <Stepper
                 name="manpower_worker_count"
-                type="number"
-                min="0"
-                defaultValue={row.worker_count}
-                placeholder={t("workers")}
-                className={`${baseInput} w-24 text-right`}
+                value={defaultWorkerCounts[i] ?? 0}
+                min={0}
+                onChange={(v) =>
+                  setDefaultWorkerCounts((counts) =>
+                    counts.map((c, idx) => (idx === i ? v : c)),
+                  )
+                }
               />
-              {/* spacer to align with custom rows' remove button */}
-              <span className="w-5" aria-hidden="true" />
+              <span className="w-9" aria-hidden="true" />
             </div>
           ))}
 
@@ -283,24 +362,35 @@ export function DailyReportForm({
             <div key={`custom-${i}`} className="flex items-center gap-3">
               <input
                 name="manpower_trade"
-                defaultValue={row.trade}
+                value={row.trade}
+                onChange={(e) =>
+                  setCustomRows((rows) =>
+                    rows.map((r, idx) =>
+                      idx === i ? { ...r, trade: e.target.value } : r,
+                    ),
+                  )
+                }
                 placeholder={t("trade")}
                 className={`${baseInput} flex-1`}
               />
-              <input
+              <Stepper
                 name="manpower_worker_count"
-                type="number"
-                min="0"
-                defaultValue={row.worker_count}
-                placeholder={t("workers")}
-                className={`${baseInput} w-24 text-right`}
+                value={row.worker_count}
+                min={0}
+                onChange={(v) =>
+                  setCustomRows((rows) =>
+                    rows.map((r, idx) =>
+                      idx === i ? { ...r, worker_count: v } : r,
+                    ),
+                  )
+                }
               />
               <button
                 type="button"
                 onClick={() =>
                   setCustomRows((rows) => rows.filter((_, idx) => idx !== i))
                 }
-                className="w-5 text-xs text-red-600"
+                className="flex min-h-11 min-w-9 items-center justify-center rounded text-sm text-red-600"
                 aria-label={t("remove")}
               >
                 ✕
@@ -310,8 +400,7 @@ export function DailyReportForm({
         </section>
       )}
 
-      {/* Machinery — one row per machine + hours. Repeat a type for multiple
-          units (e.g. backhoe 8h + backhoe 4h when one broke down). */}
+      {/* Machinery */}
       {!isNoWork && (
         <section className="space-y-2">
           <div className="flex items-center justify-between">
@@ -320,14 +409,11 @@ export function DailyReportForm({
               type="button"
               onClick={() =>
                 setMachinery((rows) => [
-                  // Start blank, not on a real machine: a forgotten/empty row then
-                  // reads as "—" and is dropped on save, instead of silently
-                  // looking (and saving) as an Excavator.
                   ...rows,
                   { type: "", custom: "", hours: "" },
                 ])
               }
-              className="text-xs underline"
+              className="min-h-11 rounded px-2 text-xs underline"
             >
               {t("addRow")}
             </button>
@@ -350,8 +436,6 @@ export function DailyReportForm({
                   }
                   className={`${baseInput} flex-1`}
                 >
-                  {/* Resting/placeholder state — an unselected row reads as "—"
-                      (and is dropped on save) rather than defaulting to Excavator. */}
                   <option value="">{t("selectMachine")}</option>
                   {DEFAULT_MACHINES.map((d) => (
                     <option key={d.key} value={d.canonical}>
@@ -374,28 +458,23 @@ export function DailyReportForm({
                     className={`${baseInput} flex-1`}
                   />
                 )}
-                <input
+                <HoursStepper
                   name="machinery_hours"
-                  type="number"
-                  min="0"
-                  step="0.5"
                   value={row.hours}
-                  onChange={(e) =>
+                  onChange={(v) =>
                     setMachinery((rows) =>
                       rows.map((r, idx) =>
-                        idx === i ? { ...r, hours: e.target.value } : r,
+                        idx === i ? { ...r, hours: v } : r,
                       ),
                     )
                   }
-                  placeholder={t("hours")}
-                  className={`${baseInput} w-24 text-right`}
                 />
                 <button
                   type="button"
                   onClick={() =>
                     setMachinery((rows) => rows.filter((_, idx) => idx !== i))
                   }
-                  className="w-5 text-xs text-red-600"
+                  className="flex min-h-11 min-w-9 items-center justify-center rounded text-sm text-red-600"
                   aria-label={t("remove")}
                 >
                   ✕
@@ -406,20 +485,21 @@ export function DailyReportForm({
         </section>
       )}
 
-      {/* Work done — policy: NEVER pre-filled */}
+      {/* Work done */}
       {!isNoWork && (
         <label className="block text-sm">
           <span className="mb-1 block font-semibold">{t("workDone")}</span>
           <textarea
             name="work_done"
             rows={4}
-            defaultValue={report?.work_done ?? ""}
+            value={workDone}
+            onChange={(e) => setWorkDone(e.target.value)}
             className={inputClass}
           />
         </label>
       )}
 
-      {/* Issues — shown for all report types */}
+      {/* Issues */}
       <section className="space-y-2">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">{t("issues")}</h2>
@@ -431,7 +511,7 @@ export function DailyReportForm({
                 { description: "", category: "other" },
               ])
             }
-            className="text-xs underline"
+            className="min-h-11 rounded px-2 text-xs underline"
           >
             {t("addRow")}
           </button>
@@ -443,14 +523,30 @@ export function DailyReportForm({
           >
             <input
               name="issue_description"
-              defaultValue={row.description}
+              value={row.description}
+              onChange={(e) =>
+                setIssues((rows) =>
+                  rows.map((r, idx) =>
+                    idx === i ? { ...r, description: e.target.value } : r,
+                  ),
+                )
+              }
               placeholder={t("issueDescription")}
               className={inputClass}
             />
             <div className="flex items-center gap-3">
               <select
                 name="issue_category"
-                defaultValue={row.category}
+                value={row.category}
+                onChange={(e) =>
+                  setIssues((rows) =>
+                    rows.map((r, idx) =>
+                      idx === i
+                        ? { ...r, category: e.target.value as IssueCategory }
+                        : r,
+                    ),
+                  )
+                }
                 className={`${baseInput} flex-1`}
               >
                 {CATEGORIES.map((c) => (
@@ -464,7 +560,7 @@ export function DailyReportForm({
                 onClick={() =>
                   setIssues((rows) => rows.filter((_, idx) => idx !== i))
                 }
-                className="w-5 text-xs text-red-600"
+                className="flex min-h-11 min-w-9 items-center justify-center rounded text-sm text-red-600"
                 aria-label={t("remove")}
               >
                 ✕
@@ -474,7 +570,7 @@ export function DailyReportForm({
         ))}
       </section>
 
-      {/* Visitors — secondary, optional; shown for all report types; no pre-fill */}
+      {/* Visitors */}
       <section className="space-y-2">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">{t("visitors")}</h2>
@@ -483,7 +579,7 @@ export function DailyReportForm({
             onClick={() =>
               setVisitors((rows) => [...rows, { name: "", purpose: "" }])
             }
-            className="text-xs underline"
+            className="min-h-11 rounded px-2 text-xs underline"
           >
             {t("addRow")}
           </button>
@@ -492,13 +588,27 @@ export function DailyReportForm({
           <div key={`visitor-${i}`} className="flex items-center gap-3">
             <input
               name="visitor_name"
-              defaultValue={row.name}
+              value={row.name}
+              onChange={(e) =>
+                setVisitors((rows) =>
+                  rows.map((r, idx) =>
+                    idx === i ? { ...r, name: e.target.value } : r,
+                  ),
+                )
+              }
               placeholder={t("visitorName")}
               className={`${baseInput} flex-1`}
             />
             <input
               name="visitor_purpose"
-              defaultValue={row.purpose}
+              value={row.purpose}
+              onChange={(e) =>
+                setVisitors((rows) =>
+                  rows.map((r, idx) =>
+                    idx === i ? { ...r, purpose: e.target.value } : r,
+                  ),
+                )
+              }
               placeholder={t("visitorPurpose")}
               className={`${baseInput} flex-1`}
             />
@@ -507,7 +617,7 @@ export function DailyReportForm({
               onClick={() =>
                 setVisitors((rows) => rows.filter((_, idx) => idx !== i))
               }
-              className="w-5 text-xs text-red-600"
+              className="flex min-h-11 min-w-9 items-center justify-center rounded text-sm text-red-600"
               aria-label={t("remove")}
             >
               ✕
@@ -516,19 +626,20 @@ export function DailyReportForm({
         ))}
       </section>
 
-      {/* Photos — optional; multiple, camera or gallery. Shown to office + PDF. */}
+      {/* Photos */}
       <section className="space-y-2">
         <h2 className="text-sm font-semibold">{t("photos")}</h2>
         <PhotoCapture projectId={projectId} month={reportDate.slice(0, 7)} />
       </section>
 
-      {/* Notes — policy: NEVER pre-filled */}
+      {/* Notes */}
       <label className="block text-sm">
         <span className="mb-1 block font-semibold">{t("notes")}</span>
         <textarea
           name="notes"
           rows={2}
-          defaultValue={report?.notes ?? ""}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
           className={inputClass}
         />
       </label>
@@ -543,27 +654,115 @@ export function DailyReportForm({
         </p>
       )}
 
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          name="intent"
-          value="draft"
-          disabled={pending}
-          className="flex-1 rounded-lg border border-black/20 px-3 py-2 text-sm font-medium disabled:opacity-50 dark:border-white/25"
-        >
-          {pending ? t("saving") : t("saveDraft")}
-        </button>
-        <button
-          type="submit"
-          name="intent"
-          value="submit"
-          disabled={pending}
-          className="flex-1 rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background disabled:opacity-50"
-        >
-          {t("submit")}
-        </button>
+      {/* Sticky submit bar — always reachable without scrolling */}
+      <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-black/10 bg-background px-4 pb-[env(safe-area-inset-bottom)] pt-3 dark:border-white/10">
+        <div className="mx-auto flex max-w-lg gap-2">
+          <button
+            type="submit"
+            name="intent"
+            value="draft"
+            disabled={pending}
+            className="flex-1 rounded-lg border border-black/20 px-3 py-3 text-sm font-medium disabled:opacity-50 dark:border-white/25"
+          >
+            {pending ? t("saving") : t("saveDraft")}
+          </button>
+          <button
+            type="submit"
+            name="intent"
+            value="submit"
+            disabled={pending}
+            className="flex-1 rounded-lg bg-foreground px-3 py-3 text-sm font-medium text-background disabled:opacity-50"
+          >
+            {t("submit")}
+          </button>
+        </div>
       </div>
     </form>
+  );
+}
+
+// --- Stepper for integer counts (manpower worker counts) ---
+function Stepper({
+  name,
+  value,
+  min = 0,
+  onChange,
+}: {
+  name: string;
+  value: number;
+  min?: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="flex items-center">
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(min, value - 1))}
+        className="flex h-10 w-10 items-center justify-center rounded-l-lg border border-black/15 text-base font-medium dark:border-white/20"
+        aria-label="−"
+      >
+        −
+      </button>
+      <input
+        name={name}
+        type="number"
+        min={min}
+        value={value}
+        onChange={(e) => onChange(Math.max(min, parseInt(e.target.value, 10) || 0))}
+        className="h-10 w-14 border-y border-black/15 bg-transparent text-center text-sm outline-none dark:border-white/20"
+      />
+      <button
+        type="button"
+        onClick={() => onChange(value + 1)}
+        className="flex h-10 w-10 items-center justify-center rounded-r-lg border border-black/15 text-base font-medium dark:border-white/20"
+        aria-label="+"
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
+// --- Stepper for decimal hours (machinery) ---
+function HoursStepper({
+  name,
+  value,
+  onChange,
+}: {
+  name: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const num = parseFloat(value) || 0;
+  return (
+    <div className="flex items-center">
+      <button
+        type="button"
+        onClick={() => onChange(String(Math.max(0, Math.round((num - 0.5) * 10) / 10)))}
+        className="flex h-10 w-10 items-center justify-center rounded-l-lg border border-black/15 text-base font-medium dark:border-white/20"
+        aria-label="−"
+      >
+        −
+      </button>
+      <input
+        name={name}
+        type="number"
+        min="0"
+        step="0.5"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="h"
+        className="h-10 w-14 border-y border-black/15 bg-transparent text-center text-sm outline-none dark:border-white/20"
+      />
+      <button
+        type="button"
+        onClick={() => onChange(String(Math.round((num + 0.5) * 10) / 10))}
+        className="flex h-10 w-10 items-center justify-center rounded-r-lg border border-black/15 text-base font-medium dark:border-white/20"
+        aria-label="+"
+      >
+        +
+      </button>
+    </div>
   );
 }
 

@@ -260,7 +260,9 @@
       "weather": "Weather",
       "consultant": "Waiting for consultant",
       "other": "Other"
-    }
+    },
+    "draftRestored": "Draft restored — unsaved changes from your last session.",
+    "draftDiscard": "Discard"
   },
   "Dashboard": {
     "title": "Dashboard",
@@ -276,6 +278,12 @@
     "uploading": "Uploading…",
     "removePhoto": "Remove photo",
     "photoError": "Some photos failed to upload.",
+    "photoQueued": "Queued",
+    "photoUploading": "Uploading…",
+    "photoDone": "Uploaded",
+    "photoFailed": "Failed",
+    "photoRetry": "Retry failed",
+    "photoStillUploading": "{count} photo(s) still uploading — wait or remove them.",
     "issue": "Problem? (optional)",
     "issueType": {
       "broken": "Broken",
@@ -394,7 +402,9 @@
       "delivered": "Delivered",
       "closed": "Closed",
       "rejected": "Rejected"
-    }
+    },
+    "draftRestored": "Draft restored — unsaved changes from your last session.",
+    "draftDiscard": "Discard"
   },
   "Photos": {
     "title": "Progress",

@@ -3,21 +3,14 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Material } from "@/lib/data/catalog";
+import type { RequestItemRow } from "@/components/purchase-request-form";
 
 // No width here — callers set width (w-full / flex-1 / w-20). Mixing w-full with
 // flex-1/w-20 produces conflicting width rules, which squashed the quantity field.
 const baseInput =
   "rounded-lg border border-black/15 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
 
-type Row = {
-  query: string;
-  materialId: string;
-  unit: string;
-  quantity: string;
-  spec: string;
-};
-
-const blankRow = (): Row => ({
+const blankRow = (): RequestItemRow => ({
   query: "",
   materialId: "",
   unit: "",
@@ -25,15 +18,21 @@ const blankRow = (): Row => ({
   spec: "",
 });
 
-// Repeatable request line items with a type-to-search material picker. Each row
-// submits hidden request_material_id (catalog) / request_material_text (free
-// text) + request_quantity + request_unit, aligned by DOM order.
-export function RequestItemsField({ materials }: { materials: Material[] }) {
+// Repeatable request line items with a type-to-search material picker.
+// rows/setRows are lifted to the parent so the draft hook can persist them.
+export function RequestItemsField({
+  materials,
+  rows,
+  setRows,
+}: {
+  materials: Material[];
+  rows: RequestItemRow[];
+  setRows: React.Dispatch<React.SetStateAction<RequestItemRow[]>>;
+}) {
   const t = useTranslations("Requests");
-  const [rows, setRows] = useState<Row[]>([blankRow()]);
   const [openIdx, setOpenIdx] = useState<number | null>(null);
 
-  const patch = (i: number, p: Partial<Row>) =>
+  const patch = (i: number, p: Partial<RequestItemRow>) =>
     setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...p } : r)));
 
   return (
@@ -43,7 +42,7 @@ export function RequestItemsField({ materials }: { materials: Material[] }) {
         <button
           type="button"
           onClick={() => setRows((rs) => [...rs, blankRow()])}
-          className="text-xs underline"
+          className="min-h-11 rounded px-2 text-xs underline"
         >
           {t("addItem")}
         </button>
@@ -134,14 +133,13 @@ export function RequestItemsField({ materials }: { materials: Material[] }) {
                   setRows((rs) => (rs.length === 1 ? rs : rs.filter((_, idx) => idx !== i)))
                 }
                 disabled={rows.length === 1}
-                className="w-5 text-xs text-red-600 disabled:opacity-30"
+                className="flex min-h-11 min-w-9 items-center justify-center rounded text-sm text-red-600 disabled:opacity-30"
                 aria-label={t("removeItem")}
               >
                 ✕
               </button>
             </div>
 
-            {/* Optional free-text size/spec, e.g. timber "12 ft" or "12 ft · 4 tonne". */}
             <input
               name="request_spec"
               value={row.spec}
