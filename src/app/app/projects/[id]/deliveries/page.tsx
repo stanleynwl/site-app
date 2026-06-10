@@ -33,7 +33,7 @@ export default async function DeliveriesPage({
       <div>
         <Link
           href={`/app/projects/${id}`}
-          className="text-xs text-black/50 hover:underline dark:text-white/50"
+          className="text-xs text-black/70 hover:underline dark:text-white/70"
         >
           ← {project.name}
         </Link>
@@ -50,14 +50,14 @@ export default async function DeliveriesPage({
       <section className="space-y-2">
         <h2 className="text-sm font-semibold">{t("recent")}</h2>
         {deliveries.length === 0 ? (
-          <p className="text-sm text-black/50 dark:text-white/50">{t("none")}</p>
+          <p className="text-sm text-black/70 dark:text-white/70">{t("none")}</p>
         ) : (
           <ul className="divide-y divide-black/10 rounded-xl border border-black/10 dark:divide-white/10 dark:border-white/15">
             {deliveries.map((d) => (
               <li key={d.id} className="space-y-2 px-4 py-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{deliveryMaterialName(d)}</span>
-                  <span className="text-black/50 dark:text-white/50">
+                  <span className="text-black/70 dark:text-white/70">
                     {d.delivered_on}
                   </span>
                 </div>

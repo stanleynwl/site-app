@@ -28,7 +28,7 @@ export default async function ProjectStockPage({
       <div>
         <Link
           href={`/app/projects/${id}`}
-          className="text-xs text-black/50 hover:underline dark:text-white/50"
+          className="text-xs text-black/70 hover:underline dark:text-white/70"
         >
           ← {project.name}
         </Link>
@@ -45,7 +45,7 @@ export default async function ProjectStockPage({
       <section className="space-y-2">
         <h2 className="text-sm font-semibold">{t("onHand")}</h2>
         {summary.length === 0 ? (
-          <p className="text-sm text-black/50 dark:text-white/50">{t("none")}</p>
+          <p className="text-sm text-black/70 dark:text-white/70">{t("none")}</p>
         ) : (
           <ul className="divide-y divide-black/10 rounded-xl border border-black/10 dark:divide-white/10 dark:border-white/15">
             {summary.map((s) => (
@@ -57,7 +57,7 @@ export default async function ProjectStockPage({
                     {s.unit ? ` ${s.unit}` : ""}
                   </span>
                 </div>
-                <div className="text-xs text-black/50 dark:text-white/50">
+                <div className="text-xs text-black/70 dark:text-white/70">
                   {t("countedOn", { date: s.latest_date })}
                   {s.consumption != null
                     ? ` · ${t("consumedSince", { qty: s.consumption, date: s.previous_date ?? "" })}`
@@ -72,7 +72,7 @@ export default async function ProjectStockPage({
       <section className="space-y-2">
         <h2 className="text-sm font-semibold">{t("recent")}</h2>
         {counts.length === 0 ? (
-          <p className="text-sm text-black/50 dark:text-white/50">{t("none")}</p>
+          <p className="text-sm text-black/70 dark:text-white/70">{t("none")}</p>
         ) : (
           <ul className="divide-y divide-black/10 rounded-xl border border-black/10 dark:divide-white/10 dark:border-white/15">
             {counts.map((c) => (
@@ -83,7 +83,7 @@ export default async function ProjectStockPage({
                 <span>
                   <span className="font-medium">{c.material?.name ?? "—"}</span>
                   {c.note && (
-                    <span className="ml-2 text-black/50 dark:text-white/50">
+                    <span className="ml-2 text-black/70 dark:text-white/70">
                       {c.note}
                     </span>
                   )}

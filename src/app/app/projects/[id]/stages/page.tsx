@@ -10,7 +10,7 @@ import { StageRow } from "@/components/stage-row";
 import { BlockBrowser, type BrowserBlock } from "@/components/block-browser";
 
 const inputCls =
-  "rounded-lg border border-black/15 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
+  "rounded-lg border border-black/25 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/30 dark:focus:border-white/50";
 const btnCls =
   "rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25";
 
@@ -35,18 +35,18 @@ export default async function ProjectStagesPage({
       <div>
         <Link
           href={`/app/projects/${id}`}
-          className="text-xs text-black/50 hover:underline dark:text-white/50"
+          className="text-xs text-black/70 hover:underline dark:text-white/70"
         >
           ← {project.name}
         </Link>
         <h1 className="mt-1 text-lg font-semibold">{t("title")}</h1>
-        <p className="text-sm text-black/50 dark:text-white/50">{t("intro")}</p>
+        <p className="text-sm text-black/70 dark:text-white/70">{t("intro")}</p>
       </div>
 
       <RefPhotoStrip photos={refPhotos} />
 
       {blocks.length === 0 ? (
-        <p className="text-sm text-black/50 dark:text-white/50">{t("noBlocks")}</p>
+        <p className="text-sm text-black/70 dark:text-white/70">{t("noBlocks")}</p>
       ) : (
         <BlockBrowser
           searchPlaceholder={t("searchBlock")}
@@ -64,7 +64,7 @@ export default async function ProjectStagesPage({
                   <div>
                     <p className="font-semibold">{b.name}</p>
                     {subtitle && (
-                      <p className="text-xs text-black/50 dark:text-white/50">
+                      <p className="text-xs text-black/70 dark:text-white/70">
                         {t("unitRange", {
                           from: b.unit_from ?? "—",
                           to: b.unit_to ?? "—",
@@ -74,7 +74,7 @@ export default async function ProjectStagesPage({
                   </div>
 
                   {b.stages.length === 0 ? (
-                    <p className="text-sm text-black/50 dark:text-white/50">
+                    <p className="text-sm text-black/70 dark:text-white/70">
                       {t("noStages")}
                     </p>
                   ) : (

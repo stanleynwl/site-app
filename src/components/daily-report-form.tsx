@@ -41,7 +41,7 @@ type DraftData = {
 };
 
 const baseInput =
-  "rounded-lg border border-black/15 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
+  "rounded-lg border border-black/25 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/60 dark:border-white/30 dark:focus:border-white/60";
 const inputClass = `w-full ${baseInput}`;
 
 export function DailyReportForm({
@@ -301,7 +301,7 @@ export function DailyReportForm({
             className={`flex cursor-pointer items-center justify-center rounded-lg border px-3 py-3 text-sm font-medium transition-colors ${
               reportType === type
                 ? "border-foreground bg-foreground text-background"
-                : "border-black/15 dark:border-white/20"
+                : "border-black/25 dark:border-white/30"
             }`}
           >
             <input
@@ -754,7 +754,7 @@ function Stepper({
       <button
         type="button"
         onClick={() => onChange(Math.max(min, value - 1))}
-        className="flex h-10 w-10 items-center justify-center rounded-l-lg border border-black/15 text-base font-medium dark:border-white/20"
+        className="flex h-10 w-10 items-center justify-center rounded-l-lg border border-black/25 text-base font-medium dark:border-white/30"
         aria-label="−"
       >
         −
@@ -765,12 +765,12 @@ function Stepper({
         min={min}
         value={value}
         onChange={(e) => onChange(Math.max(min, parseInt(e.target.value, 10) || 0))}
-        className="h-10 w-14 border-y border-black/15 bg-transparent text-center text-sm outline-none dark:border-white/20"
+        className="h-10 w-14 border-y border-black/25 bg-transparent text-center text-sm outline-none dark:border-white/30"
       />
       <button
         type="button"
         onClick={() => onChange(value + 1)}
-        className="flex h-10 w-10 items-center justify-center rounded-r-lg border border-black/15 text-base font-medium dark:border-white/20"
+        className="flex h-10 w-10 items-center justify-center rounded-r-lg border border-black/25 text-base font-medium dark:border-white/30"
         aria-label="+"
       >
         +
@@ -795,7 +795,7 @@ function HoursStepper({
       <button
         type="button"
         onClick={() => onChange(String(Math.max(0, Math.round((num - 0.5) * 10) / 10)))}
-        className="flex h-10 w-10 items-center justify-center rounded-l-lg border border-black/15 text-base font-medium dark:border-white/20"
+        className="flex h-10 w-10 items-center justify-center rounded-l-lg border border-black/25 text-base font-medium dark:border-white/30"
         aria-label="−"
       >
         −
@@ -808,12 +808,12 @@ function HoursStepper({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="h"
-        className="h-10 w-14 border-y border-black/15 bg-transparent text-center text-sm outline-none dark:border-white/20"
+        className="h-10 w-14 border-y border-black/25 bg-transparent text-center text-sm outline-none dark:border-white/30"
       />
       <button
         type="button"
         onClick={() => onChange(String(Math.round((num + 0.5) * 10) / 10))}
-        className="flex h-10 w-10 items-center justify-center rounded-r-lg border border-black/15 text-base font-medium dark:border-white/20"
+        className="flex h-10 w-10 items-center justify-center rounded-r-lg border border-black/25 text-base font-medium dark:border-white/30"
         aria-label="+"
       >
         +

@@ -7,7 +7,7 @@ import { PhotoCapture } from "@/components/photo-capture";
 import type { Supplier, Material } from "@/lib/data/catalog";
 
 const inputClass =
-  "w-full rounded-lg border border-black/15 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
+  "w-full rounded-lg border border-black/25 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/60 dark:border-white/30 dark:focus:border-white/60";
 
 const ISSUE_TYPES = [
   "broken",

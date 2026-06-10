@@ -70,7 +70,7 @@ export default async function ReportPage({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-lg font-semibold">{project.name}</h1>
-          <p className="text-xs text-black/50 dark:text-white/50">
+          <p className="text-xs text-black/70 dark:text-white/70">
             {t("title")} · {selectedDate}
           </p>
         </div>

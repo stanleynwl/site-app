@@ -8,7 +8,7 @@ export default async function AppProjects() {
 
   if (projects.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-black/15 p-6 text-center text-sm text-black/50 dark:border-white/20 dark:text-white/50">
+      <div className="rounded-xl border border-dashed border-black/25 p-6 text-center text-sm text-black/70 dark:border-white/30 dark:text-white/70">
         {t("none")}
       </div>
     );
@@ -24,7 +24,7 @@ export default async function AppProjects() {
           >
             <span className="font-medium">{p.name}</span>
             {p.code && (
-              <span className="ml-2 text-xs text-black/50 dark:text-white/50">
+              <span className="ml-2 text-xs text-black/70 dark:text-white/70">
                 {p.code}
               </span>
             )}

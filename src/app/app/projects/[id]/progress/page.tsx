@@ -39,18 +39,18 @@ export default async function ProjectProgressPage({
       <div>
         <Link
           href={`/app/projects/${id}`}
-          className="text-xs text-black/50 hover:underline dark:text-white/50"
+          className="text-xs text-black/70 hover:underline dark:text-white/70"
         >
           ← {project.name}
         </Link>
         <h1 className="mt-1 text-lg font-semibold">{t("title")}</h1>
-        <p className="text-sm text-black/50 dark:text-white/50">{t("intro")}</p>
+        <p className="text-sm text-black/70 dark:text-white/70">{t("intro")}</p>
       </div>
 
       <RefPhotoStrip photos={refPhotos} />
 
       {blocks.length === 0 ? (
-        <p className="text-sm text-black/50 dark:text-white/50">{t("noBlocks")}</p>
+        <p className="text-sm text-black/70 dark:text-white/70">{t("noBlocks")}</p>
       ) : (
         <BlockBrowser
           searchPlaceholder={t("searchBlock")}
@@ -70,7 +70,7 @@ export default async function ProjectProgressPage({
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="font-semibold">{b.name}</p>
-                      <p className="text-xs text-black/50 dark:text-white/50">
+                      <p className="text-xs text-black/70 dark:text-white/70">
                         {t("units", { count: b.unit_count ?? 0 })}
                         {subtitle ? ` · ${subtitle}` : ""}
                       </p>
@@ -83,7 +83,7 @@ export default async function ProjectProgressPage({
                   </div>
 
                   {b.progress_items.length === 0 ? (
-                    <p className="text-sm text-black/50 dark:text-white/50">
+                    <p className="text-sm text-black/70 dark:text-white/70">
                       {t("noItems")}
                     </p>
                   ) : (

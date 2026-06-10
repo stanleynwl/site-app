@@ -7,7 +7,7 @@ import { PhotoCapture } from "@/components/photo-capture";
 import { SubmitButton } from "@/components/submit-button";
 
 const baseInput =
-  "rounded-lg border border-black/15 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
+  "rounded-lg border border-black/25 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/60 dark:border-white/30 dark:focus:border-white/60";
 
 // One progress item: shows units done / total, lets the supervisor update the
 // cumulative units-done, and (optionally) snap a photo with the submission.

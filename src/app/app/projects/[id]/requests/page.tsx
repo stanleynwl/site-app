@@ -43,7 +43,7 @@ export default async function ProjectRequestsPage({
       <div>
         <Link
           href={`/app/projects/${id}`}
-          className="text-xs text-black/50 hover:underline dark:text-white/50"
+          className="text-xs text-black/70 hover:underline dark:text-white/70"
         >
           ← {project.name}
         </Link>
@@ -59,7 +59,7 @@ export default async function ProjectRequestsPage({
       <section className="space-y-2">
         <h2 className="text-sm font-semibold">{t("recent")}</h2>
         {requests.length === 0 ? (
-          <p className="text-sm text-black/50 dark:text-white/50">{t("none")}</p>
+          <p className="text-sm text-black/70 dark:text-white/70">{t("none")}</p>
         ) : (
           <ul className="divide-y divide-black/10 rounded-xl border border-black/10 dark:divide-white/10 dark:border-white/15">
             {requests.map((r) => {
@@ -85,7 +85,7 @@ export default async function ProjectRequestsPage({
                             <div className="flex-1">
                               <div className="font-medium">{itemName(it)}</div>
                               {it.spec && (
-                                <div className="text-xs text-black/50 dark:text-white/50">
+                                <div className="text-xs text-black/70 dark:text-white/70">
                                   {it.spec}
                                 </div>
                               )}
@@ -97,10 +97,10 @@ export default async function ProjectRequestsPage({
                               min="0"
                               defaultValue={it.quantity ?? ""}
                               aria-label={t("quantity")}
-                              className="w-20 rounded-lg border border-black/15 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50"
+                              className="w-20 rounded-lg border border-black/25 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/30 dark:focus:border-white/50"
                             />
                             {it.unit && (
-                              <span className="text-xs text-black/50 dark:text-white/50">
+                              <span className="text-xs text-black/70 dark:text-white/70">
                                 {it.unit}
                               </span>
                             )}
@@ -111,7 +111,7 @@ export default async function ProjectRequestsPage({
                         {t(`status.${r.status}`)}
                       </span>
                     </div>
-                    <p className="text-xs text-black/45 dark:text-white/45">
+                    <p className="text-xs text-black/60 dark:text-white/60">
                       {t("confirmDeliveredHint")}
                     </p>
                     <button className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25">
@@ -126,7 +126,7 @@ export default async function ProjectRequestsPage({
                           <div className="flex-1">
                             <div className="font-medium">{itemName(it)}</div>
                             {it.spec && (
-                              <div className="text-xs text-black/50 dark:text-white/50">
+                              <div className="text-xs text-black/70 dark:text-white/70">
                                 {it.spec}
                               </div>
                             )}
@@ -151,10 +151,10 @@ export default async function ProjectRequestsPage({
                                 min="0"
                                 defaultValue={it.quantity ?? ""}
                                 aria-label={t("quantity")}
-                                className="w-20 rounded-lg border border-black/15 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50"
+                                className="w-20 rounded-lg border border-black/25 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/30 dark:focus:border-white/50"
                               />
                               {it.unit && (
-                                <span className="text-xs text-black/50 dark:text-white/50">
+                                <span className="text-xs text-black/70 dark:text-white/70">
                                   {it.unit}
                                 </span>
                               )}
@@ -193,7 +193,7 @@ export default async function ProjectRequestsPage({
                   {r.po_number ? ` · PO ${r.po_number}` : ""}
                 </div>
                 {r.urgency_reason && (
-                  <p className="text-black/50 dark:text-white/50">
+                  <p className="text-black/70 dark:text-white/70">
                     {r.urgency_reason}
                   </p>
                 )}

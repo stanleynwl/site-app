@@ -8,7 +8,7 @@ import type { RequestItemRow } from "@/components/purchase-request-form";
 // No width here — callers set width (w-full / flex-1 / w-20). Mixing w-full with
 // flex-1/w-20 produces conflicting width rules, which squashed the quantity field.
 const baseInput =
-  "rounded-lg border border-black/15 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
+  "rounded-lg border border-black/25 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/60 dark:border-white/30 dark:focus:border-white/60";
 
 const blankRow = (): RequestItemRow => ({
   query: "",
