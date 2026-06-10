@@ -59,11 +59,11 @@ export function ProgressItemRow({
           <button
             type="button"
             onClick={() => setShowPhoto((v) => !v)}
-            className="text-xs underline"
+            className="flex min-h-11 items-center px-1 text-xs underline"
           >
             {t("addPhoto")}
           </button>
-          <SubmitButton className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium disabled:opacity-50 dark:border-white/25">
+          <SubmitButton className="flex min-h-11 items-center rounded-lg border border-black/20 px-3 text-xs font-medium disabled:opacity-50 dark:border-white/25">
             {t("save")}
           </SubmitButton>
         </div>

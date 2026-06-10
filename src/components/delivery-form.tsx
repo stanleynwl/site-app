@@ -75,7 +75,7 @@ export function DeliveryForm({
                 key={it}
                 type="button"
                 onClick={() => setIssue(activeChip ? "" : it)}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                className={`flex min-h-11 items-center rounded-full border px-3 text-xs font-medium transition-colors ${
                   activeChip
                     ? "border-foreground bg-foreground text-background"
                     : "border-black/20 dark:border-white/25"
@@ -101,7 +101,7 @@ export function DeliveryForm({
         <button
           type="button"
           onClick={() => setShowDetails((s) => !s)}
-          className="text-xs underline"
+          className="flex min-h-11 items-center px-1 text-xs underline"
         >
           {showDetails ? t("hideDetails") : t("addDetails")}
         </button>
@@ -200,7 +200,7 @@ export function DeliveryForm({
       <button
         type="submit"
         disabled={pending}
-        className="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
+        className="min-h-12 w-full rounded-lg bg-foreground px-4 py-3 text-sm font-medium text-background disabled:opacity-50"
       >
         {pending ? t("saving") : t("addDelivery")}
       </button>

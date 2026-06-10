@@ -49,7 +49,7 @@ export function StageRow({
             <button
               type="button"
               onClick={() => setShowPhoto((v) => !v)}
-              className="text-xs underline"
+              className="flex min-h-11 items-center px-1 text-xs underline"
             >
               {t("addPhoto")}
             </button>
@@ -66,8 +66,8 @@ export function StageRow({
             <button
               className={
                 done
-                  ? "text-xs text-black/50 underline dark:text-white/50"
-                  : "rounded-lg border border-black/20 px-3 py-1 text-xs font-medium text-green-700 dark:border-white/25 dark:text-green-400"
+                  ? "flex min-h-11 items-center px-1 text-xs text-black/50 underline dark:text-white/50"
+                  : "flex min-h-11 items-center rounded-lg border border-black/20 px-3 text-xs font-medium text-green-700 dark:border-white/25 dark:text-green-400"
               }
             >
               {done ? t("undo") : t("markComplete")}
@@ -77,7 +77,10 @@ export function StageRow({
             <form action={deleteBlockStage}>
               <input type="hidden" name="stage_id" value={stageId} />
               <input type="hidden" name="project_id" value={projectId} />
-              <button aria-label={t("removeStage")} className="text-red-600">
+              <button
+                aria-label={t("removeStage")}
+                className="flex min-h-11 min-w-9 items-center justify-center text-red-600"
+              >
                 ✕
               </button>
             </form>
