@@ -262,7 +262,9 @@
       "other": "Other"
     },
     "draftRestored": "Draft restored — unsaved changes from your last session.",
-    "draftDiscard": "Discard"
+    "draftDiscard": "Discard",
+    "offlineNotice": "No connection — draft saved. Will retry automatically when you reconnect.",
+    "retrying": "Retrying…"
   },
   "Dashboard": {
     "title": "Dashboard",

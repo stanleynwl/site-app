@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useEffect, useCallback } from "react";
+import { useActionState, useState, useEffect, useCallback, useRef, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { saveReport, type SaveReportState } from "@/lib/data/actions";
 import { DEFAULT_TRADES, defaultTradeKey } from "@/lib/trades";
@@ -193,6 +193,43 @@ export function DailyReportForm({
     if (state && "ok" in state) clearDraft();
   }, [state, clearDraft]);
 
+  // --- Offline detection + auto-retry ---
+  const [isOnline, setIsOnline] = useState(true);
+  const [needsRetry, setNeedsRetry] = useState(false);
+  const lastFormDataRef = useRef<FormData | null>(null);
+  const lastIntentRef = useRef<"draft" | "submit">("submit");
+  const [, startRetry] = useTransition();
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    const up = () => setIsOnline(true);
+    const dn = () => setIsOnline(false);
+    window.addEventListener("online", up);
+    window.addEventListener("offline", dn);
+    return () => {
+      window.removeEventListener("online", up);
+      window.removeEventListener("offline", dn);
+    };
+  }, []);
+
+  // Mark for retry if save fails while offline.
+  useEffect(() => {
+    if (state && "error" in state && state.error !== "locked" && !isOnline) {
+      setNeedsRetry(true);
+    }
+    if (state && "ok" in state) setNeedsRetry(false);
+  }, [state, isOnline]);
+
+  // Auto-resubmit when network comes back.
+  useEffect(() => {
+    if (!isOnline || !needsRetry || !lastFormDataRef.current) return;
+    setNeedsRetry(false);
+    const fd = lastFormDataRef.current;
+    startRetry(() => {
+      action(fd);
+    });
+  }, [isOnline, needsRetry, action]);
+
   if (isHardLocked) {
     return (
       <div className="space-y-3">
@@ -209,16 +246,29 @@ export function DailyReportForm({
       ? state.submitted
         ? t("submittedOk")
         : t("savedDraft")
-      : state && "error" in state
-        ? state.error === "locked"
-          ? t("windowExpired")
-          : t("saveError")
-        : null;
+      : needsRetry
+        ? t("offlineNotice")
+        : state && "error" in state
+          ? state.error === "locked"
+            ? t("windowExpired")
+            : !isOnline
+              ? t("offlineNotice")
+              : t("saveError")
+          : null;
 
   const isNoWork = reportType === "no_work";
 
   return (
-    <form action={action} className="space-y-6 pb-24">
+    <form
+      action={action}
+      className="space-y-6 pb-24"
+      onSubmit={(e) => {
+        // Capture FormData + intent for offline retry.
+        const fd = new FormData(e.currentTarget);
+        fd.set("intent", lastIntentRef.current);
+        lastFormDataRef.current = fd;
+      }}
+    >
       <input type="hidden" name="project_id" value={projectId} />
       <input type="hidden" name="report_date" value={reportDate} />
 
@@ -647,7 +697,11 @@ export function DailyReportForm({
       {message && (
         <p
           className={`text-sm ${
-            state && "error" in state ? "text-red-600" : "text-green-600"
+            needsRetry || (!isOnline && state && "error" in state)
+              ? "text-amber-700 dark:text-amber-400"
+              : state && "error" in state
+                ? "text-red-600"
+                : "text-green-600"
           }`}
         >
           {message}
@@ -662,15 +716,17 @@ export function DailyReportForm({
             name="intent"
             value="draft"
             disabled={pending}
+            onClick={() => { lastIntentRef.current = "draft"; }}
             className="flex-1 rounded-lg border border-black/20 px-3 py-3 text-sm font-medium disabled:opacity-50 dark:border-white/25"
           >
-            {pending ? t("saving") : t("saveDraft")}
+            {pending ? t("saving") : needsRetry ? t("retrying") : t("saveDraft")}
           </button>
           <button
             type="submit"
             name="intent"
             value="submit"
             disabled={pending}
+            onClick={() => { lastIntentRef.current = "submit"; }}
             className="flex-1 rounded-lg bg-foreground px-3 py-3 text-sm font-medium text-background disabled:opacity-50"
           >
             {t("submit")}

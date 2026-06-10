@@ -262,7 +262,9 @@
       "other": "Lain-lain"
     },
     "draftRestored": "Draf dipulihkan — perubahan yang belum disimpan daripada sesi lepas.",
-    "draftDiscard": "Buang"
+    "draftDiscard": "Buang",
+    "offlineNotice": "Tiada sambungan — draf disimpan. Akan cuba semula apabila anda bersambung.",
+    "retrying": "Mencuba semula…"
   },
   "Dashboard": {
     "title": "Papan Pemuka",

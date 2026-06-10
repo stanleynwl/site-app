@@ -262,7 +262,9 @@
       "other": "其他"
     },
     "draftRestored": "草稿已恢复——上次会话中未保存的更改。",
-    "draftDiscard": "丢弃"
+    "draftDiscard": "丢弃",
+    "offlineNotice": "无网络——草稿已保存。恢复连接后将自动重试。",
+    "retrying": "重试中…"
   },
   "Dashboard": {
     "title": "仪表板",
