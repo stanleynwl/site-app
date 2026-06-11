@@ -25,9 +25,18 @@ function urlBase64ToBytes(base64: string): ArrayBuffer {
 // Notification fallback in place.
 async function subscribeToPush(): Promise<void> {
   try {
-    if (!VAPID_PUBLIC_KEY) return;
-    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
-    if (typeof window === "undefined" || !("PushManager" in window)) return;
+    if (!VAPID_PUBLIC_KEY) {
+      console.info("[push] no NEXT_PUBLIC_VAPID_PUBLIC_KEY in this build — push off");
+      return;
+    }
+    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
+      console.info("[push] no serviceWorker support");
+      return;
+    }
+    if (typeof window === "undefined" || !("PushManager" in window)) {
+      console.info("[push] no PushManager support");
+      return;
+    }
     const reg = await navigator.serviceWorker.ready;
     const existing = await reg.pushManager.getSubscription();
     const sub =
@@ -40,14 +49,19 @@ async function subscribeToPush(): Promise<void> {
       endpoint?: string;
       keys?: { p256dh?: string; auth?: string };
     };
-    if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return;
-    await savePushSubscription({
+    if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
+      console.info("[push] subscription missing endpoint/keys");
+      return;
+    }
+    const res = await savePushSubscription({
       endpoint: json.endpoint,
       keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
       userAgent: navigator.userAgent,
     });
-  } catch {
-    /* push unavailable — keep local-notification fallback */
+    console.info("[push] subscribed; saved:", res?.ok);
+  } catch (e) {
+    // Keep the local-notification fallback; log so it's diagnosable in prod.
+    console.warn("[push] subscribe failed", e);
   }
 }
 
@@ -129,6 +143,15 @@ export function NotificationBell({
     else setPerm(Notification.permission as "default" | "granted" | "denied");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Self-heal the "already granted" case: users who enabled the old local
+  // alerts never see the "Enable alerts" button (it shows "Alerts on"), so they
+  // would never get a push subscription. Whenever permission is granted, ensure
+  // a subscription exists. subscribeToPush is idempotent (reuses an existing sub
+  // and upserts on endpoint), so calling it on every mount is safe.
+  useEffect(() => {
+    if (perm === "granted") void subscribeToPush();
+  }, [perm]);
 
   // Poll for fresh activity; raise desktop notifications for genuinely-new rows.
   useEffect(() => {
