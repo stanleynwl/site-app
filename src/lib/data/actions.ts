@@ -1735,6 +1735,55 @@ export async function setIssueResolved(formData: FormData): Promise<void> {
   revalidateIssueViews(projectId, reportId);
 }
 
+// --- Web Push subscriptions (#8) ---------------------------------------------
+// The web app only stores subscriptions (own-row RLS, 0034). Sending is done by
+// the local office mirror with the PRIVATE VAPID key — never in the web app.
+
+export type PushSubscriptionData = {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+  userAgent?: string;
+};
+
+export async function savePushSubscription(
+  sub: PushSubscriptionData,
+): Promise<{ ok: boolean }> {
+  if (!isSupabaseConfigured) return { ok: false };
+  const user = await getSessionUser();
+  if (!user) return { ok: false };
+  if (!sub?.endpoint || !sub.keys?.p256dh || !sub.keys?.auth) {
+    return { ok: false };
+  }
+  const supabase = await createClient();
+  // Upsert on the unique endpoint so re-enabling on the same device is a no-op
+  // (and reassigns the row to the current user if the device changed hands).
+  const { error } = await supabase.from("push_subscriptions").upsert(
+    {
+      user_id: user.id,
+      endpoint: sub.endpoint,
+      p256dh: sub.keys.p256dh,
+      auth: sub.keys.auth,
+      user_agent: sub.userAgent ?? null,
+    },
+    { onConflict: "endpoint" },
+  );
+  return { ok: !error };
+}
+
+export async function deletePushSubscription(
+  endpoint: string,
+): Promise<{ ok: boolean }> {
+  if (!isSupabaseConfigured) return { ok: false };
+  const user = await getSessionUser();
+  if (!user || !endpoint) return { ok: false };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("push_subscriptions")
+    .delete()
+    .eq("endpoint", endpoint);
+  return { ok: !error };
+}
+
 // --- Project lifecycle: permanent delete (office/pm) -------------------------
 
 // Permanently delete a project and EVERYTHING under it. All child rows cascade

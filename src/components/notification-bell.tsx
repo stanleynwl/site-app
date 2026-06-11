@@ -2,6 +2,54 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { savePushSubscription } from "@/lib/data/actions";
+
+// VAPID public key (build-time inlined). When unset, push stays off and the
+// bell falls back to local Notifications (foreground only). #8.
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
+
+// VAPID keys are base64url; PushManager wants raw bytes. Allocate a concrete
+// ArrayBuffer (not a SharedArrayBuffer-backed view) to satisfy the DOM types.
+function urlBase64ToBytes(base64: string): ArrayBuffer {
+  const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+  const b64 = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(b64);
+  const buf = new ArrayBuffer(raw.length);
+  const out = new Uint8Array(buf);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return buf;
+}
+
+// Subscribe this device to Web Push and persist the subscription server-side.
+// Best-effort: any failure (no SW, no key, blocked) silently leaves the local-
+// Notification fallback in place.
+async function subscribeToPush(): Promise<void> {
+  try {
+    if (!VAPID_PUBLIC_KEY) return;
+    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+    if (typeof window === "undefined" || !("PushManager" in window)) return;
+    const reg = await navigator.serviceWorker.ready;
+    const existing = await reg.pushManager.getSubscription();
+    const sub =
+      existing ??
+      (await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToBytes(VAPID_PUBLIC_KEY),
+      }));
+    const json = sub.toJSON() as {
+      endpoint?: string;
+      keys?: { p256dh?: string; auth?: string };
+    };
+    if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return;
+    await savePushSubscription({
+      endpoint: json.endpoint,
+      keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
+      userAgent: navigator.userAgent,
+    });
+  } catch {
+    /* push unavailable — keep local-notification fallback */
+  }
+}
 
 export type NotifItem = {
   id: string;
@@ -136,6 +184,9 @@ export function NotificationBell({
     if (typeof Notification === "undefined") return;
     const p = await Notification.requestPermission();
     setPerm(p as "default" | "granted" | "denied");
+    // Upgrade to real Web Push (tab-closed) when a VAPID key is configured;
+    // otherwise the granted permission just powers foreground notifications.
+    if (p === "granted") await subscribeToPush();
   };
 
   return (
