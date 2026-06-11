@@ -306,7 +306,7 @@ export function DailyReportForm({
   return (
     <form
       action={action}
-      className="space-y-6 pb-24"
+      className="space-y-6 pb-36"
       onSubmit={(e) => {
         // Capture FormData + intent for offline retry.
         const fd = new FormData(e.currentTarget);
@@ -756,9 +756,11 @@ export function DailyReportForm({
         </p>
       )}
 
-      {/* Sticky submit bar — always reachable without scrolling */}
-      <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-black/10 bg-background px-4 pb-[env(safe-area-inset-bottom)] pt-3 dark:border-white/10">
-        <div className="mx-auto flex max-w-lg gap-2">
+      {/* Sticky submit bar — always reachable without scrolling. Sits ABOVE the
+          app's bottom tab nav (sticky bottom-0, ~60px) so it never covers, or is
+          covered by, Today/Projects. */}
+      <div className="fixed inset-x-0 bottom-16 z-30 border-t border-black/10 bg-background px-4 py-3 shadow-[0_-2px_10px_rgba(0,0,0,0.07)] dark:border-white/10 dark:shadow-[0_-2px_10px_rgba(0,0,0,0.4)]">
+        <div className="mx-auto flex max-w-md gap-2">
           <button
             type="submit"
             name="intent"
