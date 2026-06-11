@@ -28,7 +28,7 @@ const CATEGORIES: IssueCategory[] = ["material", "weather", "consultant", "other
 const NO_WORK_REASONS: NoWorkReason[] = ["holiday", "weather", "site_closed", "other"];
 
 type ManpowerRow = { trade: string; subcontractor: string; worker_count: number };
-type IssueRow = { description: string; category: IssueCategory };
+type IssueRow = { id?: string; description: string; category: IssueCategory };
 type VisitorRow = { name: string; purpose: string };
 
 type DraftData = {
@@ -125,6 +125,7 @@ export function DailyReportForm({
   const [machinery, setMachinery] = useState<MachineryRow[]>(initialMachinery);
   const [issues, setIssues] = useState<IssueRow[]>(
     report?.issues.map((i) => ({
+      id: i.id,
       description: i.description,
       category: i.category,
     })) ?? [],
@@ -615,6 +616,9 @@ export function DailyReportForm({
             key={i}
             className="space-y-2 rounded-lg border border-black/10 p-2 dark:border-white/15"
           >
+            {/* Carries the row identity so saveReport merges by id and the
+                office's assignee / closed status survives a same-day edit. */}
+            <input type="hidden" name="issue_id" value={row.id ?? ""} />
             <input
               name="issue_description"
               value={row.description}

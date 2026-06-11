@@ -1399,10 +1399,15 @@ export async function saveReport(
       // rows (worker_count 0) so empty trades never reach the DB / office view.
       .filter((row) => row.trade !== "" && row.worker_count > 0);
 
+    // Issues carry a hidden id per row (empty for new rows) so we can MERGE by
+    // id below instead of delete-all+insert — that preserves lifecycle state
+    // (assigned_to / closed_at) the office set, across a same-day report edit.
+    const issueIds = formData.getAll("issue_id").map(String);
     const descs = formData.getAll("issue_description").map(String);
     const cats = formData.getAll("issue_category").map(String);
-    const issues = descs
+    const issueRows = descs
       .map((description, i) => ({
+        id: issueIds[i]?.trim() || null,
         report_id: report.id,
         description: description.trim(),
         category: (CATEGORIES.includes(cats[i] as IssueCategory)
@@ -1452,13 +1457,38 @@ export async function saveReport(
       if (mcInsErr) return { error: "save" };
     }
 
-    const { error: isDelErr } = await supabase
-      .from("issues")
-      .delete()
-      .eq("report_id", report.id);
+    // Merge-by-id (NOT delete-all+insert): delete only the rows the author
+    // removed, update survivors in place (description/category — never touching
+    // assigned_to/closed_at), insert the new ones.
+    const keepIds = issueRows
+      .map((r) => r.id)
+      .filter((id): id is string => !!id);
+    let isDel = supabase.from("issues").delete().eq("report_id", report.id);
+    if (keepIds.length) isDel = isDel.not("id", "in", `(${keepIds.join(",")})`);
+    const { error: isDelErr } = await isDel;
     if (isDelErr) return { error: "save" };
-    if (issues.length) {
-      const { error: isInsErr } = await supabase.from("issues").insert(issues);
+
+    for (const row of issueRows) {
+      if (!row.id) continue;
+      const { error: isUpdErr } = await supabase
+        .from("issues")
+        .update({ description: row.description, category: row.category })
+        .eq("id", row.id)
+        .eq("report_id", report.id);
+      if (isUpdErr) return { error: "save" };
+    }
+
+    const newIssues = issueRows
+      .filter((r) => !r.id)
+      .map((r) => ({
+        report_id: r.report_id,
+        description: r.description,
+        category: r.category,
+      }));
+    if (newIssues.length) {
+      const { error: isInsErr } = await supabase
+        .from("issues")
+        .insert(newIssues);
       if (isInsErr) return { error: "save" };
     }
   }
@@ -1644,6 +1674,65 @@ export async function unlockReport(
   revalidatePath(`/office/projects/${report.project_id}`);
   revalidatePath(`/office/projects/${report.project_id}/reports/${reportId}`);
   return { ok: true };
+}
+
+// --- Issue lifecycle (#11): owner + open/closed on report issues -------------
+// Office assigns an owner and closes / reopens issues. Member-scoped UPDATE RLS
+// (0033) gates the write; the controls are office-only in the UI. Both take
+// issue_id (+ project_id / report_id for revalidation). saveReport's merge-by-id
+// preserves these fields across a same-day report edit.
+
+function revalidateIssueViews(projectId: string, reportId: string) {
+  safeRevalidate("/office", "/office/issues");
+  if (projectId) safeRevalidate(`/office/projects/${projectId}`);
+  if (projectId && reportId)
+    safeRevalidate(`/office/projects/${projectId}/reports/${reportId}`);
+}
+
+export async function assignIssue(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const user = await getSessionUser();
+  if (!user) return;
+  const issueId = String(formData.get("issue_id") ?? "");
+  if (!issueId) return;
+  const projectId = String(formData.get("project_id") ?? "");
+  const reportId = String(formData.get("report_id") ?? "");
+  const assignee = String(formData.get("assigned_to") ?? "").trim();
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("issues")
+    .update({ assigned_to: assignee || null })
+    .eq("id", issueId);
+  if (error) return;
+  revalidateIssueViews(projectId, reportId);
+}
+
+export async function setIssueResolved(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const user = await getSessionUser();
+  if (!user) return;
+  const issueId = String(formData.get("issue_id") ?? "");
+  if (!issueId) return;
+  const projectId = String(formData.get("project_id") ?? "");
+  const reportId = String(formData.get("report_id") ?? "");
+  const resolved = String(formData.get("resolved") ?? "") === "1";
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("issues")
+    .update(
+      resolved
+        ? {
+            resolved: true,
+            closed_at: new Date().toISOString(),
+            closed_by: user.id,
+          }
+        : { resolved: false, closed_at: null, closed_by: null },
+    )
+    .eq("id", issueId);
+  if (error) return;
+  revalidateIssueViews(projectId, reportId);
 }
 
 // --- Project lifecycle: permanent delete (office/pm) -------------------------

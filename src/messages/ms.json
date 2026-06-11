@@ -26,6 +26,7 @@
     "catalog": "Katalog",
     "requests": "Permintaan",
     "doQueue": "Baris DO",
+    "issues": "Isu",
     "activity": "Aktiviti",
     "pdfExport": "Eksport PDF",
     "users": "Pengguna",
@@ -304,6 +305,19 @@
     "newStructure": "Aktiviti baru",
     "newProgress": "Kemajuan baru",
     "newStages": "Peringkat baru"
+  },
+  "Issues": {
+    "title": "Isu belum selesai",
+    "intro": "Isu yang belum selesai merentas semua projek, paling lama dahulu. Tetapkan pemilik dan tutup apabila selesai.",
+    "empty": "Tiada isu terbuka.",
+    "open": "Terbuka",
+    "closed": "Selesai",
+    "assign": "Tetapkan",
+    "unassigned": "Belum ditetapkan",
+    "close": "Tutup",
+    "reopen": "Buka semula",
+    "ageDays": "{days}h terbuka",
+    "countOpen": "{n} isu"
   },
   "Deliveries": {
     "title": "Penghantaran",

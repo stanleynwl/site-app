@@ -5,9 +5,11 @@ import { getReportById, getReportDayPhotos } from "@/lib/data/reports";
 import {
   unlockReport,
   deleteReportPhoto,
+  assignIssue,
+  setIssueResolved,
   type UnlockReportState,
 } from "@/lib/data/actions";
-import { getProfile } from "@/lib/auth/dal";
+import { getProfile, listProfiles } from "@/lib/auth/dal";
 import { isInSoftEditWindow } from "@/lib/date";
 import { defaultTradeKey } from "@/lib/trades";
 import { defaultMachineKey } from "@/lib/machines";
@@ -19,9 +21,10 @@ export default async function OfficeReportView({
   params: Promise<{ id: string; reportId: string }>;
 }) {
   const { id, reportId } = await params;
-  const [report, profile] = await Promise.all([
+  const [report, profile, profiles] = await Promise.all([
     getReportById(reportId),
     getProfile(),
+    listProfiles(),
   ]);
   if (!report) notFound();
   // All photos shot on this report's day (report + progress/stages/deliveries).
@@ -31,6 +34,7 @@ export default async function OfficeReportView({
   const tr = await getTranslations("Report");
   const ts = await getTranslations("Status");
   const tp = await getTranslations("Pdf");
+  const ti = await getTranslations("Issues");
 
   const isPm = profile?.role === "pm";
   const isExpiredSubmit =
@@ -137,15 +141,69 @@ export default async function OfficeReportView({
             {t("noIssues")}
           </p>
         ) : (
-          <ul className="text-sm">
-            {report.issues.map((i) => (
-              <li key={i.id}>
-                {i.description}{" "}
-                <span className="text-black/50 dark:text-white/50">
-                  [{tr(`cat.${i.category}`)}]
-                </span>
-              </li>
-            ))}
+          <ul className="space-y-2 text-sm">
+            {report.issues.map((i) => {
+              const closed = i.closed_at != null;
+              return (
+                <li
+                  key={i.id}
+                  className="space-y-2 rounded-lg border border-black/10 p-2.5 dark:border-white/15"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <span className={closed ? "text-black/50 line-through dark:text-white/50" : ""}>
+                      {i.description}{" "}
+                      <span className="text-black/50 no-underline dark:text-white/50">
+                        [{tr(`cat.${i.category}`)}]
+                      </span>
+                    </span>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                        closed
+                          ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300"
+                          : "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+                      }`}
+                    >
+                      {closed ? ti("closed") : ti("open")}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <form action={assignIssue} className="flex items-center gap-1">
+                      <input type="hidden" name="issue_id" value={i.id} />
+                      <input type="hidden" name="project_id" value={id} />
+                      <input type="hidden" name="report_id" value={reportId} />
+                      <select
+                        name="assigned_to"
+                        defaultValue={i.assigned_to ?? ""}
+                        className="rounded-lg border border-black/20 bg-transparent px-2 py-1 text-xs outline-none focus:border-black/40 dark:border-white/25 dark:focus:border-white/50"
+                      >
+                        <option value="">{ti("unassigned")}</option>
+                        {profiles.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.username}
+                          </option>
+                        ))}
+                      </select>
+                      <button className="rounded-lg border border-black/20 px-2 py-1 text-xs font-medium dark:border-white/25">
+                        {ti("assign")}
+                      </button>
+                    </form>
+                    <form action={setIssueResolved}>
+                      <input type="hidden" name="issue_id" value={i.id} />
+                      <input type="hidden" name="project_id" value={id} />
+                      <input type="hidden" name="report_id" value={reportId} />
+                      <input type="hidden" name="resolved" value={closed ? "0" : "1"} />
+                      <button
+                        className={`rounded-lg border border-black/20 px-2 py-1 text-xs font-medium dark:border-white/25 ${
+                          closed ? "" : "text-green-700 dark:text-green-400"
+                        }`}
+                      >
+                        {closed ? ti("reopen") : ti("close")}
+                      </button>
+                    </form>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

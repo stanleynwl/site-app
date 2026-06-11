@@ -1,18 +1,23 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { getProjectsWithLatestReport } from "@/lib/data/projects";
-import { getTodayReportsByProject } from "@/lib/data/reports";
+import {
+  getTodayReportsByProject,
+  getOpenIssueCountsByProject,
+} from "@/lib/data/reports";
 import { getOpenRequestCountsByProject } from "@/lib/data/purchase-requests";
 import { getPendingDoCountByProject } from "@/lib/data/deliveries";
 import { getProjectIdsWithNewStructure } from "@/lib/data/structure";
 
 export default async function OfficeDashboard() {
   const t = await getTranslations("Dashboard");
-  const [projects, todayMap, requestMap, doMap] = await Promise.all([
+  const ti = await getTranslations("Issues");
+  const [projects, todayMap, requestMap, doMap, issueMap] = await Promise.all([
     getProjectsWithLatestReport(),
     getTodayReportsByProject(),
     getOpenRequestCountsByProject(),
     getPendingDoCountByProject(),
+    getOpenIssueCountsByProject(),
   ]);
   const { newProgress, newStages } = await getProjectIdsWithNewStructure(projects);
 
@@ -30,6 +35,7 @@ export default async function OfficeDashboard() {
             const todayStatus = todayMap[p.id];
             const req = requestMap[p.id];
             const doCount = doMap[p.id] ?? 0;
+            const issueCount = issueMap[p.id] ?? 0;
             const hasNewActivity = newProgress.has(p.id) || newStages.has(p.id);
 
             return (
@@ -83,6 +89,13 @@ export default async function OfficeDashboard() {
                     {doCount > 0 && (
                       <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
                         {doCount} {t("pendingDOs")}
+                      </span>
+                    )}
+
+                    {/* Open issues chip */}
+                    {issueCount > 0 && (
+                      <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700 dark:bg-orange-950/40 dark:text-orange-300">
+                        {ti("countOpen", { n: issueCount })}
                       </span>
                     )}
 

@@ -26,6 +26,7 @@
     "catalog": "Catalog",
     "requests": "Requests",
     "doQueue": "DO queue",
+    "issues": "Issues",
     "activity": "Activity",
     "pdfExport": "PDF export",
     "users": "Users",
@@ -304,6 +305,19 @@
     "newStructure": "New activity",
     "newProgress": "New progress",
     "newStages": "New stages"
+  },
+  "Issues": {
+    "title": "Open issues",
+    "intro": "Unresolved issues across all projects, oldest first. Assign an owner and close when resolved.",
+    "empty": "No open issues.",
+    "open": "Open",
+    "closed": "Closed",
+    "assign": "Assign",
+    "unassigned": "Unassigned",
+    "close": "Close",
+    "reopen": "Reopen",
+    "ageDays": "{days}d open",
+    "countOpen": "{n} issues"
   },
   "Deliveries": {
     "title": "Deliveries",

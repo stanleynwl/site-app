@@ -33,6 +33,9 @@ export type Issue = {
   description: string;
   category: IssueCategory;
   resolved: boolean;
+  assigned_to: string | null;
+  closed_at: string | null;
+  assignee: { username: string } | null;
 };
 
 export type DailyReport = {
@@ -62,7 +65,7 @@ const REPORT_COLUMNS =
   "id, project_id, report_date, author_id, status, report_type, no_work_reason, weather, rain_hours, work_done, notes, submitted_at, is_backdated";
 
 const REPORT_CHILDREN =
-  "manpower_entries(id, trade, subcontractor, worker_count), machinery_entries(id, machine_type, hours_worked), visitor_entries(id, name, purpose), issues(id, description, category, resolved)";
+  "manpower_entries(id, trade, subcontractor, worker_count), machinery_entries(id, machine_type, hours_worked), visitor_entries(id, name, purpose), issues(id, description, category, resolved, assigned_to, closed_at, assignee:profiles!issues_assigned_to_fkey(username))";
 
 export async function getReportForDate(
   projectId: string,
@@ -76,7 +79,7 @@ export async function getReportForDate(
     .eq("project_id", projectId)
     .eq("report_date", date)
     .maybeSingle();
-  return (data as ReportWithChildren) ?? null;
+  return (data as unknown as ReportWithChildren) ?? null;
 }
 
 export async function getReportById(
@@ -89,7 +92,7 @@ export async function getReportById(
     .select(`${REPORT_COLUMNS}, ${REPORT_CHILDREN}`)
     .eq("id", id)
     .maybeSingle();
-  return (data as ReportWithChildren) ?? null;
+  return (data as unknown as ReportWithChildren) ?? null;
 }
 
 // Reports with their children over an inclusive date range — for the date-range
@@ -108,7 +111,7 @@ export async function getReportsInRange(
     .gte("report_date", from)
     .lte("report_date", to)
     .order("report_date", { ascending: true });
-  return (data ?? []) as ReportWithChildren[];
+  return (data ?? []) as unknown as ReportWithChildren[];
 }
 
 export async function getProjectReports(
@@ -139,7 +142,7 @@ export async function getRecentReportsWithChildren(
     .eq("project_id", projectId)
     .order("report_date", { ascending: false })
     .limit(limit);
-  return (data ?? []) as ReportWithChildren[];
+  return (data ?? []) as unknown as ReportWithChildren[];
 }
 
 // The N most recent reports, optionally skipping Sunday-dated ones (the office
@@ -356,4 +359,81 @@ export async function getTodayReportsByProject(): Promise<
     map[row.project_id] = row.status;
   }
   return map;
+}
+
+// An open issue with the context needed to triage it from the cross-project
+// office list: which project, which day, and who (if anyone) owns it. #11.
+export type OpenIssue = {
+  id: string;
+  description: string;
+  category: IssueCategory;
+  assigned_to: string | null;
+  assignee: { username: string } | null;
+  report_id: string;
+  project_id: string;
+  project_name: string | null;
+  report_date: string;
+};
+
+// All unresolved (closed_at IS NULL) issues across every project the user can
+// see, oldest report first so the longest-standing problems surface at the top.
+export async function getOpenIssues(): Promise<OpenIssue[]> {
+  if (!isSupabaseConfigured) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("issues")
+    .select(
+      "id, description, category, assigned_to, assignee:profiles!issues_assigned_to_fkey(username), report:daily_reports!inner(id, project_id, report_date, project:projects(name))",
+    )
+    .is("closed_at", null);
+
+  type Row = {
+    id: string;
+    description: string;
+    category: IssueCategory;
+    assigned_to: string | null;
+    assignee: { username: string } | null;
+    report: {
+      id: string;
+      project_id: string;
+      report_date: string;
+      project: { name: string } | null;
+    } | null;
+  };
+
+  return ((data ?? []) as unknown as Row[])
+    .filter((r) => r.report != null)
+    .map((r) => ({
+      id: r.id,
+      description: r.description,
+      category: r.category,
+      assigned_to: r.assigned_to,
+      assignee: r.assignee,
+      report_id: r.report!.id,
+      project_id: r.report!.project_id,
+      project_name: r.report!.project?.name ?? null,
+      report_date: r.report!.report_date,
+    }))
+    // Oldest report first — longest-standing problems surface at the top.
+    .sort((a, b) => a.report_date.localeCompare(b.report_date));
+}
+
+// Open-issue counts per project — for the office dashboard chip. #11.
+export async function getOpenIssueCountsByProject(): Promise<
+  Record<string, number>
+> {
+  if (!isSupabaseConfigured) return {};
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("issues")
+    .select("report:daily_reports!inner(project_id)")
+    .is("closed_at", null);
+  const counts: Record<string, number> = {};
+  for (const row of (data ?? []) as unknown as {
+    report: { project_id: string } | null;
+  }[]) {
+    const pid = row.report?.project_id;
+    if (pid) counts[pid] = (counts[pid] ?? 0) + 1;
+  }
+  return counts;
 }

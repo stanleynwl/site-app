@@ -26,6 +26,7 @@
     "catalog": "目录",
     "requests": "申请",
     "doQueue": "送货单队列",
+    "issues": "问题",
     "activity": "动态",
     "pdfExport": "导出 PDF",
     "users": "用户",
@@ -304,6 +305,19 @@
     "newStructure": "新动态",
     "newProgress": "新进度",
     "newStages": "新阶段"
+  },
+  "Issues": {
+    "title": "未解决问题",
+    "intro": "所有项目中未解决的问题，最早在前。指派负责人，解决后关闭。",
+    "empty": "没有未解决的问题。",
+    "open": "未解决",
+    "closed": "已解决",
+    "assign": "指派",
+    "unassigned": "未指派",
+    "close": "关闭",
+    "reopen": "重新打开",
+    "ageDays": "未结{days}天",
+    "countOpen": "{n}个问题"
   },
   "Deliveries": {
     "title": "送货",
