@@ -1,8 +1,13 @@
 "use client";
 
 import { useActionState, useState, useEffect, useCallback, useRef, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { saveReport, type SaveReportState } from "@/lib/data/actions";
+import {
+  saveReport,
+  checkReportSaved,
+  type SaveReportState,
+} from "@/lib/data/actions";
 import { DEFAULT_TRADES, defaultTradeKey } from "@/lib/trades";
 import { DEFAULT_MACHINES, defaultMachineKey } from "@/lib/machines";
 import { PhotoCapture } from "@/components/photo-capture";
@@ -183,8 +188,47 @@ export function DailyReportForm({
     saveDraft,
   ]);
 
+  const router = useRouter();
   const [state, action, pending] = useActionState<SaveReportState, FormData>(
-    saveReport,
+    async (prev, formData) => {
+      // On flaky 4G the action's POST response can be lost AFTER the server
+      // commits — the supervisor would see "Could not save" for a save that
+      // succeeded. So: treat a thrown call as a checkable error, then verify
+      // against the server before surfacing the failure.
+      const intentSubmit = formData.get("intent") === "submit";
+      const sentAt = Date.now();
+      let result: SaveReportState;
+      try {
+        result = await saveReport(prev, formData);
+      } catch {
+        result = { error: "save" };
+      }
+      if (
+        result &&
+        "error" in result &&
+        result.error === "save" &&
+        navigator.onLine
+      ) {
+        const check = await checkReportSaved(projectId, reportDate).catch(
+          () => null,
+        );
+        if (
+          intentSubmit &&
+          check?.exists &&
+          check.status === "submitted" &&
+          check.submittedAt &&
+          Date.parse(check.submittedAt) >= sentAt - 60_000
+        ) {
+          // The submit DID reach the server. Refresh the server-rendered page
+          // state (soft-edit banner etc.) and report success.
+          router.refresh();
+          return { ok: true, submitted: true };
+        }
+        // Draft intent stays conservative: a prior draft makes existence
+        // ambiguous, and retrying is a harmless idempotent upsert.
+      }
+      return result;
+    },
     undefined,
   );
 

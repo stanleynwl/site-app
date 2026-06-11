@@ -296,40 +296,54 @@ export async function saveAttendance(formData: FormData): Promise<void> {
 
   const supabase = await createClient();
   // Replace this day's rows for the posted roster workers (clean edit).
+  // Check delete AND insert: a silent insert failure after the delete would
+  // wipe the day's attendance while the supervisor sees no error.
   if (postedIds.length) {
-    await supabase
+    const { error: delErr } = await supabase
       .from("attendance_entries")
       .delete()
       .eq("project_id", projectId)
       .eq("work_date", date)
       .in("worker_id", postedIds);
+    if (delErr) throw new Error("attendance save failed");
   }
   if (toInsert.length) {
-    await supabase.from("attendance_entries").insert(toInsert);
+    const { error: insErr } = await supabase
+      .from("attendance_entries")
+      .insert(toInsert);
+    if (insErr) throw new Error("attendance save failed");
   }
 
   // Optional ad-hoc free-text worker not yet in the roster.
   const adhocName = String(formData.get("adhoc_name") ?? "").trim();
   const adhocUnits = Number(String(formData.get("adhoc_units") ?? "").trim());
   if (adhocName && Number.isFinite(adhocUnits) && adhocUnits > 0) {
-    await supabase.from("attendance_entries").insert({
+    const { error: adhocErr } = await supabase.from("attendance_entries").insert({
       project_id: projectId,
       worker_name: adhocName,
       work_date: date,
       units: adhocUnits,
       recorded_by: user.id,
     });
+    if (adhocErr) throw new Error("attendance save failed");
   }
 
-  await logActivity(supabase, {
-    projectId,
-    actorId: user.id,
-    action: "attendance.record",
-    entityType: "attendance",
-    detail: date,
-  });
-  revalidatePath(`/app/projects/${projectId}/workers`);
-  revalidatePath(`/office/projects/${projectId}/attendance`);
+  // Post-persist tail — must never fail a committed save.
+  try {
+    await logActivity(supabase, {
+      projectId,
+      actorId: user.id,
+      action: "attendance.record",
+      entityType: "attendance",
+      detail: date,
+    });
+  } catch {
+    /* non-critical */
+  }
+  safeRevalidate(
+    `/app/projects/${projectId}/workers`,
+    `/office/projects/${projectId}/attendance`,
+  );
 }
 
 // Advances — member logs an advance to a worker or a subcontractor. The form
@@ -616,6 +630,19 @@ function parseQty(raw: FormDataEntryValue | null): number | null {
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
+// revalidatePath must never turn a committed write into an error response: by
+// the time we revalidate, the data is already saved, so a throw here would make
+// the client show "Could not save" for a save that succeeded (seen on flaky 4G).
+function safeRevalidate(...paths: string[]) {
+  for (const p of paths) {
+    try {
+      revalidatePath(p);
+    } catch {
+      /* non-critical */
+    }
+  }
+}
+
 function parseCoord(raw: FormDataEntryValue | null): number | null {
   const s = String(raw ?? "").trim();
   if (s === "") return null;
@@ -667,7 +694,10 @@ async function attachSubmissionPhotos(
       uploaded_by: userId,
     });
   });
-  if (rows.length > 0) await supabase.from("photos").insert(rows);
+  if (rows.length > 0) {
+    const { error: insErr } = await supabase.from("photos").insert(rows);
+    if (insErr) throw new Error("photo save failed");
+  }
 }
 
 // Supervisor logs a delivery — photo-first. The fast path is a photo (+ optional
@@ -744,29 +774,39 @@ export async function createDelivery(
       gps_lng: parseCoord(photoLng[i] ?? null),
       uploaded_by: user.id,
     }));
-    const { data: inserted } = await supabase
+    // DO photo loss is the whole point of the feature — a failed insert must
+    // surface, not return ok with a photoless delivery.
+    const { data: inserted, error: phErr } = await supabase
       .from("photos")
       .insert(photoRows)
       .select("id");
+    if (phErr) return { error: "save" };
     if (inserted && inserted.length > 0) {
-      await supabase
+      const { error: doErr } = await supabase
         .from("deliveries")
         .update({ do_photo_id: inserted[0].id })
         .eq("id", delivery.id);
+      if (doErr) return { error: "save" };
     }
   }
 
-  await logActivity(supabase, {
-    projectId,
-    actorId: user.id,
-    action: "delivery.create",
-    entityType: "delivery",
-    entityId: delivery.id,
-    detail: doNumber ? `DO ${doNumber}` : materialText || null,
-  });
-
-  revalidatePath(`/app/projects/${projectId}/deliveries`);
-  revalidatePath(`/office/projects/${projectId}`);
+  // Post-persist tail — must never fail a committed delivery.
+  try {
+    await logActivity(supabase, {
+      projectId,
+      actorId: user.id,
+      action: "delivery.create",
+      entityType: "delivery",
+      entityId: delivery.id,
+      detail: doNumber ? `DO ${doNumber}` : materialText || null,
+    });
+  } catch {
+    /* non-critical */
+  }
+  safeRevalidate(
+    `/app/projects/${projectId}/deliveries`,
+    `/office/projects/${projectId}`,
+  );
   return { ok: true };
 }
 
@@ -929,8 +969,10 @@ export async function createPurchaseRequest(
   }
 
   // Persist request photo metadata (binaries already uploaded to Storage).
+  // Checked: a photo-only request whose photos insert fails would otherwise
+  // return ok as an EMPTY request the office can't act on.
   if (photoPaths.length > 0) {
-    await supabase.from("photos").insert(
+    const { error: phErr } = await supabase.from("photos").insert(
       photoPaths.map((path, i) => ({
         project_id: projectId,
         purchase_request_id: request.id,
@@ -941,19 +983,23 @@ export async function createPurchaseRequest(
         uploaded_by: user.id,
       })),
     );
+    if (phErr) return { error: "save" };
   }
 
-  await logActivity(supabase, {
-    projectId,
-    actorId: user.id,
-    action: "request.create",
-    entityType: "request",
-    entityId: request.id,
-    detail: items.map((it) => it.material_text).filter(Boolean).join(", ") || null,
-  });
-
-  revalidatePath(`/app/projects/${projectId}/requests`);
-  revalidatePath("/office/requests");
+  // Post-persist tail — must never fail a committed request.
+  try {
+    await logActivity(supabase, {
+      projectId,
+      actorId: user.id,
+      action: "request.create",
+      entityType: "request",
+      entityId: request.id,
+      detail: items.map((it) => it.material_text).filter(Boolean).join(", ") || null,
+    });
+  } catch {
+    /* non-critical */
+  }
+  safeRevalidate(`/app/projects/${projectId}/requests`, "/office/requests");
   return { ok: true };
 }
 
@@ -1104,22 +1150,26 @@ export async function confirmDeliveredPurchaseRequest(
       .eq("request_id", id);
   }
 
-  await supabase
+  const { error: stErr } = await supabase
     .from("purchase_requests")
     .update({ status: "delivered", delivered_at: new Date().toISOString() })
     .eq("id", id)
     .eq("status", "po_issued");
+  if (stErr) throw new Error("confirm delivered failed");
 
-  await logActivity(supabase, {
-    projectId,
-    actorId: user.id,
-    action: "request.delivered",
-    entityType: "request",
-    entityId: id,
-  });
-
-  revalidatePath(`/app/projects/${projectId}/requests`);
-  revalidatePath("/office/requests");
+  // Post-persist tail — must never fail a committed status change.
+  try {
+    await logActivity(supabase, {
+      projectId,
+      actorId: user.id,
+      action: "request.delivered",
+      entityType: "request",
+      entityId: id,
+    });
+  } catch {
+    /* non-critical */
+  }
+  safeRevalidate(`/app/projects/${projectId}/requests`, "/office/requests");
 }
 
 // Supervisor (any project member) amends a request line item's quantity on site
@@ -1320,12 +1370,17 @@ export async function saveReport(
   if (error || !report) return { error: "save" };
 
   // If we edited a submitted report within the soft window, log the edit.
+  // Best-effort: audit metadata must never fail the save itself.
   if (existing?.status === "submitted") {
-    await supabase.from("report_edits").insert({
-      report_id: report.id,
-      editor_id: user.id,
-      kind: "soft_window",
-    });
+    try {
+      await supabase.from("report_edits").insert({
+        report_id: report.id,
+        editor_id: user.id,
+        kind: "soft_window",
+      });
+    } catch {
+      /* non-critical */
+    }
   }
 
   // Manpower and issues only apply to normal reports.
@@ -1356,9 +1411,19 @@ export async function saveReport(
       }))
       .filter((row) => row.description !== "");
 
-    await supabase.from("manpower_entries").delete().eq("report_id", report.id);
+    // Replace-children writes: check every delete AND insert. A failed delete
+    // before insert would duplicate rows; a successful delete with a failed
+    // insert silently wipes the section while still reporting success.
+    const { error: mpDelErr } = await supabase
+      .from("manpower_entries")
+      .delete()
+      .eq("report_id", report.id);
+    if (mpDelErr) return { error: "save" };
     if (manpower.length) {
-      await supabase.from("manpower_entries").insert(manpower);
+      const { error: mpInsErr } = await supabase
+        .from("manpower_entries")
+        .insert(manpower);
+      if (mpInsErr) return { error: "save" };
     }
 
     // Machinery — one row per machine + hours (repeat a type for multiple units).
@@ -1375,14 +1440,26 @@ export async function saveReport(
       }))
       .filter((row) => row.machine_type !== "");
 
-    await supabase.from("machinery_entries").delete().eq("report_id", report.id);
+    const { error: mcDelErr } = await supabase
+      .from("machinery_entries")
+      .delete()
+      .eq("report_id", report.id);
+    if (mcDelErr) return { error: "save" };
     if (machinery.length) {
-      await supabase.from("machinery_entries").insert(machinery);
+      const { error: mcInsErr } = await supabase
+        .from("machinery_entries")
+        .insert(machinery);
+      if (mcInsErr) return { error: "save" };
     }
 
-    await supabase.from("issues").delete().eq("report_id", report.id);
+    const { error: isDelErr } = await supabase
+      .from("issues")
+      .delete()
+      .eq("report_id", report.id);
+    if (isDelErr) return { error: "save" };
     if (issues.length) {
-      await supabase.from("issues").insert(issues);
+      const { error: isInsErr } = await supabase.from("issues").insert(issues);
+      if (isInsErr) return { error: "save" };
     }
   }
 
@@ -1397,9 +1474,16 @@ export async function saveReport(
       purpose: visitorPurposes[i]?.trim() || null,
     }))
     .filter((v) => v.name !== "");
-  await supabase.from("visitor_entries").delete().eq("report_id", report.id);
+  const { error: viDelErr } = await supabase
+    .from("visitor_entries")
+    .delete()
+    .eq("report_id", report.id);
+  if (viDelErr) return { error: "save" };
   if (visitors.length) {
-    await supabase.from("visitor_entries").insert(visitors);
+    const { error: viInsErr } = await supabase
+      .from("visitor_entries")
+      .insert(visitors);
+    if (viInsErr) return { error: "save" };
   }
 
   // Report photos (uploaded to Storage client-side). Insert only paths not yet
@@ -1409,10 +1493,11 @@ export async function saveReport(
     const reportPhotoTakenAt = formData.getAll("photo_taken_at").map(String);
     const reportPhotoLat = formData.getAll("photo_lat").map(String);
     const reportPhotoLng = formData.getAll("photo_lng").map(String);
-    const { data: existingPhotos } = await supabase
+    const { data: existingPhotos, error: phSelErr } = await supabase
       .from("photos")
       .select("storage_path")
       .eq("daily_report_id", report.id);
+    if (phSelErr) return { error: "save" };
     const known = new Set((existingPhotos ?? []).map((p) => p.storage_path));
     const newRows = reportPhotoPaths
       .map((path, i) => ({
@@ -1426,7 +1511,8 @@ export async function saveReport(
       }))
       .filter((row) => !known.has(row.storage_path));
     if (newRows.length > 0) {
-      await supabase.from("photos").insert(newRows);
+      const { error: phInsErr } = await supabase.from("photos").insert(newRows);
+      if (phInsErr) return { error: "save" };
     }
   }
 
@@ -1436,21 +1522,62 @@ export async function saveReport(
       .update({ status: "submitted", submitted_at: new Date().toISOString() })
       .eq("id", report.id);
     if (submitError) return { error: "save" };
-    await logActivity(supabase, {
-      projectId,
-      actorId: user.id,
-      action: "report.submit",
-      entityType: "report",
-      entityId: report.id,
-      detail: date,
-    });
+    // Everything below runs AFTER the report is committed — none of it may turn
+    // a successful submit into an error response on the supervisor's phone.
+    try {
+      await logActivity(supabase, {
+        projectId,
+        actorId: user.id,
+        action: "report.submit",
+        entityType: "report",
+        entityId: report.id,
+        detail: date,
+      });
+    } catch {
+      /* non-critical */
+    }
   }
 
-  revalidatePath(`/app/projects/${projectId}`);
-  revalidatePath("/app");
-  revalidatePath("/office");
-  revalidatePath(`/office/projects/${projectId}`);
+  safeRevalidate(
+    `/app/projects/${projectId}`,
+    "/app",
+    "/office",
+    `/office/projects/${projectId}`,
+  );
   return { ok: true, submitted: submit };
+}
+
+// Read-only: did the report for this project+date actually reach the server?
+// Used by the form when a save APPEARS to fail on flaky 4G — the action's POST
+// response can be lost after the server commits, so before showing the red
+// "Could not save" the client verifies against the source of truth.
+export type ReportSaveCheck =
+  | { exists: true; status: string; submittedAt: string | null }
+  | { exists: false };
+
+export async function checkReportSaved(
+  projectId: string,
+  date: string,
+): Promise<ReportSaveCheck> {
+  if (!isSupabaseConfigured) return { exists: false };
+  const user = await getSessionUser();
+  if (!user) return { exists: false };
+  if (!projectId || !date) return { exists: false };
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("daily_reports")
+    .select("status, submitted_at")
+    .eq("project_id", projectId)
+    .eq("report_date", date)
+    .maybeSingle();
+
+  if (!data) return { exists: false };
+  return {
+    exists: true,
+    status: data.status as string,
+    submittedAt: (data.submitted_at as string | null) ?? null,
+  };
 }
 
 export type UnlockReportState =
@@ -1926,29 +2053,36 @@ export async function submitProgress(formData: FormData): Promise<void> {
   const cap = itemRow?.project_blocks?.unit_count;
   if (cap != null && unitsDone > cap) unitsDone = cap;
 
-  await supabase
+  const { error: upErr } = await supabase
     .from("block_progress_items")
     .update({ units_done: unitsDone, updated_at: new Date().toISOString() })
     .eq("id", itemId);
+  if (upErr) throw new Error("progress save failed");
 
   await attachSubmissionPhotos(supabase, formData, projectId, user.id, {
     column: "progress_item_id",
     id: itemId,
   });
 
-  await logActivity(supabase, {
-    projectId,
-    actorId: user.id,
-    action: "progress.submit",
-    entityType: "progress",
-    entityId: itemId,
-    detail: itemRow
-      ? `${progressItemLabel(itemRow.category, itemRow.name)} ${unitsDone}/${cap ?? "—"}`
-      : null,
-  });
-
-  revalidatePath(`/app/projects/${projectId}/progress`);
-  revalidatePath(`/office/projects/${projectId}`);
+  // Post-persist tail — must never fail a committed progress update.
+  try {
+    await logActivity(supabase, {
+      projectId,
+      actorId: user.id,
+      action: "progress.submit",
+      entityType: "progress",
+      entityId: itemId,
+      detail: itemRow
+        ? `${progressItemLabel(itemRow.category, itemRow.name)} ${unitsDone}/${cap ?? "—"}`
+        : null,
+    });
+  } catch {
+    /* non-critical */
+  }
+  safeRevalidate(
+    `/app/projects/${projectId}/progress`,
+    `/office/projects/${projectId}`,
+  );
 }
 
 // Office marks the Progress / Stages summary as seen, clearing the "New" badge
