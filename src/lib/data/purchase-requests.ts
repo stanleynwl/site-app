@@ -171,7 +171,13 @@ export async function getOpenRequestCountsByProject(): Promise<
     const key = r.project_id;
     if (!counts[key]) counts[key] = { total: 0, aged: 0 };
     counts[key].total += 1;
-    if (prAgeHours(r) >= 48) counts[key].aged += 1;
+    // Only flag as "aged" while still waiting on the office (pending/Accepted);
+    // an Ordered request is no longer the office's overdue item.
+    if (
+      (r.status === "pending" || r.status === "approved") &&
+      prAgeHours(r) >= 48
+    )
+      counts[key].aged += 1;
   }
   return counts;
 }

@@ -171,7 +171,10 @@ export default async function OfficeRequestsPage({
                     <span className="rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">
                       {t(`status.${r.status}`)}
                     </span>
-                    {r.status !== "delivered" && (
+                    {/* Aging clock only while the request is waiting on the
+                        OFFICE (pending / Accepted). Once Ordered it's waiting on
+                        the supplier/site, so the office nag stops. */}
+                    {(r.status === "pending" || r.status === "approved") && (
                       <p className={`mt-1 text-xs ${ageClass(age)}`}>
                         {t("waiting", { hours: age })}
                       </p>
