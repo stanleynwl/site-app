@@ -130,6 +130,73 @@ export function prAgeHours(r: PurchaseRequest): number {
   return Math.max(0, Math.floor((end - new Date(r.created_at).getTime()) / 3_600_000));
 }
 
+// --- Materials procurement register (office archive) ------------------------
+// Whole days between two timestamps (rounded), or null if either is missing.
+// Used for lead-time columns: requested→ordered, ordered→delivered, etc.
+export function daysBetween(
+  fromIso: string | null,
+  toIso: string | null,
+): number | null {
+  if (!fromIso || !toIso) return null;
+  const ms = new Date(toIso).getTime() - new Date(fromIso).getTime();
+  return Math.max(0, Math.round(ms / 86_400_000));
+}
+
+// A request is "outstanding" while it still needs the supplier/site to deliver —
+// i.e. not yet delivered and not rejected/closed.
+export function prIsOutstanding(r: PurchaseRequest): boolean {
+  return r.status !== "delivered" && r.status !== "rejected" && r.status !== "closed";
+}
+
+// Overdue = still outstanding AND its needed-by date is in the past. `today` is a
+// YYYY-MM-DD string in Malaysia time (caller passes todayISO()).
+export function prIsOverdue(r: PurchaseRequest, today: string): boolean {
+  return prIsOutstanding(r) && r.needed_by != null && r.needed_by < today;
+}
+
+export type ProcurementSummary = {
+  total: number;
+  delivered: number;
+  outstanding: number;
+  overdue: number;
+  avgRequestToOrderDays: number | null;
+  avgOrderToDeliveryDays: number | null;
+};
+
+// Roll a project's requests into the summary header shown atop the register.
+export function summarizeProcurement(
+  requests: PurchaseRequest[],
+  today: string,
+): ProcurementSummary {
+  const toOrder: number[] = [];
+  const toDeliver: number[] = [];
+  let delivered = 0;
+  let outstanding = 0;
+  let overdue = 0;
+
+  for (const r of requests) {
+    if (r.status === "delivered") delivered++;
+    if (prIsOutstanding(r)) outstanding++;
+    if (prIsOverdue(r, today)) overdue++;
+    const o = daysBetween(r.created_at, r.ordered_at);
+    if (o != null) toOrder.push(o);
+    const d = daysBetween(r.ordered_at, r.delivered_at);
+    if (d != null) toDeliver.push(d);
+  }
+
+  const avg = (xs: number[]): number | null =>
+    xs.length === 0 ? null : Math.round((xs.reduce((s, x) => s + x, 0) / xs.length) * 10) / 10;
+
+  return {
+    total: requests.length,
+    delivered,
+    outstanding,
+    overdue,
+    avgRequestToOrderDays: avg(toOrder),
+    avgOrderToDeliveryDays: avg(toDeliver),
+  };
+}
+
 // Resolve short-lived signed URLs for each request's photos (skip archived ones,
 // whose binaries have moved to the local archive). Mirrors withSignedPhotoUrls.
 export async function withSignedRequestPhotos(

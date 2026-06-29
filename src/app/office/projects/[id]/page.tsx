@@ -50,6 +50,7 @@ export default async function OfficeProjectDetail({
   const tw = await getTranslations("Attendance");
   const tc = await getTranslations("Claims");
   const ttr = await getTranslations("Trash");
+  const tm = await getTranslations("Materials");
 
   const [reports, deliveries, stockSummary, blocks, refPhotos] =
     await Promise.all([
@@ -100,6 +101,9 @@ export default async function OfficeProjectDetail({
           <button className={btnCls}>{tp2("rename")}</button>
         </form>
         <div className="mt-2 flex flex-wrap gap-3 text-xs">
+          <Link href={`/office/projects/${id}/materials`} className="underline">
+            {tm("title")}
+          </Link>
           <Link href={`/office/projects/${id}/activity`} className="underline">
             {t("activity")}
           </Link>
