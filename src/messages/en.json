@@ -603,6 +603,8 @@
   },
   "Progress": {
     "title": "Progress",
+    "reportTitle": "Progress report",
+    "print": "Print / Save as PDF",
     "intro": "Update how many units are done for each item. You can attach a photo. No approval needed.",
     "searchBlock": "Search block…",
     "refPhotos": "Reference",

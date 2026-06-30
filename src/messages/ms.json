@@ -603,6 +603,8 @@
   },
   "Progress": {
     "title": "Kemajuan",
+    "reportTitle": "Laporan kemajuan",
+    "print": "Cetak / Simpan PDF",
     "intro": "Kemas kini berapa unit telah siap bagi setiap item. Anda boleh lampirkan foto. Tiada kelulusan diperlukan.",
     "searchBlock": "Cari blok…",
     "refPhotos": "Rujukan",

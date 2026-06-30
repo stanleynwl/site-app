@@ -40,7 +40,15 @@ export default async function OfficeProgressPage({
         >
           ← {project.name}
         </Link>
-        <h1 className="mt-1 text-xl font-semibold">{t("title")}</h1>
+        <div className="mt-1 flex items-center justify-between gap-3">
+          <h1 className="text-xl font-semibold">{t("title")}</h1>
+          <Link
+            href={`/office/projects/${id}/progress/print`}
+            className="shrink-0 rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25"
+          >
+            {t("print")}
+          </Link>
+        </div>
       </div>
 
       {blocks.length === 0 ? (

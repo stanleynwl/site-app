@@ -603,6 +603,8 @@
   },
   "Progress": {
     "title": "进度",
+    "reportTitle": "进度报告",
+    "print": "打印 / 另存为 PDF",
     "intro": "更新每个项目已完成的单位数。可附上照片。无需审批。",
     "searchBlock": "搜索栋号…",
     "refPhotos": "参考",
