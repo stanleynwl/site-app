@@ -610,7 +610,7 @@ export async function setPhotoTags(formData: FormData): Promise<void> {
 
 export type DeliveryState =
   | { ok: true }
-  | { error: "save" | "not-configured" | "auth" | "validation" }
+  | { error: "save" | "not-configured" | "auth" | "validation" | "completeness" }
   | undefined;
 
 const DELIVERY_ISSUES = [
@@ -704,6 +704,11 @@ async function attachSubmissionPhotos(
 // issue chip/note); structured fields (supplier/material/qty) are optional and
 // often filled by the office later from the photo. received_quantity only applies
 // to count_required materials (UI hides it otherwise).
+//
+// REQUEST MODE: if the DO belongs to an ordered purchase request (request_id
+// set), the delivery is recorded per request item (3-quantity variance per
+// line), received-this-DO quantities accumulate onto the items, and the request
+// flips to 'partial' or 'delivered' — this is THE way a request gets confirmed.
 export async function createDelivery(
   _prev: DeliveryState,
   formData: FormData,
@@ -714,6 +719,9 @@ export async function createDelivery(
 
   const projectId = String(formData.get("project_id") ?? "");
   if (!projectId) return { error: "validation" };
+
+  const requestId = String(formData.get("request_id") ?? "");
+  const isRequestMode = requestId !== "" && requestId !== "__others__";
 
   const materialIdRaw = String(formData.get("material_id") ?? "");
   const isOther = materialIdRaw === "" || materialIdRaw === "__other__";
@@ -733,8 +741,9 @@ export async function createDelivery(
   const photoLng = formData.getAll("photo_lng").map(String);
 
   // Photo-first: allow a delivery with just a photo and/or an issue. Reject only
-  // a completely empty submit (no photo, no issue, no material/supplier/DO).
+  // a completely empty submit. A selected request itself counts as content.
   const hasContent =
+    isRequestMode ||
     photoPaths.length > 0 ||
     issueType !== null ||
     (!isOther && materialIdRaw) ||
@@ -744,30 +753,157 @@ export async function createDelivery(
   if (!hasContent) return { error: "validation" };
 
   const supabase = await createClient();
-  const { data: delivery, error } = await supabase
-    .from("deliveries")
-    .insert({
-      project_id: projectId,
-      supplier_id: supplierIdRaw || null,
-      material_id: isOther || !materialIdRaw ? null : materialIdRaw,
-      material_text: isOther ? materialText || null : null,
-      do_number: doNumber || null,
-      unit: String(formData.get("unit") ?? "").trim() || null,
-      received_quantity: parseQty(formData.get("received_quantity")),
-      delivered_on: String(formData.get("delivered_on") ?? "") || todayISO(),
-      issue_type: issueType,
-      note,
-      created_by: user.id,
-    })
-    .select("id")
-    .single();
-  if (error || !delivery) return { error: "save" };
+  const deliveredOn = String(formData.get("delivered_on") ?? "") || todayISO();
+  const shared = {
+    project_id: projectId,
+    do_number: doNumber || null,
+    delivered_on: deliveredOn,
+    issue_type: issueType,
+    note,
+    created_by: user.id,
+  };
+
+  let firstDeliveryId: string;
+  let requestActivity: { action: "request.delivered" | "request.partial"; id: string } | null =
+    null;
+
+  if (isRequestMode) {
+    // --- Request mode: DO against an ordered request -------------------------
+    const { data: req } = await supabase
+      .from("purchase_requests")
+      .select(
+        "id, project_id, status, supplier_id, items:purchase_request_items(id, material_id, material_text, quantity, unit, delivered_quantity)",
+      )
+      .eq("id", requestId)
+      .maybeSingle();
+    const request = req as unknown as {
+      id: string;
+      project_id: string;
+      status: string;
+      supplier_id: string | null;
+      items: {
+        id: string;
+        material_id: string | null;
+        material_text: string | null;
+        quantity: number | null;
+        unit: string | null;
+        delivered_quantity: number | null;
+      }[];
+    } | null;
+    if (
+      !request ||
+      request.project_id !== projectId ||
+      (request.status !== "po_issued" && request.status !== "partial")
+    )
+      return { error: "validation" };
+
+    // Whether the whole order has now arrived — an explicit site choice, since
+    // keying quantities is optional and concrete can over/under-deliver.
+    const completeness = String(formData.get("completeness") ?? "");
+    if (completeness !== "delivered" && completeness !== "partial")
+      return { error: "completeness" };
+
+    // Per-item received-this-DO quantities (blank = didn't count).
+    const received = new Map<string, number>();
+    for (const it of request.items) {
+      const v = parseQty(formData.get(`received_${it.id}`));
+      if (v != null) received.set(it.id, v);
+    }
+
+    // Coverage rule: full → one row per item; partial → rows for keyed items
+    // only; partial with nothing keyed → one header row as the DO/photo anchor.
+    const coveredItems =
+      completeness === "delivered"
+        ? request.items
+        : request.items.filter((it) => received.has(it.id));
+    const supplierId = supplierIdRaw || request.supplier_id || null;
+
+    const rows: Record<string, unknown>[] =
+      coveredItems.length > 0
+        ? coveredItems.map((it) => ({
+            ...shared,
+            supplier_id: supplierId,
+            material_id: it.material_id,
+            material_text: it.material_id ? null : it.material_text,
+            unit: it.unit,
+            requested_quantity: it.quantity,
+            received_quantity: received.get(it.id) ?? null,
+            purchase_request_id: request.id,
+            purchase_request_item_id: it.id,
+          }))
+        : [
+            {
+              ...shared,
+              supplier_id: supplierId,
+              material_id: null,
+              material_text: null,
+              unit: null,
+              requested_quantity: null,
+              received_quantity: null,
+              purchase_request_id: request.id,
+              purchase_request_item_id: null,
+            },
+          ];
+
+    const { data: inserted, error } = await supabase
+      .from("deliveries")
+      .insert(rows)
+      .select("id");
+    if (error || !inserted || inserted.length === 0) return { error: "save" };
+    firstDeliveryId = inserted[0].id as string;
+
+    // Accumulate received-so-far onto the items (only where a number was keyed).
+    for (const it of request.items) {
+      const add = received.get(it.id);
+      if (add == null) continue;
+      const { error: accErr } = await supabase
+        .from("purchase_request_items")
+        .update({ delivered_quantity: (it.delivered_quantity ?? 0) + add })
+        .eq("id", it.id)
+        .eq("request_id", request.id);
+      if (accErr) return { error: "save" };
+    }
+
+    // Flip the request. delivered_at only stamps at completion (lead-time stat).
+    const patch =
+      completeness === "delivered"
+        ? { status: "delivered", delivered_at: new Date().toISOString() }
+        : { status: "partial" };
+    const { error: stErr } = await supabase
+      .from("purchase_requests")
+      .update(patch)
+      .eq("id", request.id)
+      .in("status", ["po_issued", "partial"]);
+    if (stErr) return { error: "save" };
+
+    requestActivity = {
+      action: completeness === "delivered" ? "request.delivered" : "request.partial",
+      id: request.id,
+    };
+  } else {
+    // --- Others mode: unrequested delivery (unchanged behavior) --------------
+    const { data: delivery, error } = await supabase
+      .from("deliveries")
+      .insert({
+        ...shared,
+        supplier_id: supplierIdRaw || null,
+        material_id: isOther || !materialIdRaw ? null : materialIdRaw,
+        material_text: isOther ? materialText || null : null,
+        unit: String(formData.get("unit") ?? "").trim() || null,
+        received_quantity: parseQty(formData.get("received_quantity")),
+      })
+      .select("id")
+      .single();
+    if (error || !delivery) return { error: "save" };
+    firstDeliveryId = delivery.id as string;
+  }
 
   // Persist photo metadata (binaries already uploaded to Storage client-side).
+  // Photos attach to the first delivery row (photos are 1-many per delivery).
   if (photoPaths.length > 0) {
     const photoRows = photoPaths.map((path, i) => ({
       project_id: projectId,
-      delivery_id: delivery.id,
+      delivery_id: firstDeliveryId,
       storage_path: path,
       taken_at: photoTakenAt[i] || null,
       gps_lat: parseCoord(photoLat[i] ?? null),
@@ -785,7 +921,7 @@ export async function createDelivery(
       const { error: doErr } = await supabase
         .from("deliveries")
         .update({ do_photo_id: inserted[0].id })
-        .eq("id", delivery.id);
+        .eq("id", firstDeliveryId);
       if (doErr) return { error: "save" };
     }
   }
@@ -797,15 +933,30 @@ export async function createDelivery(
       actorId: user.id,
       action: "delivery.create",
       entityType: "delivery",
-      entityId: delivery.id,
+      entityId: firstDeliveryId,
       detail: doNumber ? `DO ${doNumber}` : materialText || null,
     });
+    if (requestActivity) {
+      await logActivity(supabase, {
+        projectId,
+        actorId: user.id,
+        action: requestActivity.action,
+        entityType: "request",
+        entityId: requestActivity.id,
+        detail: doNumber ? `DO ${doNumber}` : null,
+      });
+    }
   } catch {
     /* non-critical */
   }
   safeRevalidate(
     `/app/projects/${projectId}/deliveries`,
+    `/app/projects/${projectId}/requests`,
     `/office/projects/${projectId}`,
+    `/office/projects/${projectId}/deliveries`,
+    `/office/projects/${projectId}/materials`,
+    "/office/requests",
+    "/office/do-queue",
   );
   return { ok: true };
 }
@@ -1123,54 +1274,8 @@ export async function closePurchaseRequest(formData: FormData): Promise<void> {
 
 // Supervisor (any project member) confirms an ordered request has arrived. Only
 // transitions from po_issued ("Ordered") → delivered. RLS allows member update.
-export async function confirmDeliveredPurchaseRequest(
-  formData: FormData,
-): Promise<void> {
-  if (!isSupabaseConfigured) return;
-  const user = await getSessionUser();
-  if (!user) redirect("/login");
-
-  const id = String(formData.get("request_id") ?? "");
-  const projectId = String(formData.get("project_id") ?? "");
-  if (!id) return;
-
-  const supabase = await createClient();
-
-  // Persist any last-minute quantity edits made on the same form, so the
-  // supervisor confirms delivery in one tap instead of saving each line first.
-  // Inputs are named `qty_<itemId>`; only changed values are written.
-  for (const [key, value] of formData.entries()) {
-    if (!key.startsWith("qty_")) continue;
-    const itemId = key.slice(4);
-    if (!itemId) continue;
-    await supabase
-      .from("purchase_request_items")
-      .update({ quantity: parseQty(value) })
-      .eq("id", itemId)
-      .eq("request_id", id);
-  }
-
-  const { error: stErr } = await supabase
-    .from("purchase_requests")
-    .update({ status: "delivered", delivered_at: new Date().toISOString() })
-    .eq("id", id)
-    .eq("status", "po_issued");
-  if (stErr) throw new Error("confirm delivered failed");
-
-  // Post-persist tail — must never fail a committed status change.
-  try {
-    await logActivity(supabase, {
-      projectId,
-      actorId: user.id,
-      action: "request.delivered",
-      entityType: "request",
-      entityId: id,
-    });
-  } catch {
-    /* non-critical */
-  }
-  safeRevalidate(`/app/projects/${projectId}/requests`, "/office/requests");
-}
+// (confirmDeliveredPurchaseRequest was removed: DO capture in createDelivery is
+//  now the only way a request gets confirmed delivered / partial.)
 
 // Supervisor (any project member) amends a request line item's quantity on site
 // — e.g. concrete 6m³ → 12m³, or down to 3m³. Allowed anytime the request is

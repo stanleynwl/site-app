@@ -16,6 +16,7 @@ export type ActivityAction =
   | "request.order"
   | "request.close"
   | "request.delivered"
+  | "request.partial"
   | "request.amend"
   | "progress.submit"
   | "stage.complete"

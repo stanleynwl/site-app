@@ -53,6 +53,7 @@
         "order": "ordered a request",
         "close": "closed a request",
         "delivered": "confirmed a request delivered",
+        "partial": "recorded a partial delivery",
         "amend": "amended a request"
       },
       "progress": {
@@ -322,6 +323,14 @@
   "Deliveries": {
     "title": "Deliveries",
     "newDelivery": "Log a delivery",
+    "forRequest": "Which order is this DO for?",
+    "requestOthers": "Others / not from a request",
+    "receivedThisDo": "Received now",
+    "remainingHint": "{remaining} of {ordered} left",
+    "completeness": "Is the order complete?",
+    "completeAll": "All delivered",
+    "completePartial": "Partial — more coming",
+    "completenessError": "Choose whether the order is fully delivered.",
     "takePhoto": "Take photo",
     "addPhoto": "Add another photo",
     "uploading": "Uploading…",
@@ -481,14 +490,15 @@
     "orderNoPO": "Order without PO",
     "approveOrderNoPO": "Approve & order (no PO)",
     "awaitingDelivery": "Ordered — waiting for site to confirm delivery.",
-    "confirmDelivered": "Confirm delivered",
-    "confirmDeliveredHint": "Adjust the quantity above if it changed, then confirm — no need to save first.",
+    "confirmViaDO": "Arrived? Record the DO in Deliveries to confirm →",
+    "deliveredSoFar": "Delivered {delivered} of {ordered}",
     "saveQty": "Save",
     "close": "Close",
     "status": {
       "pending": "Pending",
       "approved": "Accepted",
       "po_issued": "Ordered",
+      "partial": "Partial",
       "delivered": "Delivered",
       "closed": "Closed",
       "rejected": "Rejected"

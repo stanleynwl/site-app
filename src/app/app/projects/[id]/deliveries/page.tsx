@@ -8,8 +8,13 @@ import {
   withSignedUrls,
   deliveryMaterialName,
 } from "@/lib/data/deliveries";
+import {
+  getProjectPurchaseRequests,
+  prItemsLabel,
+  itemName,
+} from "@/lib/data/purchase-requests";
 import { todayISO } from "@/lib/date";
-import { DeliveryForm } from "@/components/delivery-form";
+import { DeliveryForm, type OpenOrder } from "@/components/delivery-form";
 
 export default async function DeliveriesPage({
   params,
@@ -21,12 +26,31 @@ export default async function DeliveriesPage({
   if (!project) notFound();
 
   const t = await getTranslations("Deliveries");
-  const [suppliers, materials, rawDeliveries] = await Promise.all([
+  const [suppliers, materials, rawDeliveries, requests] = await Promise.all([
     getSuppliers(),
     getMaterials(),
     getProjectDeliveries(id),
+    getProjectPurchaseRequests(id),
   ]);
   const deliveries = await withSignedUrls(rawDeliveries);
+
+  // Ordered requests still awaiting (full) delivery — the DO picker options.
+  const openOrders: OpenOrder[] = requests
+    .filter((r) => r.status === "po_issued" || r.status === "partial")
+    .map((r) => ({
+      id: r.id,
+      label: prItemsLabel(r),
+      items: r.items.map((it) => ({
+        id: it.id,
+        name: itemName(it),
+        quantity: it.quantity,
+        unit: it.unit,
+        remaining:
+          it.quantity != null
+            ? Math.max(0, it.quantity - (it.delivered_quantity ?? 0))
+            : null,
+      })),
+    }));
 
   return (
     <div className="space-y-4">
@@ -45,6 +69,7 @@ export default async function DeliveriesPage({
         today={todayISO()}
         suppliers={suppliers.filter((s) => s.active)}
         materials={materials.filter((m) => m.active)}
+        openOrders={openOrders}
       />
 
       <section className="space-y-2">

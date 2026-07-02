@@ -11,6 +11,7 @@ export type PurchaseRequestStatus =
   | "pending"
   | "approved"
   | "po_issued"
+  | "partial" // some of the order arrived (via DO capture); more coming
   | "delivered"
   | "closed"
   | "rejected";
@@ -21,6 +22,7 @@ export const PR_OPEN_STATUSES: PurchaseRequestStatus[] = [
   "pending",
   "approved",
   "po_issued",
+  "partial",
 ];
 
 // A delivered request lingers on the supervisor's list for this many days after
@@ -34,6 +36,7 @@ export type PurchaseRequestItem = {
   quantity: number | null;
   unit: string | null;
   spec: string | null; // free-text size/spec, e.g. timber "12 ft · 4 tonne"
+  delivered_quantity: number | null; // cumulative received across DOs; null = never counted
 };
 
 export type RequestPhoto = {
@@ -62,7 +65,7 @@ export type PurchaseRequest = {
 };
 
 const PR_COLUMNS =
-  "id, project_id, needed_by, urgency_reason, note, status, po_number, rejected_reason, created_at, ordered_at, delivered_at, supplier:suppliers(name), items:purchase_request_items(id, material_text, quantity, unit, spec, material:materials(name, unit)), photos(id, storage_path, archived_at)";
+  "id, project_id, needed_by, urgency_reason, note, status, po_number, rejected_reason, created_at, ordered_at, delivered_at, supplier:suppliers(name), items:purchase_request_items(id, material_text, quantity, unit, spec, delivered_quantity, material:materials(name, unit)), photos(id, storage_path, archived_at)";
 
 // Requests still worth showing: all open ones, plus delivered ones for a short
 // hold window (DELIVERED_HOLD_DAYS) after delivery. Used by BOTH the supervisor's

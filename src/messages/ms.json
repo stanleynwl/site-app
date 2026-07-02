@@ -53,6 +53,7 @@
         "order": "memesan permintaan",
         "close": "menutup permintaan",
         "delivered": "mengesahkan permintaan diterima",
+        "partial": "merekod penghantaran separa",
         "amend": "meminda permintaan"
       },
       "progress": {
@@ -322,6 +323,14 @@
   "Deliveries": {
     "title": "Penghantaran",
     "newDelivery": "Rekod penghantaran",
+    "forRequest": "DO ini untuk pesanan yang mana?",
+    "requestOthers": "Lain-lain / bukan dari permintaan",
+    "receivedThisDo": "Diterima sekarang",
+    "remainingHint": "Baki {remaining} / {ordered}",
+    "completeness": "Adakah pesanan lengkap?",
+    "completeAll": "Semua dihantar",
+    "completePartial": "Separa — ada lagi",
+    "completenessError": "Pilih sama ada pesanan lengkap dihantar.",
     "takePhoto": "Ambil foto",
     "addPhoto": "Tambah foto",
     "uploading": "Memuat naik…",
@@ -481,14 +490,15 @@
     "orderNoPO": "Pesan tanpa PO",
     "approveOrderNoPO": "Lulus & pesan (tanpa PO)",
     "awaitingDelivery": "Dipesan — menunggu tapak mengesahkan penghantaran.",
-    "confirmDelivered": "Sahkan diterima",
-    "confirmDeliveredHint": "Laraskan kuantiti di atas jika berubah, kemudian sahkan — tak perlu simpan dahulu.",
+    "confirmViaDO": "Sudah sampai? Rekod DO di Penghantaran untuk sahkan →",
+    "deliveredSoFar": "Dihantar {delivered} / {ordered}",
     "saveQty": "Simpan",
     "close": "Tutup",
     "status": {
       "pending": "Menunggu",
       "approved": "Diterima",
       "po_issued": "Dipesan",
+      "partial": "Separa",
       "delivered": "Dihantar",
       "closed": "Ditutup",
       "rejected": "Ditolak"

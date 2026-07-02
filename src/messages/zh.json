@@ -53,6 +53,7 @@
         "order": "下单了申请",
         "close": "结束了申请",
         "delivered": "确认申请已送达",
+        "partial": "记录了部分到货",
         "amend": "修改了申请"
       },
       "progress": {
@@ -322,6 +323,14 @@
   "Deliveries": {
     "title": "送货",
     "newDelivery": "登记送货",
+    "forRequest": "这张送货单属于哪个订单？",
+    "requestOthers": "其他 / 非申请订单",
+    "receivedThisDo": "本次实收",
+    "remainingHint": "剩余 {remaining} / {ordered}",
+    "completeness": "订单是否已全部送达？",
+    "completeAll": "全部送达",
+    "completePartial": "部分到货 — 还有后续",
+    "completenessError": "请选择订单是否已全部送达。",
     "takePhoto": "拍照",
     "addPhoto": "再加一张",
     "uploading": "上传中…",
@@ -481,14 +490,15 @@
     "orderNoPO": "下单（无 PO）",
     "approveOrderNoPO": "批准并下单（无 PO）",
     "awaitingDelivery": "已下单 — 等待工地确认收货。",
-    "confirmDelivered": "确认收货",
-    "confirmDeliveredHint": "如数量有变，先在上方修改，然后确认即可，无需先保存。",
+    "confirmViaDO": "货到了？请到“送货”页登记送货单以确认 →",
+    "deliveredSoFar": "已送 {delivered} / {ordered}",
     "saveQty": "保存",
     "close": "结案",
     "status": {
       "pending": "待处理",
       "approved": "已接受",
       "po_issued": "已下单",
+      "partial": "部分送达",
       "delivered": "已送达",
       "closed": "已结案",
       "rejected": "已拒绝"

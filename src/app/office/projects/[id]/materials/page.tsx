@@ -51,6 +51,7 @@ export default async function MaterialsRegisterPage({
     { label: treq("status.pending"), value: "pending" },
     { label: treq("status.approved"), value: "approved" },
     { label: treq("status.po_issued"), value: "po_issued" },
+    { label: treq("status.partial"), value: "partial" },
     { label: treq("status.delivered"), value: "delivered" },
   ];
   const supplierOptions: FilterOption[] = suppliers.map((s) => ({ label: s, value: s }));
@@ -219,6 +220,9 @@ function RegisterCard({
               {it.quantity != null && (
                 <span className="text-black/60 dark:text-white/60">
                   {" · "}
+                  {it.delivered_quantity != null
+                    ? `${it.delivered_quantity} / `
+                    : ""}
                   {it.quantity}
                   {it.unit ? ` ${it.unit}` : ""}
                 </span>

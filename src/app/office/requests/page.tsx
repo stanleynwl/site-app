@@ -62,6 +62,7 @@ export default async function OfficeRequestsPage({
     { label: t("status.pending"), value: "pending" },
     { label: t("status.approved"), value: "approved" },
     { label: t("status.po_issued"), value: "po_issued" },
+    { label: t("status.partial"), value: "partial" },
     { label: t("status.delivered"), value: "delivered" },
   ];
 
@@ -151,6 +152,17 @@ export default async function OfficeRequestsPage({
                               — {it.spec}
                             </span>
                           )}
+                          {r.status === "partial" &&
+                            it.delivered_quantity != null &&
+                            it.quantity != null && (
+                              <span className="font-normal text-amber-700 dark:text-amber-400">
+                                {" "}
+                                · {t("deliveredSoFar", {
+                                  delivered: it.delivered_quantity,
+                                  ordered: it.quantity,
+                                })}
+                              </span>
+                            )}
                         </li>
                       ))}
                     </ul>
@@ -168,7 +180,13 @@ export default async function OfficeRequestsPage({
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs ${
+                        r.status === "partial"
+                          ? "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                          : "bg-black/5 dark:bg-white/10"
+                      }`}
+                    >
                       {t(`status.${r.status}`)}
                     </span>
                     {/* Aging clock only while the request is waiting on the
@@ -280,13 +298,15 @@ export default async function OfficeRequestsPage({
                     </>
                   )}
 
-                  {r.status === "po_issued" && (
+                  {(r.status === "po_issued" || r.status === "partial") && (
                     <span className="text-xs text-black/50 dark:text-white/50">
                       {t("awaitingDelivery")}
                     </span>
                   )}
 
-                  {(r.status === "approved" || r.status === "po_issued") && (
+                  {(r.status === "approved" ||
+                    r.status === "po_issued" ||
+                    r.status === "partial") && (
                     <form action={closePurchaseRequest}>
                       <input type="hidden" name="request_id" value={r.id} />
                       <input type="hidden" name="project_id" value={r.project_id} />

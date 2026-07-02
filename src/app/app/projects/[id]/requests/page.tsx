@@ -9,10 +9,7 @@ import {
   withSignedRequestPhotos,
   isRequestVisible,
 } from "@/lib/data/purchase-requests";
-import {
-  confirmDeliveredPurchaseRequest,
-  updateRequestItemQuantity,
-} from "@/lib/data/actions";
+import { updateRequestItemQuantity } from "@/lib/data/actions";
 import { todayISO } from "@/lib/date";
 import { PurchaseRequestForm } from "@/components/purchase-request-form";
 
@@ -63,63 +60,18 @@ export default async function ProjectRequestsPage({
         ) : (
           <ul className="divide-y divide-black/10 rounded-xl border border-black/10 dark:divide-white/10 dark:border-white/15">
             {requests.map((r) => {
-              // Three states for the quantity column:
-              //  • delivered      → read-only (no edits needed once it has arrived)
-              //  • po_issued       → editable INSIDE the confirm-delivered form, so one
-              //                      tap saves the amended quantity + marks it delivered
-              //  • pending/approved → standalone per-line Save (no delivery step yet)
-              const awaitingDelivery = r.status === "po_issued";
+              // Quantity column by state:
+              //  • delivered            → read-only (fixed once it has arrived)
+              //  • pending/approved/
+              //    po_issued/partial    → editable per-line Save (amend before/
+              //                           between deliveries, e.g. concrete 6→12)
+              // Confirming arrival happens by capturing the DO in Deliveries.
+              const awaitingDelivery =
+                r.status === "po_issued" || r.status === "partial";
               const isDelivered = r.status === "delivered";
               return (
               <li key={r.id} className="space-y-1 px-4 py-3 text-sm">
-                {awaitingDelivery ? (
-                  // One form wraps the lines AND the confirm button: editing a
-                  // quantity here is saved by pressing "Confirm delivered".
-                  <form action={confirmDeliveredPurchaseRequest} className="space-y-2">
-                    <input type="hidden" name="request_id" value={r.id} />
-                    <input type="hidden" name="project_id" value={id} />
-                    <div className="flex items-start justify-between gap-3">
-                      <ul className="flex-1 space-y-1">
-                        {r.items.map((it) => (
-                          <li key={it.id} className="flex items-center gap-2">
-                            <div className="flex-1">
-                              <div className="font-medium">{itemName(it)}</div>
-                              {it.spec && (
-                                <div className="text-xs text-black/70 dark:text-white/70">
-                                  {it.spec}
-                                </div>
-                              )}
-                            </div>
-                            <input
-                              name={`qty_${it.id}`}
-                              type="number"
-                              step="any"
-                              min="0"
-                              defaultValue={it.quantity ?? ""}
-                              aria-label={t("quantity")}
-                              className="w-20 rounded-lg border border-black/25 bg-transparent px-2 py-1 text-sm outline-none focus:border-black/40 dark:border-white/30 dark:focus:border-white/50"
-                            />
-                            {it.unit && (
-                              <span className="text-xs text-black/70 dark:text-white/70">
-                                {it.unit}
-                              </span>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                      <span className="shrink-0 rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">
-                        {t(`status.${r.status}`)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-black/60 dark:text-white/60">
-                      {t("confirmDeliveredHint")}
-                    </p>
-                    <button className="rounded-lg border border-black/20 px-3 py-1 text-xs font-medium dark:border-white/25">
-                      {t("confirmDelivered")}
-                    </button>
-                  </form>
-                ) : (
-                  <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start justify-between gap-3">
                     <ul className="flex-1 space-y-1">
                       {r.items.map((it) => (
                         <li key={it.id} className="flex items-center gap-2">
@@ -130,6 +82,16 @@ export default async function ProjectRequestsPage({
                                 {it.spec}
                               </div>
                             )}
+                            {r.status === "partial" &&
+                              it.delivered_quantity != null &&
+                              it.quantity != null && (
+                                <div className="text-xs text-amber-700 dark:text-amber-400">
+                                  {t("deliveredSoFar", {
+                                    delivered: it.delivered_quantity,
+                                    ordered: it.quantity,
+                                  })}
+                                </div>
+                              )}
                           </div>
                           {isDelivered ? (
                             // Delivered → quantity is fixed; just show it.
@@ -166,10 +128,25 @@ export default async function ProjectRequestsPage({
                         </li>
                       ))}
                     </ul>
-                    <span className="shrink-0 rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${
+                        r.status === "partial"
+                          ? "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                          : "bg-black/5 dark:bg-white/10"
+                      }`}
+                    >
                       {t(`status.${r.status}`)}
                     </span>
-                  </div>
+                </div>
+                {awaitingDelivery && (
+                  <p className="text-xs text-black/60 dark:text-white/60">
+                    <Link
+                      href={`/app/projects/${id}/deliveries`}
+                      className="underline"
+                    >
+                      {t("confirmViaDO")}
+                    </Link>
+                  </p>
                 )}
                 {r.photos.length > 0 && (
                   <div className="flex flex-wrap gap-2">
