@@ -15,6 +15,7 @@ import { todayISO, isInSoftEditWindow, normalizeReportDate } from "@/lib/date";
 import { DEFAULT_STAGES } from "@/lib/stages";
 import { progressSeedRows, progressItemLabel } from "@/lib/progress-template";
 import { logActivity, type ActivityAction } from "./activity";
+import { notifyNewRequest } from "@/lib/notify/email";
 import { purgeExpiredDeletedPhotos } from "./reports";
 import type { IssueCategory, NoWorkReason, ReportType, Weather } from "./reports";
 
@@ -1150,6 +1151,44 @@ export async function createPurchaseRequest(
   } catch {
     /* non-critical */
   }
+
+  // Instant email to the office so a request is seen even when nobody has the
+  // app open. Best-effort + no-op unless RESEND_* env is set (see notify/email).
+  try {
+    const catalogIds = items
+      .map((it) => it.material_id)
+      .filter((v): v is string => Boolean(v));
+    const [{ data: proj }, profile, mats] = await Promise.all([
+      supabase.from("projects").select("name").eq("id", projectId).maybeSingle(),
+      getProfile(),
+      catalogIds.length > 0
+        ? supabase.from("materials").select("id, name").in("id", catalogIds)
+        : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+    ]);
+    const nameById = new Map<string, string>();
+    for (const m of (mats.data ?? []) as { id: string; name: string }[])
+      nameById.set(m.id, m.name);
+    const itemLines = items.map((it) => {
+      const name = it.material_id
+        ? (nameById.get(it.material_id) ?? "Item")
+        : (it.material_text ?? "Item");
+      const qty =
+        it.quantity != null ? ` — ${it.quantity}${it.unit ? ` ${it.unit}` : ""}` : "";
+      const spec = it.spec ? ` (${it.spec})` : "";
+      return `${name}${qty}${spec}`;
+    });
+    await notifyNewRequest({
+      projectName: proj?.name ?? "Project",
+      raisedBy: profile?.full_name ?? profile?.username ?? "Site",
+      items: itemLines,
+      neededBy: String(formData.get("needed_by") ?? "") || null,
+      urgency: String(formData.get("urgency_reason") ?? "").trim() || null,
+      photoCount: photoPaths.length,
+    });
+  } catch {
+    /* non-critical */
+  }
+
   safeRevalidate(`/app/projects/${projectId}/requests`, "/office/requests");
   return { ok: true };
 }
