@@ -478,7 +478,7 @@
     "saveError": "无法提交，请重试。",
     "emptyError": "请选择材料、输入材料或添加照片。",
     "queueTitle": "采购申请队列",
-    "queueHint": "你项目中的未结申请，最早的在前。",
+    "queueHint": "你项目中的未结申请，最新的在前。",
     "empty": "暂无未结申请。",
     "waiting": "已等待 {hours} 小时",
     "approve": "接受",

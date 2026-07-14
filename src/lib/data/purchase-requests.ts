@@ -92,9 +92,9 @@ export async function getProjectPurchaseRequests(
   return (data ?? []) as unknown as PurchaseRequest[];
 }
 
-// Office queue: open requests across all the user's projects (oldest first so
-// the longest-waiting ones surface at the top), plus recently delivered ones
-// kept for the hold window — same visibility as the supervisor's site list.
+// Office queue: open requests across all the user's projects (newest first so
+// the latest requests surface at the top), plus recently delivered ones kept
+// for the hold window — same visibility as the supervisor's site list.
 export async function getOpenPurchaseRequests(): Promise<PurchaseRequest[]> {
   if (!isSupabaseConfigured) return [];
   const supabase = await createClient();
@@ -102,7 +102,7 @@ export async function getOpenPurchaseRequests(): Promise<PurchaseRequest[]> {
     .from("purchase_requests")
     .select(`${PR_COLUMNS}, project:projects(name)`)
     .in("status", [...PR_OPEN_STATUSES, "delivered"])
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: false });
   const rows = (data ?? []) as unknown as PurchaseRequest[];
   return rows.filter(isRequestVisible);
 }

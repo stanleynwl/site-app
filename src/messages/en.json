@@ -478,7 +478,7 @@
     "saveError": "Could not submit. Please try again.",
     "emptyError": "Pick a material, type one, or add a photo.",
     "queueTitle": "Purchase request queue",
-    "queueHint": "Open requests across your projects, oldest first.",
+    "queueHint": "Open requests across your projects, newest first.",
     "empty": "No open requests.",
     "waiting": "Waiting {hours}h",
     "approve": "Accept",

@@ -478,7 +478,7 @@
     "saveError": "Tidak dapat menghantar. Sila cuba lagi.",
     "emptyError": "Pilih bahan, taip satu, atau tambah foto.",
     "queueTitle": "Baris permintaan belian",
-    "queueHint": "Permintaan terbuka merentas projek anda, paling lama dahulu.",
+    "queueHint": "Permintaan terbuka merentas projek anda, terbaharu dahulu.",
     "empty": "Tiada permintaan terbuka.",
     "waiting": "Menunggu {hours}j",
     "approve": "Terima",
