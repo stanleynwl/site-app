@@ -73,7 +73,11 @@
         "create": "记录了预支"
       },
       "claim": {
-        "update": "更新了请款"
+        "update": "更新了请款",
+        "submit": "将请款单发送到工地",
+        "verify": "核实了请款单",
+        "approve": "批准了请款单",
+        "revert": "将请款单退回草稿"
       }
     }
   },
@@ -169,7 +173,25 @@
     "total": "合计",
     "lessAdvance": "减预支",
     "netPayable": "应付净额",
-    "save": "保存请款"
+    "save": "保存请款",
+    "statusDraft": "草稿",
+    "statusSubmitted": "已发送到工地",
+    "statusVerified": "已核实",
+    "statusApproved": "已批准",
+    "sendToSite": "发送到工地",
+    "revertToDraft": "退回草稿",
+    "lockedNotice": "已发送到工地 — 明细已锁定。",
+    "photosTitle": "纸质请款单照片",
+    "addPhoto": "添加照片",
+    "removePhoto": "移除照片",
+    "noPhotos": "未附照片。",
+    "verifiedStamp": "由 {name} 于 {date} 核实",
+    "approvedStamp": "由 {name} 于 {date} 批准",
+    "siteTitle": "分包商请款",
+    "siteIntro": "核对请款内容与实际完成的工作，然后进行核实。",
+    "siteEmpty": "暂无待处理的请款。",
+    "verify": "核实",
+    "approve": "批准"
   },
   "Trash": {
     "title": "回收站",
@@ -218,6 +240,7 @@
     "requests": "申请",
     "machinery": "机械",
     "stock": "库存",
+    "claims": "请款",
     "hours": "时数",
     "machineType": "机械",
     "otherMachine": "其他机械",

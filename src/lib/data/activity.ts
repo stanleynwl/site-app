@@ -24,7 +24,11 @@ export type ActivityAction =
   | "stock.count"
   | "attendance.record"
   | "advance.create"
-  | "claim.update";
+  | "claim.update"
+  | "claim.submit"
+  | "claim.verify"
+  | "claim.approve"
+  | "claim.revert";
 
 export type ActivityEntry = {
   id: string;

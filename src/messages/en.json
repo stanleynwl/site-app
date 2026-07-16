@@ -73,7 +73,11 @@
         "create": "logged an advance"
       },
       "claim": {
-        "update": "updated a claim"
+        "update": "updated a claim",
+        "submit": "sent a claim to site",
+        "verify": "verified a claim",
+        "approve": "approved a claim",
+        "revert": "pulled a claim back to draft"
       }
     }
   },
@@ -169,7 +173,25 @@
     "total": "Total",
     "lessAdvance": "Less advance",
     "netPayable": "Net payable",
-    "save": "Save claim"
+    "save": "Save claim",
+    "statusDraft": "Draft",
+    "statusSubmitted": "Sent to site",
+    "statusVerified": "Verified",
+    "statusApproved": "Approved",
+    "sendToSite": "Send to site",
+    "revertToDraft": "Revert to draft",
+    "lockedNotice": "Sent to site — lines are locked.",
+    "photosTitle": "Paper claim photos",
+    "addPhoto": "Add photo",
+    "removePhoto": "Remove photo",
+    "noPhotos": "No photos attached.",
+    "verifiedStamp": "Verified by {name} on {date}",
+    "approvedStamp": "Approved by {name} on {date}",
+    "siteTitle": "Subcontractor claims",
+    "siteIntro": "Check the claimed work against what was actually done, then verify.",
+    "siteEmpty": "No claims waiting.",
+    "verify": "Verify",
+    "approve": "Approve"
   },
   "Trash": {
     "title": "Recycle bin",
@@ -218,6 +240,7 @@
     "requests": "Requests",
     "machinery": "Machinery",
     "stock": "Stock",
+    "claims": "Claims",
     "hours": "Hours",
     "machineType": "Machine",
     "otherMachine": "Other machine",

@@ -400,7 +400,9 @@ export async function deleteAdvance(formData: FormData): Promise<void> {
 }
 
 // Monthly claim — office upserts the header and replaces its line items. Posts
-// month=YYYY-MM and parallel item_* arrays.
+// month=YYYY-MM and parallel item_* arrays. Lines are only editable in draft —
+// without this guard the delete-and-reinsert below would silently rewrite a
+// claim the site has already verified/approved.
 export async function saveClaim(formData: FormData): Promise<void> {
   if (!isSupabaseConfigured) return;
   const profile = await requireCanOffice();
@@ -411,6 +413,15 @@ export async function saveClaim(formData: FormData): Promise<void> {
   if (!projectId || !subId || !/^\d{4}-\d{2}$/.test(month)) return;
 
   const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("claims")
+    .select("id, status")
+    .eq("project_id", projectId)
+    .eq("subcontractor_id", subId)
+    .eq("period_month", `${month}-01`)
+    .maybeSingle();
+  if (existing && (existing as { status: string }).status !== "draft") return;
+
   const { data: claimRow } = await supabase
     .from("claims")
     .upsert(
@@ -454,6 +465,183 @@ export async function saveClaim(formData: FormData): Promise<void> {
     entityId: claimId,
   });
   revalidatePath(`/office/projects/${projectId}/claims`);
+}
+
+// --- Claim verify/approve workflow -------------------------------------------
+// draft -> submitted (office) -> verified (site, RPC) -> approved (PM, RPC).
+
+function claimPaths(projectId: string): string[] {
+  return [`/office/projects/${projectId}/claims`, `/app/projects/${projectId}/claims`];
+}
+
+export async function submitClaimToSite(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await requireCanOffice();
+  if (!profile) return;
+  const claimId = String(formData.get("claim_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!claimId) return;
+
+  const supabase = await createClient();
+  // Needs at least one line — site can't verify an empty claim.
+  const { count } = await supabase
+    .from("claim_items")
+    .select("id", { count: "exact", head: true })
+    .eq("claim_id", claimId);
+  if (!count) return;
+
+  const { data } = await supabase
+    .from("claims")
+    .update({ status: "submitted", submitted_at: new Date().toISOString() })
+    .eq("id", claimId)
+    .eq("status", "draft")
+    .select("id");
+  if (!data || data.length === 0) return;
+
+  await logActivity(supabase, {
+    projectId,
+    actorId: profile.id,
+    action: "claim.submit",
+    entityType: "claim",
+    entityId: claimId,
+  });
+  for (const p of claimPaths(projectId)) revalidatePath(p);
+}
+
+export async function revertClaimToDraft(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await requireCanOffice();
+  if (!profile) return;
+  const claimId = String(formData.get("claim_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!claimId) return;
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("claims")
+    .update({ status: "draft", submitted_at: null })
+    .eq("id", claimId)
+    .eq("status", "submitted")
+    .select("id");
+  if (!data || data.length === 0) return;
+
+  await logActivity(supabase, {
+    projectId,
+    actorId: profile.id,
+    action: "claim.revert",
+    entityType: "claim",
+    entityId: claimId,
+  });
+  for (const p of claimPaths(projectId)) revalidatePath(p);
+}
+
+// Site supervisor confirms the claimed work is real. The RPC re-checks
+// membership, can_site, and the submitted status, and stamps the name.
+export async function verifyClaim(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (!profile.can_site) return;
+  const claimId = String(formData.get("claim_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!claimId) return;
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("verify_claim", { p_claim_id: claimId });
+  if (error) return;
+
+  await logActivity(supabase, {
+    projectId,
+    actorId: profile.id,
+    action: "claim.verify",
+    entityType: "claim",
+    entityId: claimId,
+  });
+  for (const p of claimPaths(projectId)) revalidatePath(p);
+}
+
+// Final approval — PMs only (the RPC enforces role pm / is_admin).
+export async function approveClaim(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (!(profile.role === "pm" || profile.is_admin)) return;
+  const claimId = String(formData.get("claim_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!claimId) return;
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("approve_claim", { p_claim_id: claimId });
+  if (error) return;
+
+  await logActivity(supabase, {
+    projectId,
+    actorId: profile.id,
+    action: "claim.approve",
+    entityType: "claim",
+    entityId: claimId,
+  });
+  for (const p of claimPaths(projectId)) revalidatePath(p);
+}
+
+// Photo of the paper claim — office attaches while draft/submitted.
+export async function uploadClaimPhoto(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await requireCanOffice();
+  if (!profile) return;
+  const claimId = String(formData.get("claim_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  const file = formData.get("photo");
+  if (!claimId || !(file instanceof File) || file.size === 0) return;
+
+  const supabase = await createClient();
+  const { data: claim } = await supabase
+    .from("claims")
+    .select("status")
+    .eq("id", claimId)
+    .maybeSingle();
+  if (!claim || !["draft", "submitted"].includes((claim as { status: string }).status))
+    return;
+
+  const path = `claims/${projectId}/${claimId}/${crypto.randomUUID()}.jpg`;
+  const { error: upErr } = await supabase.storage
+    .from("site-photos")
+    .upload(path, file, { contentType: file.type || "image/jpeg" });
+  if (upErr) return;
+
+  await supabase.from("claim_photos").insert({
+    claim_id: claimId,
+    storage_path: path,
+    uploaded_by: profile.id,
+  });
+  for (const p of claimPaths(projectId)) revalidatePath(p);
+}
+
+export async function deleteClaimPhoto(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await requireCanOffice();
+  if (!profile) return;
+  const photoId = String(formData.get("photo_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!photoId) return;
+
+  const supabase = await createClient();
+  const { data: photo } = await supabase
+    .from("claim_photos")
+    .select("id, storage_path, claims(status)")
+    .eq("id", photoId)
+    .maybeSingle();
+  if (!photo) return;
+  const rel = (photo as unknown as { claims: { status: string } | { status: string }[] | null })
+    .claims;
+  const status = Array.isArray(rel) ? rel[0]?.status : rel?.status;
+  if (!status || !["draft", "submitted"].includes(status)) return;
+
+  await supabase.storage
+    .from("site-photos")
+    .remove([(photo as { storage_path: string }).storage_path]);
+  await supabase.from("claim_photos").delete().eq("id", photoId);
+  for (const p of claimPaths(projectId)) revalidatePath(p);
 }
 
 // --- Phase 2 photo taxonomy: project tags + progress photos ------------------

@@ -73,7 +73,11 @@
         "create": "merekod pendahuluan"
       },
       "claim": {
-        "update": "mengemas kini tuntutan"
+        "update": "mengemas kini tuntutan",
+        "submit": "menghantar tuntutan ke tapak",
+        "verify": "mengesahkan tuntutan",
+        "approve": "meluluskan tuntutan",
+        "revert": "menarik balik tuntutan ke draf"
       }
     }
   },
@@ -169,7 +173,25 @@
     "total": "Jumlah",
     "lessAdvance": "Tolak pendahuluan",
     "netPayable": "Bersih perlu dibayar",
-    "save": "Simpan tuntutan"
+    "save": "Simpan tuntutan",
+    "statusDraft": "Draf",
+    "statusSubmitted": "Dihantar ke tapak",
+    "statusVerified": "Disahkan",
+    "statusApproved": "Diluluskan",
+    "sendToSite": "Hantar ke tapak",
+    "revertToDraft": "Kembali ke draf",
+    "lockedNotice": "Telah dihantar ke tapak — baris dikunci.",
+    "photosTitle": "Foto tuntutan kertas",
+    "addPhoto": "Tambah foto",
+    "removePhoto": "Buang foto",
+    "noPhotos": "Tiada foto dilampirkan.",
+    "verifiedStamp": "Disahkan oleh {name} pada {date}",
+    "approvedStamp": "Diluluskan oleh {name} pada {date}",
+    "siteTitle": "Tuntutan subkontraktor",
+    "siteIntro": "Semak kerja yang dituntut dengan kerja sebenar, kemudian sahkan.",
+    "siteEmpty": "Tiada tuntutan menunggu.",
+    "verify": "Sahkan",
+    "approve": "Luluskan"
   },
   "Trash": {
     "title": "Tong kitar semula",
@@ -218,6 +240,7 @@
     "requests": "Permintaan",
     "machinery": "Jentera",
     "stock": "Stok",
+    "claims": "Tuntutan",
     "hours": "Jam",
     "machineType": "Jentera",
     "otherMachine": "Jentera lain",

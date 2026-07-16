@@ -3,10 +3,23 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getProject } from "@/lib/data/projects";
 import { getSubcontractors } from "@/lib/data/workers";
-import { getProjectClaims, claimTotal, type ClaimItem } from "@/lib/data/claims";
+import {
+  getProjectClaims,
+  getClaimPhotos,
+  claimTotal,
+  type Claim,
+  type ClaimItem,
+} from "@/lib/data/claims";
 import { getAdvances, currentMonthMYT } from "@/lib/data/attendance";
-import { saveClaim } from "@/lib/data/actions";
+import {
+  saveClaim,
+  submitClaimToSite,
+  revertClaimToDraft,
+  uploadClaimPhoto,
+  deleteClaimPhoto,
+} from "@/lib/data/actions";
 import { PrintButton } from "@/components/export-buttons";
+import { ClaimStatusChip, ClaimStamps } from "@/components/claim-status";
 
 function shiftMonth(month: string, delta: number): string {
   const [y, m] = month.split("-").map(Number);
@@ -40,6 +53,7 @@ export default async function OfficeClaimsPage({
     getProjectClaims(id, month),
     getAdvances(id, month),
   ]);
+  const photosByClaim = await getClaimPhotos(claims.map((c) => c.id));
   const activeSubs = subs.filter((s) => s.active);
   const claimBySub = new Map(claims.map((c) => [c.subcontractor_id, c]));
   const subAdvance = new Map<string, number>();
@@ -81,108 +95,282 @@ export default async function OfficeClaimsPage({
       ) : (
         activeSubs.map((s) => {
           const claim = claimBySub.get(s.id);
-          const items = claim?.items ?? [];
-          const rows: (ClaimItem | null)[] = [
-            ...items,
-            ...Array.from({ length: BLANK_ROWS }, () => null),
-          ];
+          const editable = !claim || claim.status === "draft";
           const total = claim ? claimTotal(claim) : 0;
           const adv = subAdvance.get(s.id) ?? 0;
           const net = total - adv;
+          const photos = claim ? (photosByClaim.get(claim.id) ?? []) : [];
 
           return (
             <section key={s.id} className="card p-5">
-              <h2 className="text-base font-semibold">{s.name}</h2>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-base font-semibold">{s.name}</h2>
+                {claim && <ClaimStatusChip status={claim.status} />}
+              </div>
 
-              <form action={saveClaim} className="mt-3 space-y-3">
-                <input type="hidden" name="project_id" value={id} />
-                <input type="hidden" name="subcontractor_id" value={s.id} />
-                <input type="hidden" name="month" value={month} />
+              {editable ? (
+                <EditableClaim
+                  projectId={id}
+                  subId={s.id}
+                  month={month}
+                  claim={claim}
+                  total={total}
+                  adv={adv}
+                  net={net}
+                  tc={tc}
+                />
+              ) : (
+                <ReadOnlyClaim claim={claim!} total={total} adv={adv} net={net} tc={tc} />
+              )}
 
-                <table className="w-full border-collapse text-sm">
-                  <thead>
-                    <tr className="text-left text-xs text-muted">
-                      <th className="py-1 pr-2 font-medium">{tc("description")}</th>
-                      <th className="w-24 py-1 px-2 font-medium">{tc("qty")}</th>
-                      <th className="w-20 py-1 px-2 font-medium">{tc("unit")}</th>
-                      <th className="w-28 py-1 px-2 font-medium">{tc("unitPrice")}</th>
-                      <th className="w-28 py-1 pl-2 text-right font-medium">{tc("amount")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((it, i) => (
-                      <tr key={it?.id ?? `blank-${i}`}>
-                        <td className="py-1 pr-2">
-                          <input
-                            name="item_description"
-                            defaultValue={it?.description ?? ""}
-                            placeholder={tc("descHint")}
-                            className={cellInput}
-                          />
-                        </td>
-                        <td className="px-2">
-                          <input
-                            name="item_quantity"
-                            type="number"
-                            step="any"
-                            min="0"
-                            defaultValue={it?.quantity ?? ""}
-                            className={`${cellInput} text-right`}
-                          />
-                        </td>
-                        <td className="px-2">
-                          <input
-                            name="item_unit"
-                            defaultValue={it?.unit ?? ""}
-                            className={cellInput}
-                          />
-                        </td>
-                        <td className="px-2">
-                          <input
-                            name="item_unit_price"
-                            type="number"
-                            step="any"
-                            min="0"
-                            defaultValue={it?.unit_price ?? ""}
-                            className={`${cellInput} text-right`}
-                          />
-                        </td>
-                        <td className="pl-2 text-right text-muted">
-                          {it ? money(it.quantity * it.unit_price) : ""}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              {/* Verified / approved stamps — also on the printout. */}
+              {claim && <ClaimStamps claim={claim} />}
 
-                <div className="flex flex-wrap items-end justify-between gap-3">
-                  <label className="flex-1 text-sm">
-                    <span className="mb-1 block text-xs text-muted">{tc("note")}</span>
-                    <input
-                      name="note"
-                      defaultValue={claim?.note ?? ""}
-                      className={`${cellInput} max-w-md`}
-                    />
-                  </label>
-                  <div className="text-right text-sm">
-                    <div className="text-muted">
-                      {tc("total")}: <span className="font-medium text-foreground">{money(total)}</span>
+              {/* Photos of the paper claim */}
+              {claim && (
+                <div className="mt-4 border-t border-border pt-3">
+                  <h3 className="text-xs font-medium text-muted">{tc("photosTitle")}</h3>
+                  {photos.length === 0 ? (
+                    <p className="no-print mt-1 text-xs text-muted">{tc("noPhotos")}</p>
+                  ) : (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {photos.map((p) => (
+                        <div key={p.id} className="relative">
+                          {p.url ? (
+                            <a href={p.url} target="_blank" rel="noreferrer">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={p.url}
+                                alt=""
+                                className="h-24 w-24 rounded-lg border border-border object-cover"
+                              />
+                            </a>
+                          ) : (
+                            <div className="h-24 w-24 rounded-lg border border-border" />
+                          )}
+                          {["draft", "submitted"].includes(claim.status) && (
+                            <form action={deleteClaimPhoto} className="no-print absolute -right-1.5 -top-1.5">
+                              <input type="hidden" name="photo_id" value={p.id} />
+                              <input type="hidden" name="project_id" value={id} />
+                              <button
+                                className="flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs text-white"
+                                aria-label={tc("removePhoto")}
+                              >
+                                ✕
+                              </button>
+                            </form>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                    <div className="text-muted">
-                      {tc("lessAdvance")}: <span className="text-foreground">{money(adv)}</span>
-                    </div>
-                    <div className="mt-1 text-base font-semibold">
-                      {tc("netPayable")}: {money(net)}
-                    </div>
-                  </div>
+                  )}
+                  {["draft", "submitted"].includes(claim.status) && (
+                    <form action={uploadClaimPhoto} className="no-print mt-2 flex items-center gap-2">
+                      <input type="hidden" name="claim_id" value={claim.id} />
+                      <input type="hidden" name="project_id" value={id} />
+                      <input type="file" name="photo" accept="image/*" required className="text-xs" />
+                      <button className="btn text-xs">{tc("addPhoto")}</button>
+                    </form>
+                  )}
                 </div>
+              )}
 
-                <button className="btn btn-accent no-print">{tc("save")}</button>
-              </form>
+              {/* Workflow buttons */}
+              {claim && (
+                <div className="no-print mt-3 flex gap-2">
+                  {claim.status === "draft" && claim.items.length > 0 && (
+                    <form action={submitClaimToSite}>
+                      <input type="hidden" name="claim_id" value={claim.id} />
+                      <input type="hidden" name="project_id" value={id} />
+                      <button className="btn btn-accent">{tc("sendToSite")}</button>
+                    </form>
+                  )}
+                  {claim.status === "submitted" && (
+                    <form action={revertClaimToDraft}>
+                      <input type="hidden" name="claim_id" value={claim.id} />
+                      <input type="hidden" name="project_id" value={id} />
+                      <button className="btn">{tc("revertToDraft")}</button>
+                    </form>
+                  )}
+                </div>
+              )}
             </section>
           );
         })
       )}
+    </div>
+  );
+}
+
+function EditableClaim({
+  projectId,
+  subId,
+  month,
+  claim,
+  total,
+  adv,
+  net,
+  tc,
+}: {
+  projectId: string;
+  subId: string;
+  month: string;
+  claim: Claim | undefined;
+  total: number;
+  adv: number;
+  net: number;
+  tc: Awaited<ReturnType<typeof getTranslations>>;
+}) {
+  const items = claim?.items ?? [];
+  const rows: (ClaimItem | null)[] = [
+    ...items,
+    ...Array.from({ length: BLANK_ROWS }, () => null),
+  ];
+  return (
+    <form action={saveClaim} className="mt-3 space-y-3">
+      <input type="hidden" name="project_id" value={projectId} />
+      <input type="hidden" name="subcontractor_id" value={subId} />
+      <input type="hidden" name="month" value={month} />
+
+      <table className="w-full border-collapse text-sm">
+        <thead>
+          <tr className="text-left text-xs text-muted">
+            <th className="py-1 pr-2 font-medium">{tc("description")}</th>
+            <th className="w-24 py-1 px-2 font-medium">{tc("qty")}</th>
+            <th className="w-20 py-1 px-2 font-medium">{tc("unit")}</th>
+            <th className="w-28 py-1 px-2 font-medium">{tc("unitPrice")}</th>
+            <th className="w-28 py-1 pl-2 text-right font-medium">{tc("amount")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((it, i) => (
+            <tr key={it?.id ?? `blank-${i}`}>
+              <td className="py-1 pr-2">
+                <input
+                  name="item_description"
+                  defaultValue={it?.description ?? ""}
+                  placeholder={tc("descHint")}
+                  className={cellInput}
+                />
+              </td>
+              <td className="px-2">
+                <input
+                  name="item_quantity"
+                  type="number"
+                  step="any"
+                  min="0"
+                  defaultValue={it?.quantity ?? ""}
+                  className={`${cellInput} text-right`}
+                />
+              </td>
+              <td className="px-2">
+                <input name="item_unit" defaultValue={it?.unit ?? ""} className={cellInput} />
+              </td>
+              <td className="px-2">
+                <input
+                  name="item_unit_price"
+                  type="number"
+                  step="any"
+                  min="0"
+                  defaultValue={it?.unit_price ?? ""}
+                  className={`${cellInput} text-right`}
+                />
+              </td>
+              <td className="pl-2 text-right text-muted">
+                {it ? money(it.quantity * it.unit_price) : ""}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <label className="flex-1 text-sm">
+          <span className="mb-1 block text-xs text-muted">{tc("note")}</span>
+          <input name="note" defaultValue={claim?.note ?? ""} className={`${cellInput} max-w-md`} />
+        </label>
+        <Totals total={total} adv={adv} net={net} tc={tc} />
+      </div>
+
+      <button className="btn btn-accent no-print">{tc("save")}</button>
+    </form>
+  );
+}
+
+function ReadOnlyClaim({
+  claim,
+  total,
+  adv,
+  net,
+  tc,
+}: {
+  claim: Claim;
+  total: number;
+  adv: number;
+  net: number;
+  tc: Awaited<ReturnType<typeof getTranslations>>;
+}) {
+  return (
+    <div className="mt-3 space-y-3">
+      <p className="no-print text-xs text-muted">{tc("lockedNotice")}</p>
+      <table className="w-full border-collapse text-sm">
+        <thead>
+          <tr className="text-left text-xs text-muted">
+            <th className="py-1 pr-2 font-medium">{tc("description")}</th>
+            <th className="w-24 py-1 px-2 text-right font-medium">{tc("qty")}</th>
+            <th className="w-20 py-1 px-2 font-medium">{tc("unit")}</th>
+            <th className="w-28 py-1 px-2 text-right font-medium">{tc("unitPrice")}</th>
+            <th className="w-28 py-1 pl-2 text-right font-medium">{tc("amount")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {claim.items.map((it) => (
+            <tr key={it.id} className="border-t border-border">
+              <td className="py-1.5 pr-2">{it.description}</td>
+              <td className="px-2 text-right">{it.quantity}</td>
+              <td className="px-2">{it.unit ?? ""}</td>
+              <td className="px-2 text-right">{money(it.unit_price)}</td>
+              <td className="pl-2 text-right">{money(it.quantity * it.unit_price)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        {claim.note ? (
+          <p className="text-sm text-muted">
+            {tc("note")}: {claim.note}
+          </p>
+        ) : (
+          <span />
+        )}
+        <Totals total={total} adv={adv} net={net} tc={tc} />
+      </div>
+    </div>
+  );
+}
+
+function Totals({
+  total,
+  adv,
+  net,
+  tc,
+}: {
+  total: number;
+  adv: number;
+  net: number;
+  tc: Awaited<ReturnType<typeof getTranslations>>;
+}) {
+  return (
+    <div className="text-right text-sm">
+      <div className="text-muted">
+        {tc("total")}: <span className="font-medium text-foreground">{money(total)}</span>
+      </div>
+      <div className="text-muted">
+        {tc("lessAdvance")}: <span className="text-foreground">{money(adv)}</span>
+      </div>
+      <div className="mt-1 text-base font-semibold">
+        {tc("netPayable")}: {money(net)}
+      </div>
     </div>
   );
 }
