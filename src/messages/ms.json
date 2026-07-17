@@ -26,6 +26,7 @@
     "catalog": "Katalog",
     "requests": "Permintaan",
     "doQueue": "Baris DO",
+    "claims": "Tuntutan",
     "issues": "Isu",
     "activity": "Aktiviti",
     "pdfExport": "Eksport PDF",
@@ -191,7 +192,11 @@
     "siteIntro": "Semak kerja yang dituntut dengan kerja sebenar, kemudian sahkan.",
     "siteEmpty": "Tiada tuntutan menunggu.",
     "verify": "Sahkan",
-    "approve": "Luluskan"
+    "approve": "Luluskan",
+    "saveFirstHint": "Simpan tuntutan dahulu (baris tidak wajib) — kemudian lampirkan tuntutan kertas sebagai foto atau PDF.",
+    "seeAttached": "Rujuk dokumen tuntutan yang dilampirkan.",
+    "allIntro": "Tuntutan merentas semua projek — buka satu untuk isi baris, lampirkan tuntutan kertas, atau hantar ke tapak.",
+    "noneYet": "Tiada tuntutan lagi."
   },
   "Trash": {
     "title": "Tong kitar semula",

@@ -127,6 +127,9 @@ export default async function OfficeClaimsPage({
               {claim && <ClaimStamps claim={claim} />}
 
               {/* Photos of the paper claim */}
+              {!claim && (
+                <p className="no-print mt-3 text-xs text-muted">{tc("saveFirstHint")}</p>
+              )}
               {claim && (
                 <div className="mt-4 border-t border-border pt-3">
                   <h3 className="text-xs font-medium text-muted">{tc("photosTitle")}</h3>
@@ -136,7 +139,16 @@ export default async function OfficeClaimsPage({
                     <div className="mt-2 flex flex-wrap gap-2">
                       {photos.map((p) => (
                         <div key={p.id} className="relative">
-                          {p.url ? (
+                          {p.url && p.storage_path.endsWith(".pdf") ? (
+                            <a
+                              href={p.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex h-24 w-24 flex-col items-center justify-center rounded-lg border border-border text-xs font-medium underline"
+                            >
+                              📄 PDF
+                            </a>
+                          ) : p.url ? (
                             <a href={p.url} target="_blank" rel="noreferrer">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
@@ -168,7 +180,13 @@ export default async function OfficeClaimsPage({
                     <form action={uploadClaimPhoto} className="no-print mt-2 flex items-center gap-2">
                       <input type="hidden" name="claim_id" value={claim.id} />
                       <input type="hidden" name="project_id" value={id} />
-                      <input type="file" name="photo" accept="image/*" required className="text-xs" />
+                      <input
+                        type="file"
+                        name="photo"
+                        accept="image/*,application/pdf"
+                        required
+                        className="text-xs"
+                      />
                       <button className="btn text-xs">{tc("addPhoto")}</button>
                     </form>
                   )}
@@ -178,13 +196,14 @@ export default async function OfficeClaimsPage({
               {/* Workflow buttons */}
               {claim && (
                 <div className="no-print mt-3 flex gap-2">
-                  {claim.status === "draft" && claim.items.length > 0 && (
-                    <form action={submitClaimToSite}>
-                      <input type="hidden" name="claim_id" value={claim.id} />
-                      <input type="hidden" name="project_id" value={id} />
-                      <button className="btn btn-accent">{tc("sendToSite")}</button>
-                    </form>
-                  )}
+                  {claim.status === "draft" &&
+                    (claim.items.length > 0 || photos.length > 0) && (
+                      <form action={submitClaimToSite}>
+                        <input type="hidden" name="claim_id" value={claim.id} />
+                        <input type="hidden" name="project_id" value={id} />
+                        <button className="btn btn-accent">{tc("sendToSite")}</button>
+                      </form>
+                    )}
                   {claim.status === "submitted" && (
                     <form action={revertClaimToDraft}>
                       <input type="hidden" name="claim_id" value={claim.id} />

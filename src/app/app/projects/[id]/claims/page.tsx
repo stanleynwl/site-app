@@ -66,46 +66,65 @@ export default async function SiteClaimsPage({
                 <ClaimStatusChip status={claim.status} />
               </div>
 
-              <table className="mt-3 w-full border-collapse text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-black/60 dark:text-white/60">
-                    <th className="py-1 pr-2 font-medium">{t("description")}</th>
-                    <th className="w-20 py-1 px-2 text-right font-medium">{t("qty")}</th>
-                    <th className="w-16 py-1 px-2 font-medium">{t("unit")}</th>
-                    <th className="w-24 py-1 px-2 text-right font-medium">{t("unitPrice")}</th>
-                    <th className="w-24 py-1 pl-2 text-right font-medium">{t("amount")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {claim.items.map((it) => (
-                    <tr key={it.id} className="border-t border-black/10 dark:border-white/10">
-                      <td className="py-1.5 pr-2">{it.description}</td>
-                      <td className="px-2 text-right">{it.quantity}</td>
-                      <td className="px-2">{it.unit ?? ""}</td>
-                      <td className="px-2 text-right">{money(it.unit_price)}</td>
-                      <td className="pl-2 text-right">{money(it.quantity * it.unit_price)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {claim.items.length > 0 ? (
+                <>
+                  <table className="mt-3 w-full border-collapse text-sm">
+                    <thead>
+                      <tr className="text-left text-xs text-black/60 dark:text-white/60">
+                        <th className="py-1 pr-2 font-medium">{t("description")}</th>
+                        <th className="w-20 py-1 px-2 text-right font-medium">{t("qty")}</th>
+                        <th className="w-16 py-1 px-2 font-medium">{t("unit")}</th>
+                        <th className="w-24 py-1 px-2 text-right font-medium">{t("unitPrice")}</th>
+                        <th className="w-24 py-1 pl-2 text-right font-medium">{t("amount")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {claim.items.map((it) => (
+                        <tr key={it.id} className="border-t border-black/10 dark:border-white/10">
+                          <td className="py-1.5 pr-2">{it.description}</td>
+                          <td className="px-2 text-right">{it.quantity}</td>
+                          <td className="px-2">{it.unit ?? ""}</td>
+                          <td className="px-2 text-right">{money(it.unit_price)}</td>
+                          <td className="pl-2 text-right">{money(it.quantity * it.unit_price)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
 
-              <div className="mt-2 flex items-center justify-between text-sm">
-                {claim.note ? (
-                  <p className="text-black/60 dark:text-white/60">
-                    {t("note")}: {claim.note}
-                  </p>
-                ) : (
-                  <span />
-                )}
-                <p className="font-semibold">
-                  {t("total")}: {money(claimTotal(claim))}
+                  <div className="mt-2 flex items-center justify-between text-sm">
+                    {claim.note ? (
+                      <p className="text-black/60 dark:text-white/60">
+                        {t("note")}: {claim.note}
+                      </p>
+                    ) : (
+                      <span />
+                    )}
+                    <p className="font-semibold">
+                      {t("total")}: {money(claimTotal(claim))}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <p className="mt-3 text-sm text-black/60 dark:text-white/60">
+                  {t("seeAttached")}
+                  {claim.note ? ` · ${claim.note}` : ""}
                 </p>
-              </div>
+              )}
 
               {photos.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {photos.map((p) =>
-                    p.url ? (
+                    p.url && p.storage_path.endsWith(".pdf") ? (
+                      <a
+                        key={p.id}
+                        href={p.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex h-24 w-24 flex-col items-center justify-center rounded-lg border border-black/10 text-xs font-medium underline dark:border-white/15"
+                      >
+                        📄 PDF
+                      </a>
+                    ) : p.url ? (
                       <a key={p.id} href={p.url} target="_blank" rel="noreferrer">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img

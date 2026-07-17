@@ -85,6 +85,18 @@ export async function getClaim(
   return data ? mapClaim(data) : null;
 }
 
+// Every claim across projects, newest month first — the office overview page.
+export async function getAllClaims(): Promise<Claim[]> {
+  if (!isSupabaseConfigured) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("claims")
+    .select(SELECT)
+    .order("period_month", { ascending: false })
+    .limit(300);
+  return (data ?? []).map(mapClaim);
+}
+
 // Claims the site should see: sent to site or beyond, newest month first.
 export async function getSiteClaims(projectId: string): Promise<Claim[]> {
   if (!isSupabaseConfigured) return [];

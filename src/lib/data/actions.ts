@@ -483,12 +483,20 @@ export async function submitClaimToSite(formData: FormData): Promise<void> {
   if (!claimId) return;
 
   const supabase = await createClient();
-  // Needs at least one line — site can't verify an empty claim.
-  const { count } = await supabase
+  // Site needs SOMETHING to verify: keyed lines or an attached photo/PDF of
+  // the paper claim (keying lines is optional — many claims go through as
+  // just the scanned document).
+  const { count: itemCount } = await supabase
     .from("claim_items")
     .select("id", { count: "exact", head: true })
     .eq("claim_id", claimId);
-  if (!count) return;
+  if (!itemCount) {
+    const { count: photoCount } = await supabase
+      .from("claim_photos")
+      .select("id", { count: "exact", head: true })
+      .eq("claim_id", claimId);
+    if (!photoCount) return;
+  }
 
   const { data } = await supabase
     .from("claims")
@@ -603,10 +611,13 @@ export async function uploadClaimPhoto(formData: FormData): Promise<void> {
   if (!claim || !["draft", "submitted"].includes((claim as { status: string }).status))
     return;
 
-  const path = `claims/${projectId}/${claimId}/${crypto.randomUUID()}.jpg`;
+  const isPdf = file.type === "application/pdf";
+  const path = `claims/${projectId}/${claimId}/${crypto.randomUUID()}.${isPdf ? "pdf" : "jpg"}`;
   const { error: upErr } = await supabase.storage
     .from("site-photos")
-    .upload(path, file, { contentType: file.type || "image/jpeg" });
+    .upload(path, file, {
+      contentType: isPdf ? "application/pdf" : file.type || "image/jpeg",
+    });
   if (upErr) return;
 
   await supabase.from("claim_photos").insert({

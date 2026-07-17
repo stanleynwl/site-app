@@ -26,6 +26,7 @@
     "catalog": "Catalog",
     "requests": "Requests",
     "doQueue": "DO queue",
+    "claims": "Claims",
     "issues": "Issues",
     "activity": "Activity",
     "pdfExport": "PDF export",
@@ -191,7 +192,11 @@
     "siteIntro": "Check the claimed work against what was actually done, then verify.",
     "siteEmpty": "No claims waiting.",
     "verify": "Verify",
-    "approve": "Approve"
+    "approve": "Approve",
+    "saveFirstHint": "Save the claim first (lines are optional) — then you can attach the paper claim as photos or a PDF.",
+    "seeAttached": "Refer to the attached claim document.",
+    "allIntro": "Claims across all projects — open one to key lines, attach the paper claim, or send it to site.",
+    "noneYet": "No claims yet."
   },
   "Trash": {
     "title": "Recycle bin",

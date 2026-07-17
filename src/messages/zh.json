@@ -26,6 +26,7 @@
     "catalog": "目录",
     "requests": "申请",
     "doQueue": "送货单队列",
+    "claims": "请款",
     "issues": "问题",
     "activity": "动态",
     "pdfExport": "导出 PDF",
@@ -191,7 +192,11 @@
     "siteIntro": "核对请款内容与实际完成的工作，然后进行核实。",
     "siteEmpty": "暂无待处理的请款。",
     "verify": "核实",
-    "approve": "批准"
+    "approve": "批准",
+    "saveFirstHint": "请先保存请款单（明细可不填）— 然后可以附上纸质请款单的照片或 PDF。",
+    "seeAttached": "请参阅附件中的请款单。",
+    "allIntro": "所有项目的请款 — 打开任意一项以填写明细、附上纸质请款单或发送到工地。",
+    "noneYet": "暂无请款。"
   },
   "Trash": {
     "title": "回收站",
