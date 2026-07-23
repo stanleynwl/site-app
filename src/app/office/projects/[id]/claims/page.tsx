@@ -20,6 +20,7 @@ import {
 } from "@/lib/data/actions";
 import { PrintButton } from "@/components/export-buttons";
 import { ClaimStatusChip, ClaimStamps } from "@/components/claim-status";
+import { AutoTextarea } from "@/components/auto-textarea";
 
 function shiftMonth(month: string, delta: number): string {
   const [y, m] = month.split("-").map(Number);
@@ -263,13 +264,13 @@ function EditableClaim({
         </thead>
         <tbody>
           {rows.map((it, i) => (
-            <tr key={it?.id ?? `blank-${i}`}>
+            <tr key={it?.id ?? `blank-${i}`} className="align-top">
               <td className="py-1 pr-2">
-                <input
+                <AutoTextarea
                   name="item_description"
                   defaultValue={it?.description ?? ""}
                   placeholder={tc("descHint")}
-                  className={cellInput}
+                  className={`${cellInput} resize-y leading-snug`}
                 />
               </td>
               <td className="px-2">
@@ -344,8 +345,8 @@ function ReadOnlyClaim({
         </thead>
         <tbody>
           {claim.items.map((it) => (
-            <tr key={it.id} className="border-t border-border">
-              <td className="py-1.5 pr-2">{it.description}</td>
+            <tr key={it.id} className="border-t border-border align-top">
+              <td className="py-1.5 pr-2 whitespace-pre-line">{it.description}</td>
               <td className="px-2 text-right">{it.quantity}</td>
               <td className="px-2">{it.unit ?? ""}</td>
               <td className="px-2 text-right">{money(it.unit_price)}</td>

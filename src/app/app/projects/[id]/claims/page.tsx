@@ -80,8 +80,11 @@ export default async function SiteClaimsPage({
                     </thead>
                     <tbody>
                       {claim.items.map((it) => (
-                        <tr key={it.id} className="border-t border-black/10 dark:border-white/10">
-                          <td className="py-1.5 pr-2">{it.description}</td>
+                        <tr
+                          key={it.id}
+                          className="border-t border-black/10 align-top dark:border-white/10"
+                        >
+                          <td className="py-1.5 pr-2 whitespace-pre-line">{it.description}</td>
                           <td className="px-2 text-right">{it.quantity}</td>
                           <td className="px-2">{it.unit ?? ""}</td>
                           <td className="px-2 text-right">{money(it.unit_price)}</td>
