@@ -318,7 +318,11 @@
     "draftRestored": "草稿已恢复——上次会话中未保存的更改。",
     "draftDiscard": "丢弃",
     "offlineNotice": "无网络——草稿已保存。恢复连接后将自动重试。",
-    "retrying": "重试中…"
+    "retrying": "重试中…",
+    "history": "历史报告",
+    "historySubtitle": "已提交的报告 — 仅供查看。",
+    "historyEmpty": "还没有报告。",
+    "historyShowOlder": "显示更早的"
   },
   "Dashboard": {
     "title": "仪表板",

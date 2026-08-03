@@ -119,6 +119,12 @@ export default async function ReportPage({
           >
             {t("claims")}
           </Link>
+          <Link
+            href={`/app/projects/${id}/reports`}
+            className="whitespace-nowrap text-sm underline"
+          >
+            {t("history")}
+          </Link>
         </nav>
       </div>
 

@@ -318,7 +318,11 @@
     "draftRestored": "Draf dipulihkan — perubahan yang belum disimpan daripada sesi lepas.",
     "draftDiscard": "Buang",
     "offlineNotice": "Tiada sambungan — draf disimpan. Akan cuba semula apabila anda bersambung.",
-    "retrying": "Mencuba semula…"
+    "retrying": "Mencuba semula…",
+    "history": "Laporan lepas",
+    "historySubtitle": "Laporan yang telah dihantar — untuk lihat sahaja.",
+    "historyEmpty": "Tiada laporan lagi.",
+    "historyShowOlder": "Tunjuk yang lebih lama"
   },
   "Dashboard": {
     "title": "Papan Pemuka",

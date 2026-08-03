@@ -318,7 +318,11 @@
     "draftRestored": "Draft restored — unsaved changes from your last session.",
     "draftDiscard": "Discard",
     "offlineNotice": "No connection — draft saved. Will retry automatically when you reconnect.",
-    "retrying": "Retrying…"
+    "retrying": "Retrying…",
+    "history": "Past reports",
+    "historySubtitle": "Reports already sent — view only.",
+    "historyEmpty": "No reports yet.",
+    "historyShowOlder": "Show older"
   },
   "Dashboard": {
     "title": "Dashboard",
