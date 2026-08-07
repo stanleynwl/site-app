@@ -266,36 +266,40 @@ export default async function OfficeRequestsPage({
                     </>
                   )}
 
+                  {/* Issue PO works straight from pending — a PO number is
+                      decisive enough on its own without a separate Accept
+                      click first (it stamps approved_by/approved_at itself). */}
+                  {(r.status === "pending" || r.status === "approved") && (
+                    <form
+                      action={issuePurchaseRequestPO}
+                      className="flex flex-wrap items-end gap-1"
+                    >
+                      <input type="hidden" name="request_id" value={r.id} />
+                      <input type="hidden" name="project_id" value={r.project_id} />
+                      <input
+                        name="po_number"
+                        required
+                        placeholder={t("poNumber")}
+                        className={inputCls}
+                      />
+                      <select name="supplier_id" defaultValue="" className={inputCls}>
+                        <option value="">{t("supplier")}</option>
+                        {activeSuppliers.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                      <button className={btnCls}>{t("issuePO")}</button>
+                    </form>
+                  )}
+
                   {r.status === "approved" && (
-                    <>
-                      <form
-                        action={issuePurchaseRequestPO}
-                        className="flex flex-wrap items-end gap-1"
-                      >
-                        <input type="hidden" name="request_id" value={r.id} />
-                        <input type="hidden" name="project_id" value={r.project_id} />
-                        <input
-                          name="po_number"
-                          required
-                          placeholder={t("poNumber")}
-                          className={inputCls}
-                        />
-                        <select name="supplier_id" defaultValue="" className={inputCls}>
-                          <option value="">{t("supplier")}</option>
-                          {activeSuppliers.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.name}
-                            </option>
-                          ))}
-                        </select>
-                        <button className={btnCls}>{t("issuePO")}</button>
-                      </form>
-                      <form action={orderPurchaseRequestNoPO}>
-                        <input type="hidden" name="request_id" value={r.id} />
-                        <input type="hidden" name="project_id" value={r.project_id} />
-                        <button className={btnCls}>{t("orderNoPO")}</button>
-                      </form>
-                    </>
+                    <form action={orderPurchaseRequestNoPO}>
+                      <input type="hidden" name="request_id" value={r.id} />
+                      <input type="hidden" name="project_id" value={r.project_id} />
+                      <button className={btnCls}>{t("orderNoPO")}</button>
+                    </form>
                   )}
 
                   {(r.status === "po_issued" || r.status === "partial") && (

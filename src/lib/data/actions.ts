@@ -1451,15 +1451,22 @@ export async function rejectPurchaseRequest(formData: FormData): Promise<void> {
   );
 }
 
+// Works from pending OR approved — a PO number is decisive enough on its own
+// that office shouldn't have to click a separate Approve first. Stamps
+// approved_by/approved_at too so a pending request that jumps straight to a
+// PO still has a consistent approval record.
 export async function issuePurchaseRequestPO(formData: FormData): Promise<void> {
   if (!isSupabaseConfigured) return;
   const po = String(formData.get("po_number") ?? "").trim();
   if (!po) return; // PO number is the whole point of this step
+  const profile = await getProfile();
   const supplierId = String(formData.get("supplier_id") ?? "");
   const patch: Record<string, unknown> = {
     status: "po_issued",
     po_number: po,
     ordered_at: new Date().toISOString(),
+    approved_by: profile?.id ?? null,
+    approved_at: new Date().toISOString(),
   };
   if (supplierId) patch.supplier_id = supplierId;
   await updatePurchaseRequest(formData, patch, {
