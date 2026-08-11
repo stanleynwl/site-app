@@ -28,7 +28,12 @@ export type ActivityAction =
   | "claim.submit"
   | "claim.verify"
   | "claim.approve"
-  | "claim.revert";
+  | "claim.revert"
+  | "po.create"
+  | "po.update"
+  | "po.issue"
+  | "po.revise"
+  | "po.cancel";
 
 export type ActivityEntry = {
   id: string;

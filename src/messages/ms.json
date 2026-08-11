@@ -79,6 +79,13 @@
         "verify": "mengesahkan tuntutan",
         "approve": "meluluskan tuntutan",
         "revert": "menarik balik tuntutan ke draf"
+      },
+      "po": {
+        "create": "memulakan pesanan belian",
+        "update": "mengemas kini pesanan belian",
+        "issue": "mengeluarkan pesanan belian",
+        "revise": "meminda pesanan belian",
+        "cancel": "membatalkan pesanan belian"
       }
     }
   },
@@ -197,6 +204,47 @@
     "seeAttached": "Rujuk dokumen tuntutan yang dilampirkan.",
     "allIntro": "Tuntutan merentas semua projek — buka satu untuk isi baris, lampirkan tuntutan kertas, atau hantar ke tapak.",
     "noneYet": "Tiada tuntutan lagi."
+  },
+  "Po": {
+    "title": "Pesanan Belian",
+    "listTitle": "Pesanan belian",
+    "listIntro": "Semua PO bagi projek ini, terbaharu dahulu.",
+    "listEmpty": "Tiada pesanan belian lagi.",
+    "createPo": "Buat PO",
+    "open": "Buka",
+    "print": "Cetak",
+    "save": "Simpan draf",
+    "issue": "Keluarkan PO",
+    "issueHint": "Pengeluaran mengunci dokumen dan menandakan permintaan sebagai dipesan.",
+    "revise": "Pinda",
+    "cancel": "Batalkan PO",
+    "status": {
+      "draft": "Draf",
+      "issued": "Dikeluarkan",
+      "cancelled": "Dibatalkan"
+    },
+    "fromLocal": "Dibuat dalam aplikasi pejabat tempatan.",
+    "dated": "Tarikh",
+    "toSupplier": "Kepada",
+    "deliverTo": "Hantar ke",
+    "supplier": "Pembekal",
+    "neededBy": "Diperlukan pada",
+    "deliveryAddress": "Alamat penghantaran",
+    "taxPercent": "Cukai %",
+    "item": "Item",
+    "itemHint": "cth. Simen OPC 50kg",
+    "spec": "Spesifikasi / saiz",
+    "qty": "Kuantiti",
+    "unit": "Unit",
+    "unitPrice": "Harga seunit",
+    "amount": "Jumlah",
+    "subtotal": "Jumlah kecil",
+    "tax": "Cukai",
+    "total": "Jumlah besar",
+    "terms": "Terma",
+    "note": "Nota",
+    "issuedStamp": "Dikeluarkan oleh {name} pada {date}",
+    "notIssuedYet": "Draf — belum dikeluarkan kepada pembekal."
   },
   "Trash": {
     "title": "Tong kitar semula",

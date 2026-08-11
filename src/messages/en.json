@@ -79,6 +79,13 @@
         "verify": "verified a claim",
         "approve": "approved a claim",
         "revert": "pulled a claim back to draft"
+      },
+      "po": {
+        "create": "started a purchase order",
+        "update": "updated a purchase order",
+        "issue": "issued a purchase order",
+        "revise": "revised a purchase order",
+        "cancel": "cancelled a purchase order"
       }
     }
   },
@@ -197,6 +204,47 @@
     "seeAttached": "Refer to the attached claim document.",
     "allIntro": "Claims across all projects — open one to key lines, attach the paper claim, or send it to site.",
     "noneYet": "No claims yet."
+  },
+  "Po": {
+    "title": "Purchase Order",
+    "listTitle": "Purchase orders",
+    "listIntro": "Every PO raised for this project, newest first.",
+    "listEmpty": "No purchase orders yet.",
+    "createPo": "Create PO",
+    "open": "Open",
+    "print": "Print",
+    "save": "Save draft",
+    "issue": "Issue PO",
+    "issueHint": "Issuing locks the document and marks the request as ordered.",
+    "revise": "Revise",
+    "cancel": "Cancel PO",
+    "status": {
+      "draft": "Draft",
+      "issued": "Issued",
+      "cancelled": "Cancelled"
+    },
+    "fromLocal": "Created in the local office app.",
+    "dated": "Date",
+    "toSupplier": "To",
+    "deliverTo": "Deliver to",
+    "supplier": "Supplier",
+    "neededBy": "Needed by",
+    "deliveryAddress": "Delivery address",
+    "taxPercent": "Tax %",
+    "item": "Item",
+    "itemHint": "e.g. Cement OPC 50kg",
+    "spec": "Spec / size",
+    "qty": "Qty",
+    "unit": "Unit",
+    "unitPrice": "Unit price",
+    "amount": "Amount",
+    "subtotal": "Subtotal",
+    "tax": "Tax",
+    "total": "Total",
+    "terms": "Terms",
+    "note": "Note",
+    "issuedStamp": "Issued by {name} on {date}",
+    "notIssuedYet": "Draft — not yet issued to the supplier."
   },
   "Trash": {
     "title": "Recycle bin",

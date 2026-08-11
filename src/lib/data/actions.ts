@@ -1491,6 +1491,319 @@ export async function closePurchaseRequest(formData: FormData): Promise<void> {
   await updatePurchaseRequest(formData, { status: "closed" }, { action: "request.close" });
 }
 
+// --- Purchase orders ---------------------------------------------------------
+// Supabase is the source of truth shared with the local office app: numbers are
+// always minted by the next_po_number() RPC (never generated here), so the two
+// systems can't collide. See docs/PURCHASE_ORDER_SYNC.md.
+
+function poPaths(projectId: string, poId?: string): string[] {
+  const paths = [
+    `/office/projects/${projectId}/purchase-orders`,
+    `/office/requests`,
+  ];
+  if (poId) paths.push(`/office/purchase-orders/${poId}`);
+  return paths;
+}
+
+// Raise a draft PO from a request, copying its line items across. Office then
+// keys prices on the PO editor and issues it.
+export async function createPurchaseOrderFromRequest(
+  formData: FormData,
+): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await requireCanOffice();
+  if (!profile) return;
+  const requestId = String(formData.get("request_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!requestId || !projectId) return;
+
+  const supabase = await createClient();
+
+  // Don't mint a second number for a request that already has a live PO.
+  const { data: existing } = await supabase
+    .from("purchase_orders")
+    .select("id")
+    .eq("purchase_request_id", requestId)
+    .neq("status", "cancelled")
+    .maybeSingle();
+  if (existing) {
+    redirect(`/office/purchase-orders/${(existing as { id: string }).id}`);
+  }
+
+  const { data: request } = await supabase
+    .from("purchase_requests")
+    .select(
+      "id, supplier_id, needed_by, note, purchase_request_items(material_id, material_text, quantity, unit, spec)",
+    )
+    .eq("id", requestId)
+    .maybeSingle();
+  if (!request) return;
+  const req = request as {
+    supplier_id: string | null;
+    needed_by: string | null;
+    note: string | null;
+    purchase_request_items: {
+      material_id: string | null;
+      material_text: string | null;
+      quantity: number | null;
+      unit: string | null;
+      spec: string | null;
+    }[] | null;
+  };
+
+  const { data: poNumber, error: numErr } = await supabase.rpc("next_po_number");
+  if (numErr || !poNumber) return;
+
+  const { data: project } = await supabase
+    .from("projects")
+    .select("delivery_address, location")
+    .eq("id", projectId)
+    .maybeSingle();
+  const proj = project as { delivery_address: string | null; location: string | null } | null;
+
+  const { data: created, error: poErr } = await supabase
+    .from("purchase_orders")
+    .insert({
+      po_number: poNumber as string,
+      project_id: projectId,
+      supplier_id: req.supplier_id,
+      purchase_request_id: requestId,
+      status: "draft",
+      needed_by: req.needed_by,
+      delivery_address: proj?.delivery_address ?? proj?.location ?? null,
+      note: req.note,
+      source: "web",
+      created_by: profile.id,
+    })
+    .select("id")
+    .maybeSingle();
+  if (poErr || !created) return;
+  const poId = (created as { id: string }).id;
+
+  const items = (req.purchase_request_items ?? []).map((it, i) => ({
+    po_id: poId,
+    material_id: it.material_id,
+    material_text: it.material_text,
+    spec: it.spec,
+    quantity: it.quantity ?? 0,
+    unit: it.unit,
+    unit_price: 0,
+    sort_order: i,
+  }));
+  if (items.length) await supabase.from("purchase_order_items").insert(items);
+
+  await logActivity(supabase, {
+    projectId,
+    actorId: profile.id,
+    action: "po.create",
+    entityType: "purchase_order",
+    entityId: poId,
+    detail: poNumber as string,
+  });
+  safeRevalidate(...poPaths(projectId, poId));
+  redirect(`/office/purchase-orders/${poId}`);
+}
+
+// Save the PO header + replace its line items (the editor posts parallel
+// item_* arrays, same shape as the claims form).
+export async function savePurchaseOrder(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await requireCanOffice();
+  if (!profile) return;
+  const poId = String(formData.get("po_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!poId) return;
+
+  const supabase = await createClient();
+  const { data: po } = await supabase
+    .from("purchase_orders")
+    .select("status")
+    .eq("id", poId)
+    .maybeSingle();
+  // An issued PO is a document already sent — it must be revised, not edited.
+  if (!po || (po as { status: string }).status !== "draft") return;
+
+  const supplierId = String(formData.get("supplier_id") ?? "");
+  await supabase
+    .from("purchase_orders")
+    .update({
+      supplier_id: supplierId || null,
+      needed_by: String(formData.get("needed_by") ?? "") || null,
+      delivery_address: String(formData.get("delivery_address") ?? "").trim() || null,
+      terms: String(formData.get("terms") ?? "").trim() || null,
+      note: String(formData.get("note") ?? "").trim() || null,
+      tax_percent: Number(formData.get("tax_percent") ?? 0) || 0,
+    })
+    .eq("id", poId);
+
+  const names = formData.getAll("item_name").map(String);
+  const specs = formData.getAll("item_spec").map(String);
+  const qtys = formData.getAll("item_quantity").map(String);
+  const units = formData.getAll("item_unit").map(String);
+  const prices = formData.getAll("item_unit_price").map(String);
+  const materialIds = formData.getAll("item_material_id").map(String);
+
+  const items = names
+    .map((name, i) => ({
+      po_id: poId,
+      material_id: materialIds[i]?.trim() || null,
+      material_text: name.trim(),
+      spec: (specs[i] ?? "").trim() || null,
+      quantity: Number(qtys[i] ?? 0) || 0,
+      unit: (units[i] ?? "").trim() || null,
+      unit_price: Number(prices[i] ?? 0) || 0,
+      sort_order: i,
+    }))
+    .filter((it) => it.material_text !== "");
+
+  await supabase.from("purchase_order_items").delete().eq("po_id", poId);
+  if (items.length) await supabase.from("purchase_order_items").insert(items);
+
+  await logActivity(supabase, {
+    projectId,
+    actorId: profile.id,
+    action: "po.update",
+    entityType: "purchase_order",
+    entityId: poId,
+  });
+  safeRevalidate(...poPaths(projectId, poId));
+}
+
+// Issue the PO: it becomes the document of record and stops being editable.
+// Also mirrors the number onto the originating request so the existing
+// request → delivery flow keeps working unchanged.
+export async function issuePurchaseOrder(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await requireCanOffice();
+  if (!profile) return;
+  const poId = String(formData.get("po_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!poId) return;
+
+  const supabase = await createClient();
+  const { data: po } = await supabase
+    .from("purchase_orders")
+    .select("po_number, supplier_id, purchase_request_id, status")
+    .eq("id", poId)
+    .maybeSingle();
+  if (!po) return;
+  const order = po as {
+    po_number: string;
+    supplier_id: string | null;
+    purchase_request_id: string | null;
+    status: string;
+  };
+  if (order.status !== "draft") return;
+
+  // A PO with no priced lines isn't a document worth sending.
+  const { count } = await supabase
+    .from("purchase_order_items")
+    .select("id", { count: "exact", head: true })
+    .eq("po_id", poId);
+  if (!count) return;
+
+  const { data: updated } = await supabase
+    .from("purchase_orders")
+    .update({
+      status: "issued",
+      issued_at: new Date().toISOString(),
+      issued_by: profile.id,
+      issued_by_name: profile.full_name || profile.username,
+    })
+    .eq("id", poId)
+    .eq("status", "draft")
+    .select("id");
+  if (!updated || updated.length === 0) return;
+
+  if (order.purchase_request_id) {
+    const patch: Record<string, unknown> = {
+      status: "po_issued",
+      po_number: order.po_number,
+      ordered_at: new Date().toISOString(),
+      approved_by: profile.id,
+      approved_at: new Date().toISOString(),
+    };
+    if (order.supplier_id) patch.supplier_id = order.supplier_id;
+    await supabase
+      .from("purchase_requests")
+      .update(patch)
+      .eq("id", order.purchase_request_id);
+  }
+
+  await logActivity(supabase, {
+    projectId,
+    actorId: profile.id,
+    action: "po.issue",
+    entityType: "purchase_order",
+    entityId: poId,
+    detail: order.po_number,
+  });
+  safeRevalidate(...poPaths(projectId, poId));
+}
+
+// Reopen an issued PO for correction, bumping the revision ("Rev 1"). The
+// number is kept — the supplier already has it — matching how the local app
+// labels a corrected order.
+export async function revisePurchaseOrder(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await requireCanOffice();
+  if (!profile) return;
+  const poId = String(formData.get("po_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!poId) return;
+
+  const supabase = await createClient();
+  const { data: po } = await supabase
+    .from("purchase_orders")
+    .select("revision, po_number, status")
+    .eq("id", poId)
+    .maybeSingle();
+  if (!po || (po as { status: string }).status !== "issued") return;
+  const next = ((po as { revision: number }).revision ?? 0) + 1;
+
+  await supabase
+    .from("purchase_orders")
+    .update({ status: "draft", revision: next, issued_at: null, issued_by: null, issued_by_name: null })
+    .eq("id", poId);
+
+  await logActivity(supabase, {
+    projectId,
+    actorId: profile.id,
+    action: "po.revise",
+    entityType: "purchase_order",
+    entityId: poId,
+    detail: `${(po as { po_number: string }).po_number} Rev ${next}`,
+  });
+  safeRevalidate(...poPaths(projectId, poId));
+}
+
+export async function cancelPurchaseOrder(formData: FormData): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const profile = await requireCanOffice();
+  if (!profile) return;
+  const poId = String(formData.get("po_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!poId) return;
+
+  const supabase = await createClient();
+  const { data: po } = await supabase
+    .from("purchase_orders")
+    .select("po_number")
+    .eq("id", poId)
+    .maybeSingle();
+  await supabase.from("purchase_orders").update({ status: "cancelled" }).eq("id", poId);
+
+  await logActivity(supabase, {
+    projectId,
+    actorId: profile.id,
+    action: "po.cancel",
+    entityType: "purchase_order",
+    entityId: poId,
+    detail: (po as { po_number: string } | null)?.po_number ?? null,
+  });
+  safeRevalidate(...poPaths(projectId, poId));
+}
+
 // Supervisor (any project member) confirms an ordered request has arrived. Only
 // transitions from po_issued ("Ordered") → delivered. RLS allows member update.
 // (confirmDeliveredPurchaseRequest was removed: DO capture in createDelivery is

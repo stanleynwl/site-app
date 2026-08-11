@@ -79,6 +79,13 @@
         "verify": "核实了请款单",
         "approve": "批准了请款单",
         "revert": "将请款单退回草稿"
+      },
+      "po": {
+        "create": "创建了采购单",
+        "update": "更新了采购单",
+        "issue": "发出了采购单",
+        "revise": "修订了采购单",
+        "cancel": "作废了采购单"
       }
     }
   },
@@ -197,6 +204,47 @@
     "seeAttached": "请参阅附件中的请款单。",
     "allIntro": "所有项目的请款 — 打开任意一项以填写明细、附上纸质请款单或发送到工地。",
     "noneYet": "暂无请款。"
+  },
+  "Po": {
+    "title": "采购单",
+    "listTitle": "采购单",
+    "listIntro": "本项目的所有采购单，最新在前。",
+    "listEmpty": "暂无采购单。",
+    "createPo": "创建采购单",
+    "open": "打开",
+    "print": "打印",
+    "save": "保存草稿",
+    "issue": "发出采购单",
+    "issueHint": "发出后将锁定单据，并将申请标记为已下单。",
+    "revise": "修订",
+    "cancel": "作废采购单",
+    "status": {
+      "draft": "草稿",
+      "issued": "已发出",
+      "cancelled": "已作废"
+    },
+    "fromLocal": "由本地办公室程序创建。",
+    "dated": "日期",
+    "toSupplier": "供应商",
+    "deliverTo": "送货至",
+    "supplier": "供应商",
+    "neededBy": "需求日期",
+    "deliveryAddress": "送货地址",
+    "taxPercent": "税率 %",
+    "item": "项目",
+    "itemHint": "例如：水泥 OPC 50kg",
+    "spec": "规格 / 尺寸",
+    "qty": "数量",
+    "unit": "单位",
+    "unitPrice": "单价",
+    "amount": "金额",
+    "subtotal": "小计",
+    "tax": "税额",
+    "total": "总计",
+    "terms": "条款",
+    "note": "备注",
+    "issuedStamp": "由 {name} 于 {date} 发出",
+    "notIssuedYet": "草稿 — 尚未发给供应商。"
   },
   "Trash": {
     "title": "回收站",

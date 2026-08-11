@@ -13,7 +13,9 @@ import {
   issuePurchaseRequestPO,
   orderPurchaseRequestNoPO,
   closePurchaseRequest,
+  createPurchaseOrderFromRequest,
 } from "@/lib/data/actions";
+import { getPoIdsByRequest, poLabel } from "@/lib/data/purchase-orders";
 import { FilterChips, SearchBox } from "@/components/filter-chips";
 import type { FilterOption } from "@/components/filter-chips";
 
@@ -40,9 +42,11 @@ export default async function OfficeRequestsPage({
 }) {
   const params = await searchParams;
   const t = await getTranslations("Requests");
-  const [rawRequests, suppliers] = await Promise.all([
+  const tp = await getTranslations("Po");
+  const [rawRequests, suppliers, poByRequest] = await Promise.all([
     getOpenPurchaseRequests(),
     getSuppliers(),
+    getPoIdsByRequest(),
   ]);
   const requests = await withSignedRequestPhotos(rawRequests);
   const activeSuppliers = suppliers.filter((s) => s.active);
@@ -126,6 +130,7 @@ export default async function OfficeRequestsPage({
         <ul className="space-y-3">
           {filtered.map((r) => {
             const age = prAgeHours(r);
+            const po = poByRequest.get(r.id);
             return (
               <li
                 key={r.id}
@@ -232,6 +237,27 @@ export default async function OfficeRequestsPage({
 
                 {/* State-machine actions */}
                 <div className="flex flex-wrap items-end gap-2 pt-1">
+                  {/* Generate the PO document in-app. Once one exists, link to
+                      it instead of offering to mint a second number. */}
+                  {po ? (
+                    <Link
+                      href={`/office/purchase-orders/${po.id}`}
+                      className={`${btnCls} inline-block`}
+                    >
+                      {poLabel(po)} · {tp("open")}
+                    </Link>
+                  ) : (
+                    r.status !== "rejected" && (
+                      <form action={createPurchaseOrderFromRequest}>
+                        <input type="hidden" name="request_id" value={r.id} />
+                        <input type="hidden" name="project_id" value={r.project_id} />
+                        <button className={`${btnCls} text-accent`}>
+                          {tp("createPo")}
+                        </button>
+                      </form>
+                    )
+                  )}
+
                   {/* No Accept step: a request goes straight from pending to
                       ordered (with or without a PO) — or gets rejected. The
                       order actions stamp the approval themselves. 'approved'
