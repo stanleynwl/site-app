@@ -1427,19 +1427,10 @@ async function updatePurchaseRequest(
   }
 }
 
-export async function approvePurchaseRequest(formData: FormData): Promise<void> {
-  if (!isSupabaseConfigured) return;
-  const profile = await getProfile();
-  await updatePurchaseRequest(
-    formData,
-    {
-      status: "approved",
-      approved_by: profile?.id ?? null,
-      approved_at: new Date().toISOString(),
-    },
-    { action: "request.approve" },
-  );
-}
+// (approvePurchaseRequest was removed: there is no separate Accept step any
+//  more. Office either orders the request or rejects it — ordering stamps the
+//  approval itself. The 'approved' status survives only on rows keyed before
+//  this change, and the order actions below still accept it.)
 
 export async function rejectPurchaseRequest(formData: FormData): Promise<void> {
   if (!isSupabaseConfigured) return;
@@ -1451,10 +1442,9 @@ export async function rejectPurchaseRequest(formData: FormData): Promise<void> {
   );
 }
 
-// Works from pending OR approved — a PO number is decisive enough on its own
-// that office shouldn't have to click a separate Approve first. Stamps
-// approved_by/approved_at too so a pending request that jumps straight to a
-// PO still has a consistent approval record.
+// Order WITH a PO number. Works straight from pending — there is no separate
+// Accept step. Stamps approved_by/approved_at so the row still carries who
+// authorised it.
 export async function issuePurchaseRequestPO(formData: FormData): Promise<void> {
   if (!isSupabaseConfigured) return;
   const po = String(formData.get("po_number") ?? "").trim();
@@ -1475,41 +1465,25 @@ export async function issuePurchaseRequestPO(formData: FormData): Promise<void> 
   });
 }
 
-// Mark an approved request as ordered WITHOUT raising a formal PO number — for
-// quick orders (phoned/WhatsApp'd to the supplier) where there's no PO to key
-// in. Same "Ordered" (po_issued) state, just with no po_number. An optional
-// supplier can still be recorded.
+// Order WITHOUT a formal PO number — quick orders phoned/WhatsApp'd to the
+// supplier. Same "Ordered" (po_issued) state, just no po_number. Like the PO
+// path it works straight from pending and stamps the approval itself. An
+// optional supplier can still be recorded.
 export async function orderPurchaseRequestNoPO(formData: FormData): Promise<void> {
   if (!isSupabaseConfigured) return;
+  const profile = await getProfile();
   const supplierId = String(formData.get("supplier_id") ?? "");
   const patch: Record<string, unknown> = {
     status: "po_issued",
     ordered_at: new Date().toISOString(),
+    approved_by: profile?.id ?? null,
+    approved_at: new Date().toISOString(),
   };
   if (supplierId) patch.supplier_id = supplierId;
   await updatePurchaseRequest(formData, patch, {
     action: "request.order",
     detail: "Ordered (no PO)",
   });
-}
-
-// One-tap shortcut for quick orders: approve a pending request AND mark it
-// ordered (no PO) in a single step, so the office doesn't click twice.
-export async function approveAndOrderPurchaseRequestNoPO(
-  formData: FormData,
-): Promise<void> {
-  if (!isSupabaseConfigured) return;
-  const profile = await getProfile();
-  await updatePurchaseRequest(
-    formData,
-    {
-      status: "po_issued",
-      approved_by: profile?.id ?? null,
-      approved_at: new Date().toISOString(),
-      ordered_at: new Date().toISOString(),
-    },
-    { action: "request.order", detail: "Approved & ordered (no PO)" },
-  );
 }
 
 export async function closePurchaseRequest(formData: FormData): Promise<void> {

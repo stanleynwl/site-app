@@ -9,8 +9,6 @@ import {
 } from "@/lib/data/purchase-requests";
 import { getSuppliers } from "@/lib/data/catalog";
 import {
-  approvePurchaseRequest,
-  approveAndOrderPurchaseRequestNoPO,
   rejectPurchaseRequest,
   issuePurchaseRequestPO,
   orderPurchaseRequestNoPO,
@@ -234,19 +232,38 @@ export default async function OfficeRequestsPage({
 
                 {/* State-machine actions */}
                 <div className="flex flex-wrap items-end gap-2 pt-1">
-                  {r.status === "pending" && (
+                  {/* No Accept step: a request goes straight from pending to
+                      ordered (with or without a PO) — or gets rejected. The
+                      order actions stamp the approval themselves. 'approved'
+                      is handled identically for rows keyed before this. */}
+                  {(r.status === "pending" || r.status === "approved") && (
                     <>
-                      <form action={approvePurchaseRequest}>
+                      <form
+                        action={issuePurchaseRequestPO}
+                        className="flex flex-wrap items-end gap-1"
+                      >
                         <input type="hidden" name="request_id" value={r.id} />
                         <input type="hidden" name="project_id" value={r.project_id} />
-                        <button className={`${btnCls} text-green-700 dark:text-green-400`}>
-                          {t("approve")}
-                        </button>
+                        <input
+                          name="po_number"
+                          required
+                          placeholder={t("poNumber")}
+                          className={inputCls}
+                        />
+                        <select name="supplier_id" defaultValue="" className={inputCls}>
+                          <option value="">{t("supplier")}</option>
+                          {activeSuppliers.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </select>
+                        <button className={btnCls}>{t("issuePO")}</button>
                       </form>
-                      <form action={approveAndOrderPurchaseRequestNoPO}>
+                      <form action={orderPurchaseRequestNoPO}>
                         <input type="hidden" name="request_id" value={r.id} />
                         <input type="hidden" name="project_id" value={r.project_id} />
-                        <button className={btnCls}>{t("approveOrderNoPO")}</button>
+                        <button className={btnCls}>{t("orderNoPO")}</button>
                       </form>
                       <form
                         action={rejectPurchaseRequest}
@@ -264,42 +281,6 @@ export default async function OfficeRequestsPage({
                         </button>
                       </form>
                     </>
-                  )}
-
-                  {/* Issue PO works straight from pending — a PO number is
-                      decisive enough on its own without a separate Accept
-                      click first (it stamps approved_by/approved_at itself). */}
-                  {(r.status === "pending" || r.status === "approved") && (
-                    <form
-                      action={issuePurchaseRequestPO}
-                      className="flex flex-wrap items-end gap-1"
-                    >
-                      <input type="hidden" name="request_id" value={r.id} />
-                      <input type="hidden" name="project_id" value={r.project_id} />
-                      <input
-                        name="po_number"
-                        required
-                        placeholder={t("poNumber")}
-                        className={inputCls}
-                      />
-                      <select name="supplier_id" defaultValue="" className={inputCls}>
-                        <option value="">{t("supplier")}</option>
-                        {activeSuppliers.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </select>
-                      <button className={btnCls}>{t("issuePO")}</button>
-                    </form>
-                  )}
-
-                  {r.status === "approved" && (
-                    <form action={orderPurchaseRequestNoPO}>
-                      <input type="hidden" name="request_id" value={r.id} />
-                      <input type="hidden" name="project_id" value={r.project_id} />
-                      <button className={btnCls}>{t("orderNoPO")}</button>
-                    </form>
                   )}
 
                   {(r.status === "po_issued" || r.status === "partial") && (
