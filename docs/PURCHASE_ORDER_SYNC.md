@@ -96,3 +96,25 @@ based, which a background process has no session for; the service role bypasses 
 
 A PO created in the local app appears in the web list automatically — same table,
 no import step.
+
+---
+
+## Status: both directions are live (2026-08-12)
+
+**Backfill — done.** All 14 POs and 43 line items that existed in the local app
+were imported by `npm run import-pos` (`scripts/import-local-pos.mjs`). Re-run it
+any time; it upserts on `po_number`, so it only ever adds or refreshes.
+
+**Ongoing — automatic.** `siteapp-office/src/lib/po-sync.ts` (`pushPoRecord`) pushes
+the PO record on issue, called from `writeback.ts`, which previously only stamped
+`po_number` onto the request. Covers memos and blank POs too. No import step for
+new orders.
+
+**Numbering — self-healing.** `sync_po_sequence()` is called after every push and
+after every import.
+
+> **Numbering incident worth remembering.** 0038 seeded `po_number_seq` from the
+> highest PO number then visible (4718), but the local app had already reached
+> 4725 — so the first web PO would have been `PO-4719`, a number already given to
+> a supplier. Caught before any web PO was created. This is why the sequence is
+> now derived from the table rather than set by hand.
