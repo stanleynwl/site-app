@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -8,9 +9,12 @@ import {
   poTotal,
   poLabel,
 } from "@/lib/data/purchase-orders";
+import { FilterChips, SearchBox } from "@/components/filter-chips";
+import type { FilterOption } from "@/components/filter-chips";
 
 // Every PO raised for a project — web-generated and local-app rows alike, since
-// both write to the same table.
+// both write to the same table. Filters live in the URL so the page stays
+// server-rendered with the filtered set (same pattern as the request queue).
 
 const money = (n: number) =>
   n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -23,15 +27,45 @@ const CHIP: Record<string, string> = {
 
 export default async function ProjectPurchaseOrdersPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string>>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
   const project = await getProject(id);
   if (!project) notFound();
 
   const t = await getTranslations("Po");
   const orders = await getProjectPurchaseOrders(id);
+
+  // Supplier chips are built from the suppliers that actually appear on this
+  // project's POs, so there are never chips that filter to nothing.
+  const supplierOptions: FilterOption[] = Array.from(
+    new Set(orders.map((po) => po.supplier?.name).filter((n): n is string => !!n)),
+  )
+    .sort((a, b) => a.localeCompare(b))
+    .map((name) => ({ label: name, value: name }));
+
+  const qSupplier = sp.supplier ?? "";
+  const qSearch = (sp.q ?? "").trim().toLowerCase();
+
+  const filtered = orders.filter((po) => {
+    if (qSupplier && po.supplier?.name !== qSupplier) return false;
+    if (qSearch) {
+      const haystack = [
+        po.po_number,
+        po.supplier?.name ?? "",
+        po.note ?? "",
+        ...po.items.map((it) => poItemName(it)),
+      ]
+        .join(" ")
+        .toLowerCase();
+      if (!haystack.includes(qSearch)) return false;
+    }
+    return true;
+  });
 
   return (
     <div className="space-y-5">
@@ -43,11 +77,37 @@ export default async function ProjectPurchaseOrdersPage({
         <p className="text-xs text-muted">{t("listIntro")}</p>
       </div>
 
+      {orders.length > 0 && (
+        <Suspense>
+          <div className="space-y-3 rounded-xl border border-border p-3">
+            <SearchBox paramKey="q" placeholder={t("searchPlaceholder")} />
+            {supplierOptions.length > 1 && (
+              <FilterChips
+                paramKey="supplier"
+                options={supplierOptions}
+                label={t("filterSupplier")}
+                allLabel={t("filterAll")}
+              />
+            )}
+          </div>
+        </Suspense>
+      )}
+
+      {/* With a company filter on, the running total is the point of the view. */}
+      {filtered.length > 0 && (qSupplier || qSearch) && (
+        <p className="text-xs text-muted">
+          {t("resultCount", { count: filtered.length })} ·{" "}
+          {money(filtered.reduce((sum, po) => sum + poTotal(po), 0))}
+        </p>
+      )}
+
       {orders.length === 0 ? (
         <p className="text-sm text-muted">{t("listEmpty")}</p>
+      ) : filtered.length === 0 ? (
+        <p className="text-sm text-muted">{t("noMatches")}</p>
       ) : (
         <ul className="space-y-2">
-          {orders.map((po) => (
+          {filtered.map((po) => (
             <li key={po.id}>
               <Link
                 href={`/office/purchase-orders/${po.id}`}
