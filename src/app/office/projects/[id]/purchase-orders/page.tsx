@@ -116,6 +116,11 @@ export default async function ProjectPurchaseOrdersPage({
                 <div className="min-w-0">
                   <p className="font-medium">
                     {poLabel(po)}
+                    {po.doc_type === "memo" && (
+                      <span className="ml-1.5 rounded-full bg-black/10 px-2 py-0.5 text-xs font-medium dark:bg-white/15">
+                        {t("memoTitle")}
+                      </span>
+                    )}
                     {po.supplier?.name ? (
                       <span className="text-muted"> · {po.supplier.name}</span>
                     ) : null}

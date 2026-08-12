@@ -40,6 +40,16 @@ export type PurchaseOrder = {
   issued_at: string | null;
   issued_by_name: string | null;
   created_at: string;
+  // Carried over from the local office app (migration 0039). doc_type 'memo'
+  // draws against a bulk PO named by parent_po_number; needed_by_text holds the
+  // free-text form ("ASAP") that doesn't fit the date column.
+  doc_type: string;
+  doc_date: string | null;
+  needed_by_text: string | null;
+  remark: string | null;
+  site_contact: string | null;
+  is_bulk: boolean;
+  parent_po_number: string | null;
   supplier: {
     name: string;
     address: string | null;
@@ -54,6 +64,7 @@ const SELECT = `
   id, po_number, revision, project_id, supplier_id, purchase_request_id, status,
   needed_by, delivery_address, terms, note, tax_percent, source, issued_at,
   issued_by_name, created_at,
+  doc_type, doc_date, needed_by_text, remark, site_contact, is_bulk, parent_po_number,
   supplier:suppliers(name, address, phone, email, payment_terms),
   purchase_order_items(
     id, material_id, material_text, spec, quantity, unit, unit_price, sort_order,
@@ -179,4 +190,10 @@ export function poTotal(po: PurchaseOrder): number {
 // "PO-4719" or "PO-4719 Rev 2" — matches how the local app labels revisions.
 export function poLabel(po: PurchaseOrder): string {
   return po.revision > 0 ? `${po.po_number} Rev ${po.revision}` : po.po_number;
+}
+
+// The local app stores needed_by as free text ("ASAP", "Upon Request") while
+// web-created POs use a real date — show whichever this row has.
+export function poNeededBy(po: PurchaseOrder): string | null {
+  return po.needed_by_text ?? po.needed_by;
 }

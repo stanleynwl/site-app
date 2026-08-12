@@ -249,7 +249,12 @@
     "terms": "Terma",
     "note": "Nota",
     "issuedStamp": "Dikeluarkan oleh {name} pada {date}",
-    "notIssuedYet": "Draf — belum dikeluarkan kepada pembekal."
+    "notIssuedYet": "Draf — belum dikeluarkan kepada pembekal.",
+    "memoTitle": "Memo",
+    "against": "Terhadap",
+    "bulkOrder": "Pesanan pukal",
+    "remark": "Catatan",
+    "siteContact": "Hubungan tapak"
   },
   "Trash": {
     "title": "Tong kitar semula",

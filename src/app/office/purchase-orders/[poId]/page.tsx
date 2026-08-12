@@ -12,6 +12,7 @@ import {
   poTax,
   poTotal,
   poLabel,
+  poNeededBy,
   type PurchaseOrder,
   type PurchaseOrderItem,
 } from "@/lib/data/purchase-orders";
@@ -129,11 +130,26 @@ export default async function PurchaseOrderPage({
             </p>
           </div>
           <div className="text-right">
-            <p className="text-lg font-semibold">{t("title")}</p>
+            <p className="text-lg font-semibold">
+              {po.doc_type === "memo" ? t("memoTitle") : t("title")}
+            </p>
             <p className="text-sm font-medium">{poLabel(po)}</p>
             <p className="text-xs text-muted">
-              {t("dated")}: {fmtDate(po.issued_at ?? po.created_at)}
+              {/* doc_date is the document's own date and may be backdated —
+                  prefer it over when the row happened to be created. */}
+              {t("dated")}:{" "}
+              {po.doc_date
+                ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(
+                    new Date(`${po.doc_date}T00:00:00`),
+                  )
+                : fmtDate(po.issued_at ?? po.created_at)}
             </p>
+            {po.parent_po_number && (
+              <p className="text-xs text-muted">
+                {t("against")}: {po.parent_po_number}
+              </p>
+            )}
+            {po.is_bulk && <p className="text-xs text-muted">{t("bulkOrder")}</p>}
           </div>
         </div>
 
@@ -221,9 +237,14 @@ function PartyBlocks({
         {po.delivery_address && (
           <p className="whitespace-pre-line text-sm text-muted">{po.delivery_address}</p>
         )}
-        {po.needed_by && (
+        {poNeededBy(po) && (
           <p className="text-sm text-muted">
-            {t("neededBy")}: {po.needed_by}
+            {t("neededBy")}: {poNeededBy(po)}
+          </p>
+        )}
+        {po.site_contact && (
+          <p className="text-sm text-muted">
+            {t("siteContact")}: {po.site_contact}
           </p>
         )}
       </div>
@@ -435,7 +456,12 @@ function ReadOnlyOrder({
           {t("terms")}: {po.terms ?? po.supplier?.payment_terms}
         </p>
       )}
-      {po.note && <p className="text-sm text-muted">{po.note}</p>}
+      {po.remark && (
+        <p className="text-sm text-muted">
+          {t("remark")}: {po.remark}
+        </p>
+      )}
+      {po.note && <p className="whitespace-pre-line text-sm text-muted">{po.note}</p>}
     </div>
   );
 }

@@ -249,7 +249,12 @@
     "terms": "Terms",
     "note": "Note",
     "issuedStamp": "Issued by {name} on {date}",
-    "notIssuedYet": "Draft — not yet issued to the supplier."
+    "notIssuedYet": "Draft — not yet issued to the supplier.",
+    "memoTitle": "Memo",
+    "against": "Against",
+    "bulkOrder": "Bulk order",
+    "remark": "Remark",
+    "siteContact": "Site contact"
   },
   "Trash": {
     "title": "Recycle bin",

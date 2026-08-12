@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "archive": "node scripts/archive-photos.mjs",
-    "archive:dry": "node scripts/archive-photos.mjs --dry-run"
+    "archive:dry": "node scripts/archive-photos.mjs --dry-run",
+    "import-pos": "node scripts/import-local-pos.mjs",
+    "import-pos:dry": "node scripts/import-local-pos.mjs --dry-run"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",

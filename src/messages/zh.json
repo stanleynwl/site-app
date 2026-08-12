@@ -249,7 +249,12 @@
     "terms": "条款",
     "note": "备注",
     "issuedStamp": "由 {name} 于 {date} 发出",
-    "notIssuedYet": "草稿 — 尚未发给供应商。"
+    "notIssuedYet": "草稿 — 尚未发给供应商。",
+    "memoTitle": "备忘单",
+    "against": "对应",
+    "bulkOrder": "大宗订单",
+    "remark": "备注说明",
+    "siteContact": "工地联络人"
   },
   "Trash": {
     "title": "回收站",
