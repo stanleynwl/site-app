@@ -11,6 +11,7 @@ import {
 } from "@/lib/data/purchase-orders";
 import { FilterChips, SearchBox } from "@/components/filter-chips";
 import type { FilterOption } from "@/components/filter-chips";
+import { ScrollRestore } from "@/components/scroll-restore";
 
 // Every PO raised for a project — web-generated and local-app rows alike, since
 // both write to the same table. Filters live in the URL so the page stays
@@ -81,6 +82,9 @@ export default async function ProjectPurchaseOrdersPage({
 
   return (
     <div className="space-y-5">
+      <Suspense>
+        <ScrollRestore scope="po-project" />
+      </Suspense>
       <div>
         <Link href={`/office/projects/${id}`} className="text-xs text-muted hover:underline">
           ← {project.name}

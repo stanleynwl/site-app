@@ -10,6 +10,7 @@ import {
 } from "@/lib/data/purchase-orders";
 import { FilterChips, SearchBox } from "@/components/filter-chips";
 import type { FilterOption } from "@/components/filter-chips";
+import { ScrollRestore } from "@/components/scroll-restore";
 
 // Office-wide purchase order registry — every PO across every project, however
 // it was raised: created here, or issued in the local office app and pushed up
@@ -104,6 +105,9 @@ export default async function OfficePurchaseOrdersPage({
 
   return (
     <div className="space-y-5">
+      <Suspense>
+        <ScrollRestore scope="po-registry" />
+      </Suspense>
       <div>
         <h1 className="text-xl font-semibold">{t("listTitle")}</h1>
         <p className="text-xs text-muted">{t("registryIntro")}</p>
