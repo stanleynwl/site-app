@@ -57,6 +57,9 @@ export type PurchaseOrder = {
     email: string | null;
     payment_terms: string | null;
   } | null;
+  // Only needed by the cross-project registry, but embedded everywhere so both
+  // list pages share one SELECT.
+  project: { name: string } | null;
   items: PurchaseOrderItem[];
 };
 
@@ -66,6 +69,7 @@ const SELECT = `
   issued_by_name, created_at,
   doc_type, doc_date, needed_by_text, remark, site_contact, is_bulk, parent_po_number,
   supplier:suppliers(name, address, phone, email, payment_terms),
+  project:projects(name),
   purchase_order_items(
     id, material_id, material_text, spec, quantity, unit, unit_price, sort_order,
     material:materials(name, unit)
@@ -83,17 +87,31 @@ function one<T>(rel: T | T[] | null): T | null {
 }
 
 function mapOrder(row: unknown): PurchaseOrder {
-  const { purchase_order_items, supplier, ...rest } = row as Omit<
+  const { purchase_order_items, supplier, project, ...rest } = row as Omit<
     PurchaseOrder,
-    "items" | "supplier"
+    "items" | "supplier" | "project"
   > & {
     purchase_order_items: RawItem[] | null;
     supplier: PurchaseOrder["supplier"] | PurchaseOrder["supplier"][] | null;
+    project: PurchaseOrder["project"] | PurchaseOrder["project"][] | null;
   };
   const items = (purchase_order_items ?? [])
     .map((it) => ({ ...it, material: one(it.material) }))
     .sort((a, b) => a.sort_order - b.sort_order);
-  return { ...rest, supplier: one(supplier), items };
+  return { ...rest, supplier: one(supplier), project: one(project), items };
+}
+
+// Every PO across every project the user can see, newest first — the office
+// registry, mirroring the local app's top-level Purchase orders page. RLS keeps
+// this to the caller's projects.
+export async function getAllPurchaseOrders(): Promise<PurchaseOrder[]> {
+  if (!isSupabaseConfigured) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("purchase_orders")
+    .select(SELECT)
+    .order("created_at", { ascending: false });
+  return (data ?? []).map(mapOrder);
 }
 
 // Every PO for a project, newest first.

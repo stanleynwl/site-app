@@ -38,6 +38,7 @@ export default async function OfficeLayout({
     { href: "/office/catalog", label: t("catalog") },
     { href: "/office/requests", label: t("requests") },
     { href: "/office/do-queue", label: t("doQueue") },
+    { href: "/office/purchase-orders", label: t("purchaseOrders") },
     { href: "/office/claims", label: t("claims") },
     { href: "/office/issues", label: t("issues") },
     { href: "/office/activity", label: t("activity") },
