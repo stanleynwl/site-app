@@ -49,12 +49,24 @@ function fmtDate(iso: string | null): string {
   }).format(new Date(iso));
 }
 
+// Where "← back" goes. The list that linked here passes its own URL, filters and
+// all, so returning doesn't throw away a search. Must be a local office path —
+// never trust an arbitrary URL from the query string as a link target.
+function safeBackHref(back: string | undefined, fallback: string): string {
+  if (!back) return fallback;
+  const decoded = decodeURIComponent(back);
+  return decoded.startsWith("/office/") && !decoded.startsWith("//") ? decoded : fallback;
+}
+
 export default async function PurchaseOrderPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ poId: string }>;
+  searchParams: Promise<{ back?: string }>;
 }) {
   const { poId } = await params;
+  const { back } = await searchParams;
   const po = await getPurchaseOrder(poId);
   if (!po) notFound();
 
@@ -66,6 +78,7 @@ export default async function PurchaseOrderPage({
   ]);
   const activeSuppliers = suppliers.filter((s) => s.active);
   const editable = po.status === "draft";
+  const backHref = safeBackHref(back, `/office/projects/${po.project_id}/purchase-orders`);
 
   return (
     <div className="space-y-5">
@@ -74,11 +87,8 @@ export default async function PurchaseOrderPage({
       {/* Toolbar */}
       <div className="no-print flex flex-wrap items-center justify-between gap-3">
         <div>
-          <Link
-            href={`/office/projects/${po.project_id}/purchase-orders`}
-            className="text-xs text-muted hover:underline"
-          >
-            ← {project?.name ?? t("title")}
+          <Link href={backHref} className="text-xs text-muted hover:underline">
+            ← {t("backToList")}
           </Link>
           <h1 className="mt-1 flex items-center gap-2 text-xl font-semibold">
             {poLabel(po)}

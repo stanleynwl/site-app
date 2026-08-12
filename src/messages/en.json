@@ -256,6 +256,7 @@
     "issuedStamp": "Issued by {name} on {date}",
     "notIssuedYet": "Draft — not yet issued to the supplier.",
     "memoTitle": "Memo",
+    "backToList": "Purchase orders",
     "against": "Against",
     "bulkOrder": "Bulk order",
     "remark": "Remark",

@@ -51,6 +51,18 @@ export default async function ProjectPurchaseOrdersPage({
   const qSupplier = sp.supplier ?? "";
   const qSearch = (sp.q ?? "").trim().toLowerCase();
 
+  // Carry this list's filters onto each PO link so "← back" returns here with
+  // the search still applied.
+  const backTo = (() => {
+    const p = new URLSearchParams();
+    if (qSearch) p.set("q", sp.q ?? "");
+    if (qSupplier) p.set("supplier", qSupplier);
+    const qs = p.toString();
+    return encodeURIComponent(
+      `/office/projects/${id}/purchase-orders${qs ? `?${qs}` : ""}`,
+    );
+  })();
+
   const filtered = orders.filter((po) => {
     if (qSupplier && po.supplier?.name !== qSupplier) return false;
     if (qSearch) {
@@ -110,7 +122,7 @@ export default async function ProjectPurchaseOrdersPage({
           {filtered.map((po) => (
             <li key={po.id}>
               <Link
-                href={`/office/purchase-orders/${po.id}`}
+                href={`/office/purchase-orders/${po.id}?back=${backTo}`}
                 className="card flex flex-wrap items-center justify-between gap-3 p-4 hover:border-accent"
               >
                 <div className="min-w-0">

@@ -256,6 +256,7 @@
     "issuedStamp": "Dikeluarkan oleh {name} pada {date}",
     "notIssuedYet": "Draf — belum dikeluarkan kepada pembekal.",
     "memoTitle": "Memo",
+    "backToList": "Pesanan belian",
     "against": "Terhadap",
     "bulkOrder": "Pesanan pukal",
     "remark": "Catatan",

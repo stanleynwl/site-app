@@ -90,6 +90,18 @@ export default async function OfficePurchaseOrdersPage({
 
   const filtering = Boolean(qSupplier || qProject || qType || qSearch);
 
+  // Hand the current filtered URL to each PO, so "← back" from the document
+  // returns to this exact list instead of a bare one.
+  const backTo = (() => {
+    const p = new URLSearchParams();
+    if (qSearch) p.set("q", sp.q ?? "");
+    if (qSupplier) p.set("supplier", qSupplier);
+    if (qProject) p.set("project", qProject);
+    if (qType) p.set("type", qType);
+    const qs = p.toString();
+    return encodeURIComponent(`/office/purchase-orders${qs ? `?${qs}` : ""}`);
+  })();
+
   return (
     <div className="space-y-5">
       <div>
@@ -141,7 +153,7 @@ export default async function OfficePurchaseOrdersPage({
           {filtered.map((po) => (
             <li key={po.id}>
               <Link
-                href={`/office/purchase-orders/${po.id}`}
+                href={`/office/purchase-orders/${po.id}?back=${backTo}`}
                 className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-2.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
               >
                 <div className="min-w-0">
