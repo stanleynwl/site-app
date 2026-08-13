@@ -134,7 +134,11 @@ export default async function OfficeRequestsPage({
             return (
               <li
                 key={r.id}
-                className="space-y-2 rounded-xl border border-black/10 p-4 text-sm dark:border-white/15"
+                // Anchor target for notification deep links (#r-<id>). scroll-mt
+                // keeps the row clear of the top edge; :target rings it so the
+                // one you were sent to is obvious in a long queue.
+                id={`r-${r.id}`}
+                className="scroll-mt-6 space-y-2 rounded-xl border border-black/10 p-4 text-sm target:ring-2 target:ring-accent dark:border-white/15"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>

@@ -41,6 +41,7 @@ export default async function AppLayout({
             labels={activityLabels}
             pollUrl="/api/site/activity"
             viewAllHref="/app/activity"
+            surface="site"
             seenKey="siteapp.site.activitySeen"
             strings={{
               title: tn("title"),

@@ -72,7 +72,68 @@ export type NotifItem = {
   actor_name: string;
   project_name?: string | null;
   created_at: string;
+  // Used to deep-link a notification at the thing it's about.
+  project_id?: string | null;
+  entity_type?: string | null;
+  entity_id?: string | null;
 };
+
+// Where clicking a notification lands. The activity row carries the entity it
+// was about, so most actions can open the exact record rather than a list.
+// Requests have no page of their own, so they point at the queue anchored on
+// that row (see the id/:target styling on the request list).
+function hrefFor(it: NotifItem, surface: "office" | "site"): string {
+  const project = it.project_id ?? "";
+  const entity = it.entity_id ?? "";
+  const kind = it.action.split(".")[0];
+
+  if (surface === "site") {
+    switch (kind) {
+      case "request":
+        return project ? `/app/projects/${project}/requests` : "/app/activity";
+      case "delivery":
+        return project ? `/app/projects/${project}/deliveries` : "/app/activity";
+      case "claim":
+        return project ? `/app/projects/${project}/claims` : "/app/activity";
+      case "progress":
+        return project ? `/app/projects/${project}/progress` : "/app/activity";
+      case "stage":
+        return project ? `/app/projects/${project}/stages` : "/app/activity";
+      case "report":
+        return project ? `/app/projects/${project}` : "/app/activity";
+      default:
+        return "/app/activity";
+    }
+  }
+
+  switch (kind) {
+    case "po":
+      return entity ? `/office/purchase-orders/${entity}` : "/office/purchase-orders";
+    case "request":
+      return entity ? `/office/requests#r-${entity}` : "/office/requests";
+    case "report":
+      return project && entity
+        ? `/office/projects/${project}/reports/${entity}`
+        : "/office/activity";
+    case "delivery":
+      return project ? `/office/projects/${project}/deliveries` : "/office/activity";
+    case "claim":
+      return project ? `/office/projects/${project}/claims` : "/office/activity";
+    case "progress":
+      return project ? `/office/projects/${project}/progress` : "/office/activity";
+    case "stage":
+      return project ? `/office/projects/${project}/stages` : "/office/activity";
+    case "stock":
+      return project ? `/office/projects/${project}` : "/office/activity";
+    case "attendance":
+    case "advance":
+      return project ? `/office/projects/${project}/attendance` : "/office/activity";
+    case "issue":
+      return "/office/issues";
+    default:
+      return "/office/activity";
+  }
+}
 
 function fmt(iso: string): string {
   return new Intl.DateTimeFormat("en-GB", {
@@ -96,6 +157,7 @@ export function NotificationBell({
   seenKey,
   pollMs = 45000,
   align = "right",
+  surface = "office",
   strings,
 }: {
   initial: NotifItem[];
@@ -104,6 +166,8 @@ export function NotificationBell({
   viewAllHref: string;
   seenKey: string;
   pollMs?: number;
+  // Which app the bell is in — decides where a notification links to.
+  surface?: "office" | "site";
   // Which edge the dropdown anchors to. Use "left" when the bell is on the left
   // (e.g. a left sidebar) so the panel opens rightward and stays on screen.
   align?: "left" | "right";
@@ -270,19 +334,22 @@ export function NotificationBell({
                 items.slice(0, 15).map((it) => {
                   const isNew = Date.parse(it.created_at) > seen;
                   return (
-                    <li
-                      key={it.id}
-                      className={`px-3 py-2.5 text-sm ${isNew ? "bg-accent-soft/60" : ""}`}
-                    >
-                      <div className="leading-snug">
-                        <span className="font-medium">{it.actor_name}</span>{" "}
-                        <span className="text-muted">{label(it.action)}</span>
-                        {it.detail ? <span className="text-muted"> · {it.detail}</span> : null}
-                      </div>
-                      <div className="mt-0.5 flex items-center justify-between text-[11px] text-muted">
-                        <span>{it.project_name ?? ""}</span>
-                        <time>{fmt(it.created_at)}</time>
-                      </div>
+                    <li key={it.id} className={isNew ? "bg-accent-soft/60" : ""}>
+                      <Link
+                        href={hrefFor(it, surface)}
+                        onClick={() => setOpen(false)}
+                        className="block px-3 py-2.5 text-sm hover:bg-foreground/5"
+                      >
+                        <div className="leading-snug">
+                          <span className="font-medium">{it.actor_name}</span>{" "}
+                          <span className="text-muted">{label(it.action)}</span>
+                          {it.detail ? <span className="text-muted"> · {it.detail}</span> : null}
+                        </div>
+                        <div className="mt-0.5 flex items-center justify-between text-[11px] text-muted">
+                          <span>{it.project_name ?? ""}</span>
+                          <time>{fmt(it.created_at)}</time>
+                        </div>
+                      </Link>
                     </li>
                   );
                 })
