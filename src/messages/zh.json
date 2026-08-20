@@ -586,6 +586,11 @@
     "awaitingDelivery": "已下单 — 等待工地确认收货。",
     "confirmViaDO": "货到了？请到“送货”页登记送货单以确认 →",
     "deliveredSoFar": "已送 {delivered} / {ordered}",
+    "delivered": "已送达",
+    "historyTitle": "历史订单",
+    "historySubtitle": "订购了什么、实际到货多少。仅供查看。",
+    "historyEmpty": "暂无历史订单。",
+    "historyShowOlder": "显示更早",
     "saveQty": "保存",
     "close": "结案",
     "status": {

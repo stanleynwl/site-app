@@ -586,6 +586,11 @@
     "awaitingDelivery": "Ordered — waiting for site to confirm delivery.",
     "confirmViaDO": "Arrived? Record the DO in Deliveries to confirm →",
     "deliveredSoFar": "Delivered {delivered} of {ordered}",
+    "delivered": "Delivered",
+    "historyTitle": "Past orders",
+    "historySubtitle": "What was ordered and how much arrived. View only.",
+    "historyEmpty": "No past orders yet.",
+    "historyShowOlder": "Show older",
     "saveQty": "Save",
     "close": "Close",
     "status": {

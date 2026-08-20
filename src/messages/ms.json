@@ -586,6 +586,11 @@
     "awaitingDelivery": "Dipesan — menunggu tapak mengesahkan penghantaran.",
     "confirmViaDO": "Sudah sampai? Rekod DO di Penghantaran untuk sahkan →",
     "deliveredSoFar": "Dihantar {delivered} / {ordered}",
+    "delivered": "Dihantar",
+    "historyTitle": "Pesanan lalu",
+    "historySubtitle": "Apa yang dipesan dan berapa yang sampai. Lihat sahaja.",
+    "historyEmpty": "Tiada pesanan lalu lagi.",
+    "historyShowOlder": "Tunjuk lebih lama",
     "saveQty": "Simpan",
     "close": "Tutup",
     "status": {

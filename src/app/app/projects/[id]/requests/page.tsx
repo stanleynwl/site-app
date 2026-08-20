@@ -54,7 +54,17 @@ export default async function ProjectRequestsPage({
       />
 
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold">{t("recent")}</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold">{t("recent")}</h2>
+          {/* Delivered orders drop off this list after the hold window — the
+              history page is where they can still be looked up. */}
+          <Link
+            href={`/app/projects/${id}/requests/history`}
+            className="text-xs underline"
+          >
+            {t("historyTitle")}
+          </Link>
+        </div>
         {requests.length === 0 ? (
           <p className="text-sm text-black/70 dark:text-white/70">{t("none")}</p>
         ) : (
