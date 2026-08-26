@@ -99,6 +99,25 @@ const knownProjects = new Set((projRows ?? []).map((r) => r.id));
 const { data: supRows } = await supabase.from("suppliers").select("id").in("id", supplierIds);
 const knownSuppliers = new Set((supRows ?? []).map((r) => r.id));
 
+// Guard: a PO number that already exists on the web as a WEB-created order is a
+// different document that happens to share the number, not this one. Upserting
+// would silently overwrite it, so those are skipped and reported instead. (This
+// is what a numbering collision looks like after the fact — see
+// docs/PURCHASE_ORDER_SYNC.md rule 1.)
+const { data: webOwned } = await supabase
+  .from("purchase_orders")
+  .select("po_number")
+  .eq("source", "web");
+const webNumbers = new Set((webOwned ?? []).map((r) => r.po_number));
+const collisions = localPos.filter((r) => webNumbers.has(r.po_number)).map((r) => r.po_number);
+if (collisions.length) {
+  console.warn(
+    `\n  !! ${collisions.length} number(s) already used by a web-created PO — SKIPPED to avoid overwriting:`,
+  );
+  for (const n of collisions) console.warn(`     ${n}`);
+  console.warn("     Renumber one side, then re-run.\n");
+}
+
 for (const id of projectIds)
   if (!knownProjects.has(id)) console.warn(`  ! project ${id} not on the web — its POs are skipped`);
 for (const id of supplierIds)
@@ -118,6 +137,10 @@ let imported = 0,
 
 for (const r of localPos) {
   if (!r.project_id || !knownProjects.has(r.project_id)) {
+    skipped++;
+    continue;
+  }
+  if (webNumbers.has(r.po_number)) {
     skipped++;
     continue;
   }
