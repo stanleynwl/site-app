@@ -92,9 +92,22 @@ export async function getProjectPurchaseRequests(
   return (data ?? []) as unknown as PurchaseRequest[];
 }
 
-// Office queue: open requests across all the user's projects (newest first so
-// the latest requests surface at the top), plus recently delivered ones kept
-// for the hold window — same visibility as the supervisor's site list.
+// Office register: EVERY request across the user's projects, newest first —
+// delivered, closed and rejected included, so the office can refer back to an
+// old order instead of only seeing the live queue. The page's status filter
+// narrows it back down to whatever they're working on.
+export async function getAllPurchaseRequests(): Promise<PurchaseRequest[]> {
+  if (!isSupabaseConfigured) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("purchase_requests")
+    .select(`${PR_COLUMNS}, project:projects(name)`)
+    .order("created_at", { ascending: false });
+  return (data ?? []) as unknown as PurchaseRequest[];
+}
+
+// Open requests only — still what the DO queue wants, since a delivery can only
+// be booked against an order that is actually outstanding.
 export async function getOpenPurchaseRequests(): Promise<PurchaseRequest[]> {
   if (!isSupabaseConfigured) return [];
   const supabase = await createClient();

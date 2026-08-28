@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import {
-  getOpenPurchaseRequests,
+  getAllPurchaseRequests,
   itemName,
   prAgeHours,
   withSignedRequestPhotos,
@@ -44,7 +44,7 @@ export default async function OfficeRequestsPage({
   const t = await getTranslations("Requests");
   const tp = await getTranslations("Po");
   const [rawRequests, suppliers, poByRequest] = await Promise.all([
-    getOpenPurchaseRequests(),
+    getAllPurchaseRequests(),
     getSuppliers(),
     getPoIdsByRequest(),
   ]);
@@ -60,12 +60,16 @@ export default async function OfficeRequestsPage({
     ).values(),
   );
 
+  // Every status is filterable now that the list is the full register — without
+  // closed/rejected chips those rows could only be reached by scrolling.
   const statusOptions: FilterOption[] = [
     { label: t("status.pending"), value: "pending" },
     { label: t("status.approved"), value: "approved" },
     { label: t("status.po_issued"), value: "po_issued" },
     { label: t("status.partial"), value: "partial" },
     { label: t("status.delivered"), value: "delivered" },
+    { label: t("status.closed"), value: "closed" },
+    { label: t("status.rejected"), value: "rejected" },
   ];
 
   // Supplier names that actually appear in the current queue (avoids showing
@@ -124,8 +128,14 @@ export default async function OfficeRequestsPage({
         </div>
       </Suspense>
 
-      {filtered.length === 0 ? (
+      <p className="text-xs text-black/50 dark:text-white/50">
+        {t("countShown", { shown: filtered.length, total: requests.length })}
+      </p>
+
+      {requests.length === 0 ? (
         <p className="text-sm text-black/50 dark:text-white/50">{t("empty")}</p>
+      ) : filtered.length === 0 ? (
+        <p className="text-sm text-black/50 dark:text-white/50">{t("noMatches")}</p>
       ) : (
         <ul className="space-y-3">
           {filtered.map((r) => {
