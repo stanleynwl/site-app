@@ -47,6 +47,7 @@ export type PurchaseOrder = {
   doc_date: string | null;
   needed_by_text: string | null;
   remark: string | null;
+  quotation_ref: string | null;
   site_contact: string | null;
   is_bulk: boolean;
   parent_po_number: string | null;
@@ -67,7 +68,7 @@ const SELECT = `
   id, po_number, revision, project_id, supplier_id, purchase_request_id, status,
   needed_by, delivery_address, terms, note, tax_percent, source, issued_at,
   issued_by_name, created_at,
-  doc_type, doc_date, needed_by_text, remark, site_contact, is_bulk, parent_po_number,
+  doc_type, doc_date, needed_by_text, remark, quotation_ref, site_contact, is_bulk, parent_po_number,
   supplier:suppliers(name, address, phone, email, payment_terms),
   project:projects(name),
   purchase_order_items(

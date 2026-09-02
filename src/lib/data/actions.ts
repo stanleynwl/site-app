@@ -1631,6 +1631,7 @@ export async function savePurchaseOrder(formData: FormData): Promise<void> {
       needed_by: String(formData.get("needed_by") ?? "") || null,
       delivery_address: String(formData.get("delivery_address") ?? "").trim() || null,
       terms: String(formData.get("terms") ?? "").trim() || null,
+      quotation_ref: String(formData.get("quotation_ref") ?? "").trim() || null,
       note: String(formData.get("note") ?? "").trim() || null,
       tax_percent: Number(formData.get("tax_percent") ?? 0) || 0,
     })

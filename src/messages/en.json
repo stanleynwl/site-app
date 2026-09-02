@@ -260,7 +260,9 @@
     "against": "Against",
     "bulkOrder": "Bulk order",
     "remark": "Remark",
-    "siteContact": "Site contact"
+    "siteContact": "Site contact",
+    "quotationRef": "Quotation Ref",
+    "quotationRefHint": "e.g. KW/1015/QTN28052026"
   },
   "Trash": {
     "title": "Recycle bin",

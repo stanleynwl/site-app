@@ -154,6 +154,11 @@ export default async function PurchaseOrderPage({
                   )
                 : fmtDate(po.issued_at ?? po.created_at)}
             </p>
+            {po.quotation_ref && (
+              <p className="text-xs text-muted">
+                {t("quotationRef")}: {po.quotation_ref}
+              </p>
+            )}
             {po.parent_po_number && (
               <p className="text-xs text-muted">
                 {t("against")}: {po.parent_po_number}
@@ -398,6 +403,15 @@ function EditableOrder({
         <label className="text-sm">
           <span className="mb-1 block text-xs text-muted">{t("terms")}</span>
           <input name="terms" defaultValue={po.terms ?? ""} className={cellInput} />
+        </label>
+        <label className="text-sm">
+          <span className="mb-1 block text-xs text-muted">{t("quotationRef")}</span>
+          <input
+            name="quotation_ref"
+            defaultValue={po.quotation_ref ?? ""}
+            placeholder={t("quotationRefHint")}
+            className={cellInput}
+          />
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-xs text-muted">{t("note")}</span>

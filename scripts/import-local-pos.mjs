@@ -77,6 +77,7 @@ const localPos = db
   .prepare(
     `select id, po_number, request_id, project_id, supplier_id, supplier, items_json,
             terms, pdf_path, status, doc_type, supplier_address, deliver_to, revision,
+            quotation_ref,
             tax_pct, created_at, doc_date, needed_by, notes, remark, is_bulk,
             parent_po_id, issued_by, site_contact
        from purchase_orders
@@ -161,6 +162,7 @@ for (const r of localPos) {
     terms: r.terms || null,
     note: r.notes || null,
     remark: r.remark || null,
+    quotation_ref: r.quotation_ref || null,
     site_contact: r.site_contact || null,
     tax_percent: num(r.tax_pct),
     is_bulk: !!r.is_bulk,

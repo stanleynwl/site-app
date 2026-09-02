@@ -260,7 +260,9 @@
     "against": "对应",
     "bulkOrder": "大宗订单",
     "remark": "备注说明",
-    "siteContact": "工地联络人"
+    "siteContact": "工地联络人",
+    "quotationRef": "报价单编号",
+    "quotationRefHint": "例如：KW/1015/QTN28052026"
   },
   "Trash": {
     "title": "回收站",

@@ -260,7 +260,9 @@
     "against": "Terhadap",
     "bulkOrder": "Pesanan pukal",
     "remark": "Catatan",
-    "siteContact": "Hubungan tapak"
+    "siteContact": "Hubungan tapak",
+    "quotationRef": "Ruj. Sebut Harga",
+    "quotationRefHint": "cth. KW/1015/QTN28052026"
   },
   "Trash": {
     "title": "Tong kitar semula",
