@@ -587,6 +587,8 @@
     "supplier": "Supplier",
     "issuePO": "Order with PO",
     "orderNoPO": "Order without PO",
+    "copyForSupplier": "Copy",
+    "copied": "Copied ✓",
     "awaitingDelivery": "Ordered — waiting for site to confirm delivery.",
     "confirmViaDO": "Arrived? Record the DO in Deliveries to confirm →",
     "deliveredSoFar": "Delivered {delivered} of {ordered}",

@@ -587,6 +587,8 @@
     "supplier": "Pembekal",
     "issuePO": "Pesan dengan PO",
     "orderNoPO": "Pesan tanpa PO",
+    "copyForSupplier": "Salin",
+    "copied": "Disalin ✓",
     "awaitingDelivery": "Dipesan — menunggu tapak mengesahkan penghantaran.",
     "confirmViaDO": "Sudah sampai? Rekod DO di Penghantaran untuk sahkan →",
     "deliveredSoFar": "Dihantar {delivered} / {ordered}",

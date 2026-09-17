@@ -17,6 +17,7 @@ import {
 } from "@/lib/data/actions";
 import { getPoIdsByRequest, poLabel } from "@/lib/data/purchase-orders";
 import { FilterChips, SearchBox } from "@/components/filter-chips";
+import { CopyTextButton } from "@/components/copy-text-button";
 import type { FilterOption } from "@/components/filter-chips";
 
 const inputCls =
@@ -141,6 +142,23 @@ export default async function OfficeRequestsPage({
           {filtered.map((r) => {
             const age = prAgeHours(r);
             const po = poByRequest.get(r.id);
+            // Plain-text summary for forwarding to a supplier: one line per
+            // item, then project, needed-by and the reason when site gave one.
+            const copyText = [
+              ...r.items.map(
+                (it) =>
+                  itemName(it) +
+                  (it.quantity != null
+                    ? ` · ${it.quantity}${it.unit ? ` ${it.unit}` : ""}`
+                    : "") +
+                  (it.spec ? ` — ${it.spec}` : ""),
+              ),
+              r.project?.name,
+              r.needed_by ? `${t("neededBy")}: ${r.needed_by}` : null,
+              r.urgency_reason,
+            ]
+              .filter(Boolean)
+              .join("\n");
             return (
               <li
                 key={r.id}
@@ -251,6 +269,12 @@ export default async function OfficeRequestsPage({
 
                 {/* State-machine actions */}
                 <div className="flex flex-wrap items-end gap-2 pt-1">
+                  <CopyTextButton
+                    text={copyText}
+                    label={t("copyForSupplier")}
+                    copiedLabel={t("copied")}
+                    className={btnCls}
+                  />
                   {/* Generate the PO document in-app. Once one exists, link to
                       it instead of offering to mint a second number. */}
                   {po ? (
